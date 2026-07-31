@@ -1,11 +1,19 @@
 {
+  "//": "Layout follows .docs/Architecture/03-frontend-architecture.md: app/, lib/, components/ at the package root rather than under src/.",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
-    "outDir": "dist",
-    "rootDir": "src"
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "noEmit": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/types" }, { "path": "../../packages/ui" }]
+  "include": ["app", "lib", "components", "middleware.ts", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next"],
+  "references": [{ "path": "../../packages/types" }]
 }

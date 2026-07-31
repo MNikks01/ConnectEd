@@ -1,0 +1,169 @@
+/**
+ * Skeleton styling only.
+ *
+ * The real design system — tokens and primitives — belongs in `packages/ui` and is owned by the
+ * ui-designer charter. This file exists so the auth skeleton is legible and accessible, not to
+ * pre-empt those decisions. Values that will become tokens are declared as custom properties so
+ * the migration is a find-and-replace rather than a rewrite.
+ */
+
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f7f8fa;
+  --color-border: #d9dde3;
+  --color-text: #16191d;
+  --color-text-muted: #5b6470;
+  --color-accent: #1f5f9e;
+  --color-accent-text: #ffffff;
+  --color-danger: #b3261e;
+  --radius: 8px;
+  --space: 1rem;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #14171a;
+    --color-surface: #1c2025;
+    --color-border: #333a42;
+    --color-text: #eef1f4;
+    --color-text-muted: #a3adb9;
+    --color-accent: #7cb2e8;
+    --color-accent-text: #10151a;
+    --color-danger: #f2b8b5;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.5;
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: calc(var(--space) * 2) var(--space);
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/* Never remove focus indication — keyboard users navigate by it. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: calc(var(--space) * 1.5);
+}
+
+.auth-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space);
+}
+
+.auth-card {
+  width: min(28rem, 100%);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: var(--space);
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input {
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  width: 100%;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  cursor: pointer;
+  width: 100%;
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.field-error,
+.form-error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.form-error {
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: var(--space);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+dl.summary {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.35rem var(--space);
+  margin: 0;
+}
+
+dl.summary dt {
+  font-weight: 600;
+}
+
+dl.summary dd {
+  margin: 0;
+}
+
+@media (max-width: 30rem) {
+  dl.summary {
+    grid-template-columns: 1fr;
+    gap: 0 0;
+  }
+
+  dl.summary dd {
+    margin-bottom: 0.5rem;
+  }
+}

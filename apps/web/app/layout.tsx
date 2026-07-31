@@ -1,0 +1,17 @@
+import './globals.css';
+
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+
+export const metadata: Metadata = {
+  title: 'GetConnected',
+  description: 'The school-community platform connecting students, parents, teachers, and schools.',
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}

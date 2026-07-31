@@ -1,4 +1,8 @@
-// Package ESLint config — re-exports the shared flat config from @connected/config.
+// Package ESLint config — shared flat config plus the Next.js rules.
 import config from '@connected/config/eslint';
 
-export default config;
+export default [
+  // Build output and generated types are not ours to lint.
+  { ignores: ['.next/**', 'next-env.d.ts'] },
+  ...config,
+];

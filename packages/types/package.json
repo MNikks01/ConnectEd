@@ -3,11 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "//": "Consumers get built output, not raw .ts. apps/api runs on plain node, which cannot import TypeScript, and pointing main at src/ also leaves the Next bundler resolving './auth.js' against a file that does not exist. `turbo` builds this before anything that depends on it.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
@@ -18,5 +25,8 @@
     "@connected/config": "workspace:*",
     "eslint": "^9.12.0",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
