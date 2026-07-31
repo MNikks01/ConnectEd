@@ -4,10 +4,6 @@
     "noEmit": true
   },
   "files": [],
-  "references": [
-    { "path": "./apps/api" },
-    { "path": "./apps/web" },
-    { "path": "./packages/types" },
-    { "path": "./packages/ui" }
-  ]
+  "//": "Only the shared libraries are referenced. The apps are leaves — nothing consumes their build output — and referencing them would force `composite` on their tsconfigs for no benefit.",
+  "references": [{ "path": "./packages/types" }, { "path": "./packages/ui" }]
 }

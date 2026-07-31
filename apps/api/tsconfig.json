@@ -1,11 +1,12 @@
 {
+  "//": "NodeNext, not the base's Bundler resolution: this is a real Node process compiled by tsc and run by node, so relative imports carry explicit .js extensions.",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
-    "composite": true,
     "types": ["node"]
   },
-  "include": ["src"],
+  "include": ["src", "vitest.config.ts"],
   "references": [{ "path": "../../packages/types" }]
 }
