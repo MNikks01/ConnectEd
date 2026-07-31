@@ -1,0 +1,32 @@
+# CodeRabbit configuration — AI review on every PR (augments human CODEOWNERS review).
+# See .docs/CI-CD/02-code-review.md
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    base_branches:
+      - development
+      - main
+  path_instructions:
+    - path: 'apps/api/**'
+      instructions: >
+        Flag any new scoped endpoint that lacks a server-side authorization check
+        (role + verification + ownership) or lacks positive AND negative permission tests.
+        Ensure Prisma is used only in repositories, inputs are validated with zod, and
+        errors go through the global error envelope. No plaintext secrets or PII in logs.
+    - path: 'apps/web/**'
+      instructions: >
+        Ensure features handle Loading/Error/Empty/Success states, are accessible (labels,
+        keyboard, contrast), avoid `any`, do not expose secrets to the browser, and consume
+        shared types from packages/types rather than redefining API shapes.
+    - path: 'apps/api/prisma/**'
+      instructions: >
+        Treat schema/migration changes as high-risk. Check for destructive changes without a
+        data plan, missing indexes on FK/hot-query columns, and backwards-incompatible migrations.
+chat:
+  auto_reply: true
