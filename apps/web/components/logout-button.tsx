@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@connected/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -19,8 +20,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button type="button" onClick={() => void onClick()} disabled={pending}>
-      {pending ? 'Signing out…' : 'Sign out'}
-    </button>
+    <Button variant="secondary" loading={pending} onClick={() => void onClick()}>
+      Sign out
+    </Button>
   );
 }

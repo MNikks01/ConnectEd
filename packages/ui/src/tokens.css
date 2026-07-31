@@ -1,0 +1,136 @@
+/**
+ * Design tokens — the single source of visual truth for ConnectEd.
+ *
+ * Every value components use is declared here. A component that hardcodes a colour or a spacing
+ * step is a bug: it cannot follow a theme change and it cannot be audited for contrast.
+ *
+ * **Contrast is verified, not assumed.** Every foreground/background pair below meets WCAG 2.1 AA
+ * (4.5:1 for text, 3:1 for non-text UI boundaries per 1.4.11), in both themes. The ratios are
+ * asserted by `src/__tests__/tokens.test.ts`, so a "small tweak" to a hex value fails the build
+ * rather than quietly dropping the product below AA.
+ *
+ * Note the two border tokens. `--ui-border` is decorative (dividers, card edges) and may be
+ * subtle; `--ui-border-strong` bounds interactive controls and must clear 3:1. Collapsing them
+ * into one is how input fields end up invisible to low-vision users.
+ */
+
+:root {
+  /* ---- Colour: light ---- */
+  --ui-bg: #ffffff;
+  --ui-surface: #f6f7f9;
+  --ui-text: #16191d;
+  --ui-text-muted: #55606d;
+  --ui-border: #d4d9e0;
+  --ui-border-strong: #767f8c;
+  --ui-accent: #1a5fb4;
+  --ui-accent-hover: #164e94;
+  --ui-accent-text: #ffffff;
+  --ui-danger: #b3261e;
+  --ui-danger-surface: #fdecea;
+  --ui-success: #1a7f37;
+  --ui-success-surface: #e8f5ec;
+  --ui-warning: #7a4f00;
+  --ui-warning-surface: #fdf3e2;
+
+  /* ---- Typography ---- */
+  --ui-font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ui-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --ui-text-xs: 0.75rem;
+  --ui-text-sm: 0.875rem;
+  --ui-text-base: 1rem;
+  --ui-text-lg: 1.125rem;
+  --ui-text-xl: 1.375rem;
+  --ui-text-2xl: 1.75rem;
+  --ui-leading-tight: 1.25;
+  --ui-leading-normal: 1.5;
+  --ui-weight-normal: 400;
+  --ui-weight-medium: 500;
+  --ui-weight-semibold: 600;
+
+  /* ---- Spacing: a 4px scale, so alignment is arithmetic rather than eyeballed ---- */
+  --ui-space-1: 0.25rem;
+  --ui-space-2: 0.5rem;
+  --ui-space-3: 0.75rem;
+  --ui-space-4: 1rem;
+  --ui-space-5: 1.5rem;
+  --ui-space-6: 2rem;
+  --ui-space-7: 3rem;
+
+  /* ---- Shape ---- */
+  --ui-radius-sm: 4px;
+  --ui-radius: 8px;
+  --ui-radius-lg: 12px;
+  --ui-radius-full: 9999px;
+
+  /* ---- Elevation ---- */
+  --ui-shadow-sm: 0 1px 2px rgb(16 25 35 / 8%);
+  --ui-shadow: 0 4px 12px rgb(16 25 35 / 10%);
+  --ui-shadow-lg: 0 12px 32px rgb(16 25 35 / 16%);
+
+  /* ---- Motion ---- */
+  --ui-duration-fast: 120ms;
+  --ui-duration: 200ms;
+  --ui-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* ---- Focus: one ring everywhere, so keyboard position is never ambiguous ---- */
+  --ui-focus-width: 2px;
+  --ui-focus-offset: 2px;
+}
+
+/* Dark values apply when the OS asks for dark and the app has not pinned a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ui-bg: #101418;
+    --ui-surface: #181d23;
+    --ui-text: #e9edf2;
+    --ui-text-muted: #a0abb8;
+    --ui-border: #2f3742;
+    --ui-border-strong: #707c8a;
+    --ui-accent: #7fb4f0;
+    --ui-accent-hover: #9cc6f5;
+    --ui-accent-text: #0b1017;
+    --ui-danger: #f2b8b5;
+    --ui-danger-surface: #2a1614;
+    --ui-success: #7ee2a8;
+    --ui-success-surface: #10241a;
+    --ui-warning: #e8c07d;
+    --ui-warning-surface: #2a2011;
+
+    --ui-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+    --ui-shadow: 0 4px 12px rgb(0 0 0 / 45%);
+    --ui-shadow-lg: 0 12px 32px rgb(0 0 0 / 55%);
+  }
+}
+
+/* An explicit choice always wins over the OS preference, in both directions. */
+:root[data-theme='dark'] {
+  --ui-bg: #101418;
+  --ui-surface: #181d23;
+  --ui-text: #e9edf2;
+  --ui-text-muted: #a0abb8;
+  --ui-border: #2f3742;
+  --ui-border-strong: #707c8a;
+  --ui-accent: #7fb4f0;
+  --ui-accent-hover: #9cc6f5;
+  --ui-accent-text: #0b1017;
+  --ui-danger: #f2b8b5;
+  --ui-danger-surface: #2a1614;
+  --ui-success: #7ee2a8;
+  --ui-success-surface: #10241a;
+  --ui-warning: #e8c07d;
+  --ui-warning-surface: #2a2011;
+
+  --ui-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --ui-shadow: 0 4px 12px rgb(0 0 0 / 45%);
+  --ui-shadow-lg: 0 12px 32px rgb(0 0 0 / 55%);
+}
+
+/* Respect a stated preference for reduced motion — this is an accessibility requirement, not a
+   nicety: vestibular disorders make large transitions genuinely unpleasant. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-duration-fast: 0ms;
+    --ui-duration: 0ms;
+  }
+}

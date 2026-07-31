@@ -2,8 +2,9 @@
  * The authenticated shell. A Server Component: it calls the API during SSR using the access token
  * from the httpOnly cookie, so the token never reaches the browser.
  *
- * Role dashboards, the school portal, and social land on top of this in Sprint 1.
+ * Role dashboards, the school portal, and social land on top of this next.
  */
+import { Badge, Card, PageHeader } from '@connected/ui';
 import { redirect } from 'next/navigation';
 
 import { LogoutButton } from '@/components/logout-button';
@@ -38,31 +39,19 @@ export default async function AppHomePage() {
 
   return (
     <main>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '1rem',
-          flexWrap: 'wrap',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h1>Signed in</h1>
-          <p className="muted">
-            {account.accountType === 'SCHOOL'
-              ? 'You are signed in as an institution.'
-              : 'You are signed in as an individual.'}
-          </p>
-        </div>
-        <div style={{ width: 'auto' }}>
-          <LogoutButton />
-        </div>
-      </header>
+      <PageHeader
+        title="Signed in"
+        description={
+          account.accountType === 'SCHOOL'
+            ? 'You are signed in as an institution.'
+            : 'You are signed in as an individual.'
+        }
+        actions={<LogoutButton />}
+      />
 
-      <div className="card">
-        <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Your account</h2>
+      <Card as="section">
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Your account</h2>
+
         <dl className="summary">
           <dt>Name</dt>
           <dd>{account.fullName ?? account.schoolName ?? '—'}</dd>
@@ -80,13 +69,20 @@ export default async function AppHomePage() {
           <dd>{account.handle ?? '—'}</dd>
 
           <dt>Email verified</dt>
-          <dd>{account.emailVerified ? 'Yes' : 'Not yet'}</dd>
+          <dd>
+            <Badge tone={account.emailVerified ? 'success' : 'warning'}>
+              {account.emailVerified ? 'Verified' : 'Not yet verified'}
+            </Badge>
+          </dd>
         </dl>
-      </div>
+      </Card>
 
-      <p className="muted" style={{ marginTop: '1.5rem', fontSize: '0.9rem' }}>
+      <p
+        className="muted"
+        style={{ marginTop: 'var(--ui-space-5)', fontSize: 'var(--ui-text-sm)' }}
+      >
         This page is the authenticated skeleton — it proves the browser, this app, and the API share
-        a working session. Role dashboards and the school portal arrive in Sprint 1.
+        a working session. Role dashboards and the school portal arrive next.
       </p>
     </main>
   );

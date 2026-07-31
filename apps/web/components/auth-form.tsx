@@ -3,10 +3,11 @@
 /**
  * Shared client behaviour for the login and register forms.
  *
- * Every state the frontend checklist requires is handled here rather than in each page: submitting
- * (button disabled, `aria-busy`), field-level errors from the API's 422 `details`, a form-level
- * error announced to screen readers via `role="alert"`, and success (redirect).
+ * Presentation now comes from `@connected/ui` — this file owns submission, error mapping, and the
+ * six states the frontend checklist requires, not styling. Field-level errors from the API's 422
+ * `details` are routed to the matching `Field`, which handles the `aria-describedby` wiring.
  */
+import { Alert, Button, Field } from '@connected/ui';
 import { useRouter } from 'next/navigation';
 import { createContext, useContext, useState, type FormEvent, type ReactNode } from 'react';
 
@@ -77,25 +78,26 @@ export function AuthForm({
   }
 
   return (
-    // `void` because a form's onSubmit must return nothing; an unhandled rejection would
-    // otherwise escape silently. Every failure path inside `onSubmit` is already caught.
+    // `void` because a form's onSubmit must return nothing; every failure path inside is caught.
     <form onSubmit={(event) => void onSubmit(event)} noValidate aria-busy={pending}>
       {formError ? (
-        <p className="form-error" role="alert">
-          {formError}
-        </p>
+        <div style={{ marginBottom: 'var(--ui-space-4)' }}>
+          <Alert tone="danger">{formError}</Alert>
+        </div>
       ) : null}
 
       <FieldErrorContext.Provider value={fieldErrors}>{children}</FieldErrorContext.Provider>
 
-      <button type="submit" disabled={pending}>
-        {pending ? pendingLabel : submitLabel}
-      </button>
+      <div style={{ marginTop: 'var(--ui-space-5)' }}>
+        <Button type="submit" loading={pending} fullWidth>
+          {pending ? pendingLabel : submitLabel}
+        </Button>
+      </div>
     </form>
   );
 }
 
-export interface FieldProps {
+export interface FormFieldProps {
   name: string;
   label: string;
   type?: string;
@@ -104,38 +106,13 @@ export interface FieldProps {
   hint?: string;
 }
 
-/** A labelled input that wires its error message to the control for screen readers. */
-export function Field({ name, label, type = 'text', autoComplete, required, hint }: FieldProps) {
+/** Thin wrapper that pulls this field's server-side error out of context. */
+export function FormField({ name, label, ...rest }: FormFieldProps) {
   const errors = useContext(FieldErrorContext);
-  const error = errors[name];
-  const errorId = `${name}-error`;
-  const hintId = `${name}-hint`;
-  const describedBy = [error ? errorId : undefined, hint ? hintId : undefined]
-    .filter(Boolean)
-    .join(' ');
 
   return (
-    <div className="field">
-      <label htmlFor={name}>{label}</label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        autoComplete={autoComplete}
-        required={required}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy.length > 0 ? describedBy : undefined}
-      />
-      {hint ? (
-        <span id={hintId} className="muted" style={{ fontSize: '0.85rem' }}>
-          {hint}
-        </span>
-      ) : null}
-      {error ? (
-        <span id={errorId} className="field-error">
-          {error}
-        </span>
-      ) : null}
+    <div style={{ marginBottom: 'var(--ui-space-4)' }}>
+      <Field {...rest} name={name} label={label} error={errors[name]} />
     </div>
   );
 }
