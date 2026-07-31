@@ -1,0 +1,60 @@
+# Local development dependencies for ConnectEd.
+# Usage: docker compose up -d
+# App processes (api/web) run on the host via `pnpm dev`; this file provides backing services.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: connected
+      POSTGRES_PASSWORD: connected
+      POSTGRES_DB: connected
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U connected']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Observability stack is optional locally; configs live in infrastructure/.
+  # Uncomment when needed:
+  # prometheus: { image: prom/prometheus, ports: ['9090:9090'], volumes: ['./infrastructure/prometheus:/etc/prometheus'] }
+  # grafana:    { image: grafana/grafana, ports: ['3001:3000'] }
+  # loki:       { image: grafana/loki, ports: ['3100:3100'] }
+  # tempo:      { image: grafana/tempo, ports: ['3200:3200'] }
+
+volumes:
+  pgdata:
+  miniodata:

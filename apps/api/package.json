@@ -1,0 +1,21 @@
+{
+  "name": "@connected/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"[api] dev not implemented yet — scaffold only\"",
+    "build": "echo \"[api] build not implemented yet\"",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"[api] no tests yet\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@connected/config": "workspace:*",
+    "@connected/types": "workspace:*",
+    "@types/node": "^22.7.5",
+    "eslint": "^9.12.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,107 @@
+# API — Endpoint Catalogue
+
+`Status: Accepted` · `Last updated: 2026-07-28`
+
+Grouped by module. All under `/api/v1`. **Auth** column: 🔓 public · 🔑 authenticated · 🛡 authorized (role/
+verification/ownership checked). This is the contract; the OpenAPI spec (generated) is authoritative for shapes.
+
+## Auth & accounts
+
+| Method | Path                    | Auth | Purpose                                      |
+| ------ | ----------------------- | :--: | -------------------------------------------- |
+| POST   | `/auth/register`        |  🔓  | Register individual.                         |
+| POST   | `/auth/register/school` |  🔓  | Register school (web only).                  |
+| POST   | `/auth/login`           |  🔓  | Login → access + refresh.                    |
+| POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                               |
+| POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                       |
+| POST   | `/auth/password/forgot` |  🔓  | Start reset.                                 |
+| POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                      |
+| POST   | `/auth/email/verify`    |  🔑  | Confirm email.                               |
+| GET    | `/me`                   |  🔑  | Current account + roles + verified contexts. |
+| PATCH  | `/me/profile`           |  🔑  | Update own profile.                          |
+| POST   | `/me/role`              |  🔑  | Declare/switch academic role.                |
+
+## Institution & classes
+
+| Method | Path                              | Auth | Purpose                          |
+| ------ | --------------------------------- | :--: | -------------------------------- |
+| GET    | `/schools/:id`                    |  🔑  | School public/member profile.    |
+| PATCH  | `/schools/:id`                    |  🛡   | Update own school (school acct). |
+| POST   | `/schools/:id/classes`            |  🛡   | Create class.                    |
+| GET    | `/schools/:id/classes`            |  🛡   | List classes.                    |
+| POST   | `/classes/:id/subjects`           |  🛡   | Add subject.                     |
+| POST   | `/classes/:id/class-teacher`      |  🛡   | Allocate class teacher.          |
+| GET    | `/schools/:id/members`            |  🛡   | Roster.                          |
+| DELETE | `/schools/:id/members/:accountId` |  🛡   | Remove/revoke member.            |
+
+## Verification
+
+| Method | Path                                        | Auth | Purpose                                            |
+| ------ | ------------------------------------------- | :--: | -------------------------------------------------- |
+| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal). |
+| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                              |
+| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                    |
+| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                            |
+
+## Academics
+
+| Method       | Path                     | Auth | Purpose                                |
+| ------------ | ------------------------ | :--: | -------------------------------------- |
+| POST         | `/classes/:id/homework`  |  🛡   | Teacher publishes item (type in body). |
+| GET          | `/classes/:id/academics` |  🛡   | Verified member feed.                  |
+| GET          | `/homework/:id`          |  🛡   | Read item (marks read).                |
+| PATCH/DELETE | `/homework/:id`          |  🛡   | Author edits/deletes.                  |
+| POST         | `/schools/:id/notices`   |  🛡   | Publish notice.                        |
+| GET          | `/schools/:id/notices`   |  🛡   | List notices.                          |
+| POST         | `/schools/:id/events`    |  🛡   | Create event.                          |
+| POST         | `/classes/:id/timetable` |  🛡   | Upload timetable.                      |
+| GET          | `/classes/:id/timetable` |  🛡   | View timetable.                        |
+| POST/GET     | `/subjects/:id/syllabus` |  🛡   | Update/view coverage.                  |
+
+## Workflows
+
+| Method | Path                                         | Auth | Purpose                   |
+| ------ | -------------------------------------------- | :--: | ------------------------- |
+| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child. |
+| POST   | `/me/leave`                                  |  🛡   | Teacher applies (own).    |
+| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.      |
+| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.          |
+| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.            |
+| POST   | `/schools/:id/feedback`                      |  🛡   | Complaint/suggestion.     |
+| GET    | `/schools/:id/feedback`                      |  🛡   | Review.                   |
+
+## Social
+
+| Method | Path                                 | Auth | Purpose                   |
+| ------ | ------------------------------------ | :--: | ------------------------- |
+| POST   | `/posts`                             |  🔑  | Create post.              |
+| GET    | `/feed`                              |  🔑  | Aggregated feed (cursor). |
+| POST   | `/posts/:id/like` / `DELETE`         |  🔑  | Like/unlike.              |
+| POST   | `/posts/:id/comments`                |  🔑  | Comment.                  |
+| POST   | `/accounts/:id/follow` / `DELETE`    |  🔑  | Follow/unfollow.          |
+| POST   | `/connections`                       |  🔑  | Request connection.       |
+| POST   | `/connections/:id/accept`            |  🔑  | Accept.                   |
+| GET    | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                |
+| POST   | `/threads/:id/messages`              |  🔑  | Send message.             |
+
+## Notifications & billing
+
+| Method | Path                        | Auth | Purpose                                |
+| ------ | --------------------------- | :--: | -------------------------------------- |
+| GET    | `/notifications?cursor=`    |  🔑  | List (unread count in headers).        |
+| POST   | `/notifications/:id/read`   |  🔑  | Mark read.                             |
+| PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                           |
+| POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).              |
+| GET    | `/plans`                    |  🔑  | Available plans.                       |
+| POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.             |
+| POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified). |
+
+## Ops
+
+| Method | Path       | Auth | Purpose                                 |
+| ------ | ---------- | :--: | --------------------------------------- |
+| GET    | `/healthz` |  🔓  | Liveness.                               |
+| GET    | `/readyz`  |  🔓  | Readiness (DB/Redis/storage).           |
+| GET    | `/metrics` | 🔓†  | Prometheus scrape (network-restricted). |
+
+\* webhook auth is by provider signature, not user token. † `/metrics` restricted to the monitoring network.
