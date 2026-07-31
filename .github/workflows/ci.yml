@@ -1,8 +1,11 @@
 name: CI
 
 on:
+  # Deliberately unfiltered by base branch. Restricting to [development, main] meant a PR stacked
+  # on another feature branch ran *no* checks at all — and `gh pr checks` reports that as "no checks
+  # reported", which reads like pending rather than absent. Sprint 0 merged one such PR believing it
+  # was green.
   pull_request:
-    branches: [development, main]
   push:
     branches: [development]
 
