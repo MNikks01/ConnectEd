@@ -11,6 +11,7 @@ import { uuidParam } from '../../shared/http/params.js';
 import { requireActor } from '../../shared/middleware/authenticate.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import {
+  allocateClassTeacherSchema,
   createClassSchema,
   createSubjectSchema,
   updateClassSchema,
@@ -99,6 +100,26 @@ export function institutionRoutes(service: InstitutionService): ExpressRouter {
         req.body as never,
       );
       res.status(201).json(created);
+    }),
+  );
+
+  router.post(
+    '/classes/:id/class-teacher',
+    validateBody(allocateClassTeacherSchema),
+    handler(async (req, res) => {
+      const allocation = await service.allocateClassTeacher(
+        requireActor(req),
+        uuidParam(req, 'id'),
+        req.body as never,
+      );
+      res.status(200).json(allocation);
+    }),
+  );
+
+  router.get(
+    '/classes/:id/class-teacher',
+    handler(async (req, res) => {
+      res.status(200).json(await service.getClassTeacher(requireActor(req), uuidParam(req, 'id')));
     }),
   );
 

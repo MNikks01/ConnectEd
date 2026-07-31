@@ -15,7 +15,9 @@ import { ConflictError, NotFoundError } from '../../shared/errors/index.js';
 import type { InstitutionRepository, ClassRow } from './institution.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type {
+  AllocateClassTeacherInput,
   ClassResponse,
+  ClassTeacherResponse,
   CreateClassInput,
   CreateSubjectInput,
   SchoolProfileResponse,
@@ -44,6 +46,12 @@ export interface InstitutionService {
     input: CreateSubjectInput,
   ) => Promise<SubjectResponse>;
   listSubjects: (actor: Actor, classId: string) => Promise<SubjectResponse[]>;
+  allocateClassTeacher: (
+    actor: Actor,
+    classId: string,
+    input: AllocateClassTeacherInput,
+  ) => Promise<ClassTeacherResponse>;
+  getClassTeacher: (actor: Actor, classId: string) => Promise<ClassTeacherResponse>;
 }
 
 export function createInstitutionService(repository: InstitutionRepository): InstitutionService {
@@ -138,6 +146,49 @@ export function createInstitutionService(repository: InstitutionRepository): Ins
       // Same reasoning as listClasses: a teacher declaring which subjects they teach needs to see
       // them before they have any verified membership.
       return repository.listSubjects(classId);
+    },
+
+    /**
+     * FR-INST-004. The allocatee must be a **verified** teacher of this school — a self-declared
+     * TEACHER role is not enough, or a school could be tricked into handing class-teacher powers
+     * (leave approval for the whole class) to someone it never approved.
+     */
+    allocateClassTeacher: async (actor, classId, input) => {
+      const klass = await loadClassForSchoolWrite(actor, classId);
+
+      const teacher = await repository.findVerifiedTeacher(input.teacherAccountId, klass.schoolId);
+
+      if (!teacher) {
+        throw new ConflictError('That account is not a verified teacher of this school.');
+      }
+
+      const { allocatedAt } = await repository.allocateClassTeacher({
+        classId,
+        teacherId: teacher.id,
+        actorAccountId: actor.accountId,
+      });
+
+      return {
+        classId,
+        teacherAccountId: input.teacherAccountId,
+        teacherName: teacher.fullName,
+        allocatedAt: allocatedAt.toISOString(),
+      };
+    },
+
+    getClassTeacher: async (_actor, classId) => {
+      const klass = await repository.findClass(classId);
+      if (!klass) throw new NotFoundError();
+
+      const allocation = await repository.findClassTeacher(classId);
+      if (!allocation) throw new NotFoundError('This class has no class teacher yet.');
+
+      return {
+        classId: allocation.classId,
+        teacherAccountId: allocation.teacherAccountId,
+        teacherName: allocation.teacherName,
+        allocatedAt: allocation.allocatedAt.toISOString(),
+      };
     },
   };
 }
