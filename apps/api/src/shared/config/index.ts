@@ -59,6 +59,11 @@ const envSchema = z.object({
   OTEL_SERVICE_NAME: z.string().default('connected-api'),
   /** Traces are exported only when a collector endpoint is configured. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+  /**
+   * Ships logs to Loki when set. Deployed environments collect container stdout instead and leave
+   * this empty; locally the API runs on the host, so nothing would collect it otherwise.
+   */
+  LOKI_URL: z.url().optional(),
 });
 
 export type Config = z.infer<typeof envSchema> & {
