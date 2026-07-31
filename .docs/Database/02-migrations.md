@@ -1,22 +1,29 @@
 # Database — Migrations & Seeding
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-07-31`
 
 ## Tooling
 
-**Prisma Migrate**. `prisma/schema.prisma` is the source of truth; migrations live in `prisma/migrations` and are
-committed. The Prisma client is generated into `node_modules/@prisma/client` and re-exported through a shared
-`db` module in `apps/api/src/shared`.
+**Prisma Migrate** (Prisma 7 — see [`../ADR/0013-prisma-7-driver-adapter.md`](../ADR/0013-prisma-7-driver-adapter.md)).
+`prisma/schema.prisma` is the source of truth; migrations live in `prisma/migrations` and are committed.
+
+Prisma 7 specifics that differ from older guides:
+
+- The `datasource` block has **no `url`**. CLI connection details live in `apps/api/prisma.config.ts`; the
+  running app passes its connection string to the `pg` driver adapter in `apps/api/src/shared/db`.
+- The client is generated into `apps/api/src/generated/prisma` (gitignored) rather than `node_modules`, and is
+  rebuilt by the `postinstall` hook — so a fresh clone must `pnpm install` before `type-check` will pass.
 
 ## Workflow
 
-| Situation                | Command                                                |
-| ------------------------ | ------------------------------------------------------ |
-| Change schema during dev | `pnpm --filter api prisma migrate dev --name <change>` |
-| Apply in CI/staging/prod | `pnpm --filter api prisma migrate deploy`              |
-| Regenerate client        | `pnpm --filter api prisma generate`                    |
-| Inspect data             | `pnpm --filter api prisma studio`                      |
-| Seed                     | `pnpm --filter api prisma db seed`                     |
+| Situation                | Command                                        |
+| ------------------------ | ---------------------------------------------- |
+| Change schema during dev | `pnpm --filter api db:migrate --name <change>` |
+| Apply in CI/staging/prod | `pnpm --filter api db:deploy`                  |
+| Regenerate client        | `pnpm --filter api exec prisma generate`       |
+| Inspect data             | `pnpm --filter api db:studio`                  |
+| Seed                     | `pnpm --filter api db:seed`                    |
+| Reset local database     | `pnpm --filter api db:reset`                   |
 
 ## Rules
 

@@ -7,6 +7,7 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src", "vitest.config.ts"],
+  "//include": "prisma/ and the config files are included so they are type-checked and lintable; tsconfig.build.json drops them from the shipped output.",
+  "include": ["src", "prisma", "prisma.config.ts", "vitest.config.ts"],
   "references": [{ "path": "../../packages/types" }]
 }

@@ -15,10 +15,19 @@ const tracing = startTracing(config);
 const logger = createLogger(config);
 
 const { createApp } = await import('./app.js');
+const { createDb, registerDbReadiness } = await import('./shared/db/index.js');
+const { ReadinessRegistry } = await import('./shared/health/readiness.js');
 
-// Readiness checks register here as their dependencies land:
-//   readiness.register({ name: 'postgres', probe: () => prisma.$queryRaw`SELECT 1` })  // S0-6
-const app = createApp({ config, logger });
+const db = createDb({
+  connectionString: config.DATABASE_URL,
+  logQueries: config.DB_LOG_QUERIES,
+});
+
+// Dependencies register their own readiness probes here, at the composition root.
+const readiness = new ReadinessRegistry();
+registerDbReadiness(readiness, db);
+
+const app = createApp({ config, logger, readiness });
 
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
@@ -47,6 +56,8 @@ function shutdown(signal: string): void {
 
   server.close(() => {
     void (async () => {
+      // Close the pool only after in-flight requests have drained, or their queries would fail.
+      await db.$disconnect();
       await tracing.stop();
       logger.info('Shutdown complete');
       process.exit(0);

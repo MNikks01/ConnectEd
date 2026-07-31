@@ -1,6 +1,6 @@
 # Database — Schema & ERD
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-07-31`
 
 Logical schema (Prisma models will mirror this). Types are indicative; all tables have `id`, `created_at`,
 `updated_at`; user-content tables add `deleted_at`.
@@ -18,6 +18,17 @@ Logical schema (Prisma models will mirror this). Types are indicative; all table
 - `LeaveKind`: `STUDENT | TEACHER`
 - `FeedbackKind`: `COMPLAINT | SUGGESTION`
 - `SubscriptionStatus`: `TRIALING | ACTIVE | PAST_DUE | CANCELED`
+
+Added while implementing the schema, for columns the tables above list without naming a closed set:
+
+- `AccountStatus`: `ACTIVE | SUSPENDED | DEACTIVATED` — `account.status`
+- `FeedbackStatus`: `OPEN | UNDER_REVIEW | RESOLVED` — `feedback.status`
+- `ConnectionStatus`: `PENDING | ACCEPTED` — `connection.status`
+- `ReadReceiptSubject`: `NOTICE | ACADEMIC_ITEM | EVENT | TIMETABLE` — `read_receipt.subject_type`
+- `NotificationCategory`: `ACADEMIC | NOTICE | EVENT | LEAVE | SOCIAL | MESSAGE | VERIFICATION | BILLING` —
+  `notification_pref.category`. Note `notification.type` stays a free-form string: types grow per module, so
+  only the preference _category_ is a closed set.
+- `DevicePlatform`: `IOS | ANDROID | WEB` — `push_token.platform`
 
 ## Identity & accounts
 
@@ -42,10 +53,18 @@ Logical schema (Prisma models will mirror this). Types are indicative; all table
 
 ## Membership & verification
 
-| Table                  | Key columns                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verification_request` | `id`, `requester_account_id FK`, `school_id FK`, `role (UserRole)`, `class_id FK?`, `child_id FK?`, `status`, `decided_by`, `decided_at`, `payload jsonb`           |
-| `membership`           | `id`, `account_id FK`, `school_id FK`, `role`, `class_id FK?`, `child_id FK?`, `status (VerificationStatus)`, UNIQUE(`account_id,school_id,role,class_id,child_id`) |
+| Table                  | Key columns                                                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `verification_request` | `id`, `requester_account_id FK`, `school_id FK`, `role (UserRole)`, `class_id FK?`, `child_id FK?`, `status`, `decided_by`, `decided_at`, `payload jsonb`                |
+| `membership`           | `id`, `account_id FK`, `school_id FK`, `role`, `class_id FK?`, `child_id FK?`, `scope_key`, `status (VerificationStatus)`, UNIQUE(`account_id,school_id,role,scope_key`) |
+
+> **Why `scope_key` instead of the nullable columns.** The original design put `class_id, child_id` directly in
+> the unique constraint. Postgres treats NULLs as **distinct**, so that constraint would not have prevented
+> duplicate `PRINCIPAL`/`TEACHER` memberships — the rows with no class or child, and the most authority.
+> `scope_key` is a non-null derivation of the optional pair (`membershipScopeKey()` in
+> `apps/api/src/shared/db`), which makes the constraint enforceable. Postgres 15+ could express this with
+> `UNIQUE NULLS NOT DISTINCT`, but Prisma cannot emit it, and hand-written partial indexes would be reverted by
+> the next `migrate dev`. See `ADR-0013` for the Prisma version context.
 
 ## Academic content
 

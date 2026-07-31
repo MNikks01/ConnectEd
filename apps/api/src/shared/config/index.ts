@@ -16,6 +16,14 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(4000),
   WEB_ORIGIN: z.url().default('http://localhost:3000'),
 
+  /** Required: the API is useless without its database, so fail at boot rather than at first query. */
+  DATABASE_URL: z.string().min(1),
+  /** Logs every SQL statement. Local debugging only — query text is PII-adjacent. */
+  DB_LOG_QUERIES: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   /** `/metrics` is served only when enabled; network-level restriction is the infra's job. */
