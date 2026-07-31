@@ -1,0 +1,12 @@
+{
+  "//": "NodeNext so the emitted ESM carries explicit .js specifiers — apps/api runs this output directly on node.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true
+  },
+  "include": ["src"]
+}

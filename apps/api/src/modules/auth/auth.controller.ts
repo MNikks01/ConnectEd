@@ -1,0 +1,164 @@
+/**
+ * HTTP shell for the auth module. No business logic here (`apps/api/CLAUDE.md` rule 2) — it reads
+ * the request, calls a service, and shapes the response.
+ *
+ * It does own one HTTP-specific concern: where the refresh token lives. Web clients get an
+ * httpOnly cookie the browser cannot hand to script; mobile clients get it in the body because
+ * they have no cookie jar and use secure device storage instead.
+ */
+import { requireActor } from '../../shared/middleware/authenticate.js';
+
+import type { AuthService, AuthSession, ClientType } from './auth.service.js';
+import type { Config } from '../../shared/config/index.js';
+import type { CookieOptions, Request, RequestHandler, Response } from 'express';
+
+export const REFRESH_COOKIE = 'connected_refresh';
+
+/** Scoped to the refresh route so the cookie is not attached to every request. */
+const REFRESH_COOKIE_PATH = '/api/v1/auth';
+
+export interface AuthControllerDeps {
+  service: AuthService;
+  config: Config;
+}
+
+export interface AuthController {
+  registerIndividual: RequestHandler;
+  registerSchool: RequestHandler;
+  login: RequestHandler;
+  refresh: RequestHandler;
+  logout: RequestHandler;
+  me: RequestHandler;
+}
+
+export function createAuthController({ service, config }: AuthControllerDeps): AuthController {
+  function cookieOptions(expires: Date): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: config.cookieSecure,
+      // 'lax' still sends the cookie on top-level navigation but not on cross-site subrequests,
+      // which is the CSRF-relevant case for a refresh endpoint.
+      sameSite: 'lax',
+      path: REFRESH_COOKIE_PATH,
+      expires,
+    };
+  }
+
+  /**
+   * Web responses deliberately omit the refresh token from the body — putting it there would make
+   * it readable by script, defeating the httpOnly cookie.
+   */
+  function sendSession(res: Response, session: AuthSession, clientType: ClientType): void {
+    const body: Record<string, unknown> = {
+      accessToken: session.accessToken,
+      expiresIn: session.expiresInSeconds,
+      tokenType: 'Bearer',
+    };
+
+    if (clientType === 'mobile') {
+      body.refreshToken = session.refreshToken;
+    } else {
+      res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(session.refreshExpiresAt));
+    }
+
+    res.status(res.statusCode === 201 ? 201 : 200).json(body);
+  }
+
+  return {
+    registerIndividual: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const session = await service.registerIndividual(req.body as never);
+          res.status(201);
+          sendSession(res, session, clientTypeOf(req));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    registerSchool: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const session = await service.registerSchool(req.body as never);
+          res.status(201);
+          sendSession(res, session, clientTypeOf(req));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    login: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const clientType = clientTypeOf(req);
+          const session = await service.login(req.body as never, clientType);
+          sendSession(res, session, clientType);
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    refresh: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const clientType = clientTypeOf(req);
+          const token = refreshTokenFrom(req);
+
+          if (!token) {
+            const { UnauthenticatedError } = await import('../../shared/errors/index.js');
+            throw new UnauthenticatedError('Your session is invalid or has expired.');
+          }
+
+          const session = await service.refresh(token);
+          sendSession(res, session, clientType);
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    logout: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          await service.logout(refreshTokenFrom(req));
+          res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+          res.status(204).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    me: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const actor = requireActor(req);
+          res.status(200).json(await service.currentAccount(actor.accountId));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+  };
+}
+
+/**
+ * `X-Client-Type` drives the school-web-only rule (`.docs/API/01-conventions.md`). It is a client
+ * hint, not a security boundary — a mobile app could lie. The rule it feeds is a product
+ * constraint, and anything that actually matters is enforced by role and membership instead.
+ */
+function clientTypeOf(req: Request): ClientType {
+  return req.get('x-client-type')?.toLowerCase() === 'mobile' ? 'mobile' : 'web';
+}
+
+/** Cookie first (web), then body (mobile). */
+function refreshTokenFrom(req: Request): string | undefined {
+  const fromCookie = (req.cookies as Record<string, unknown> | undefined)?.[REFRESH_COOKIE];
+  if (typeof fromCookie === 'string' && fromCookie.length > 0) return fromCookie;
+
+  const fromBody = (req.body as { refreshToken?: unknown } | undefined)?.refreshToken;
+  return typeof fromBody === 'string' && fromBody.length > 0 ? fromBody : undefined;
+}

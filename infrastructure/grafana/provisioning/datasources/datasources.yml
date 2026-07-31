@@ -1,0 +1,55 @@
+# Grafana datasources, provisioned as code.
+#
+# The correlation wiring matters as much as the datasources themselves: one `correlationId` or
+# `traceId` should pivot across metrics, logs, and traces
+# (`.docs/Monitoring/00-observability.md`). Without `derivedFields` and `tracesToLogs`, an
+# engineer has to copy ids between tabs by hand at exactly the moment they can least afford to.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        # Turns a traceId in a log line into a link straight to the trace.
+        - name: TraceID
+          matcherRegex: '"traceId":"(\w+)"'
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+        - name: CorrelationID
+          matcherRegex: '"correlationId":"([\w.:-]+)"'
+          url: '$${__value.raw}'
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        filterByTraceID: true
+      tracesToMetrics:
+        datasourceUid: prometheus
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true

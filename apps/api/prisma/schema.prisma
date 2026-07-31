@@ -1,0 +1,861 @@
+// ConnectEd — Prisma schema v1.
+//
+// Mirrors `.docs/Database/01-schema.md`. Conventions from `.docs/Database/00-overview.md`:
+//   - surrogate uuid PKs; human names are attributes, never keys (the legacy app used name-as-path)
+//   - created_at / updated_at on every table; deleted_at (soft delete) on user content
+//   - closed sets are DB enums, mirrored in packages/types
+//   - FK columns indexed, plus composite indexes for the hot queries called out in the doc
+//
+// School-scoped rows reference `school_profile.account_id` rather than `account.id`, so the database
+// itself guarantees the target is a SCHOOL account — an individual account has no school_profile row.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts (CLI) and in the driver adapter
+// (runtime), not here. See ADR-0013.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AccountType {
+  INDIVIDUAL
+  SCHOOL
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum UserRole {
+  STUDENT
+  PARENT
+  TEACHER
+  PRINCIPAL
+  USER
+}
+
+enum Medium {
+  ENGLISH
+  HINDI
+}
+
+enum ClassLevel {
+  PRE_NURSERY
+  NURSERY
+  KG1
+  KG2
+  CLASS_1
+  CLASS_2
+  CLASS_3
+  CLASS_4
+  CLASS_5
+  CLASS_6
+  CLASS_7
+  CLASS_8
+  CLASS_9
+  CLASS_10
+  CLASS_11
+  CLASS_12
+}
+
+enum Section {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+enum AcademicItemType {
+  HOMEWORK
+  ASSIGNMENT
+  PROJECT
+}
+
+enum LeaveStatus {
+  RECEIVED
+  ACCEPTED
+  REJECTED
+}
+
+enum LeaveKind {
+  STUDENT
+  TEACHER
+}
+
+enum FeedbackKind {
+  COMPLAINT
+  SUGGESTION
+}
+
+enum FeedbackStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// Polymorphic target of a read receipt. Kept as an enum + loose id rather than one join table per
+/// content type, matching the legacy VIEWED_BY[] semantics without the array.
+enum ReadReceiptSubject {
+  NOTICE
+  ACADEMIC_ITEM
+  EVENT
+  TIMETABLE
+}
+
+enum NotificationCategory {
+  ACADEMIC
+  NOTICE
+  EVENT
+  LEAVE
+  SOCIAL
+  MESSAGE
+  VERIFICATION
+  BILLING
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+// ---------------------------------------------------------------------------
+// Identity & accounts
+// ---------------------------------------------------------------------------
+
+model Account {
+  id              String        @id @default(uuid()) @db.Uuid
+  type            AccountType
+  email           String        @unique
+  emailVerifiedAt DateTime?     @map("email_verified_at")
+  status          AccountStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+
+  credential    Credential?
+  userProfile   UserProfile?
+  schoolProfile SchoolProfile?
+  refreshTokens RefreshToken[]
+
+  teacherProfiles      TeacherProfile[]
+  children             Child[]
+  memberships          Membership[]
+  verificationRequests VerificationRequest[] @relation("VerificationRequester")
+  academicItems        AcademicItem[]
+  notices              Notice[]
+  leaveApplications    LeaveApplication[]
+  feedback             Feedback[]
+  readReceipts         ReadReceipt[]
+  posts                Post[]
+  postLikes            PostLike[]
+  postComments         PostComment[]
+  following            Follow[]              @relation("Follower")
+  followers            Follow[]              @relation("Followee")
+  connectionsInitiated Connection[]          @relation("ConnectionA")
+  connectionsReceived  Connection[]          @relation("ConnectionB")
+  threadsAsA           MessageThread[]       @relation("ThreadParticipantA")
+  threadsAsB           MessageThread[]       @relation("ThreadParticipantB")
+  messagesSent         Message[]
+  notifications        Notification[]
+  notificationPrefs    NotificationPref[]
+  pushTokens           PushToken[]
+
+  @@index([type])
+  @@map("account")
+}
+
+/// Password material, split from `account` so an account read never drags the hash along.
+/// Plaintext passwords are never stored or logged (`apps/api/CLAUDE.md` rule 7).
+model Credential {
+  accountId    String   @id @map("account_id") @db.Uuid
+  passwordHash String   @map("password_hash")
+  /// e.g. "argon2id" — recorded so hashes can be re-hashed when parameters change.
+  algo         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("credential")
+}
+
+/// Rotating refresh tokens (ADR-0007). `familyId` groups a rotation chain so detecting reuse of an
+/// already-rotated token can revoke the whole family.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  familyId   String    @map("family_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([familyId])
+  @@map("refresh_token")
+}
+
+model UserProfile {
+  accountId     String    @id @map("account_id") @db.Uuid
+  fullName      String    @map("full_name")
+  handle        String    @unique
+  mobile        String?
+  gender        String?
+  dob           DateTime? @db.Date
+  bio           String?
+  displayPicKey String?   @map("display_pic_key")
+  achievements  String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([role])
+  @@map("user_profile")
+}
+
+/// Institution accounts are web-only (enforced at login, not here).
+model SchoolProfile {
+  accountId        String   @id @map("account_id") @db.Uuid
+  name             String
+  adminName        String?  @map("admin_name")
+  phone            String?
+  addressLine1     String?  @map("address_line1")
+  addressLine2     String?  @map("address_line2")
+  city             String?
+  state            String?
+  postalCode       String?  @map("postal_code")
+  country          String?
+  about            String?
+  mission          String?
+  vision           String?
+  facilities       String?
+  establishmentYear Int?    @map("establishment_year")
+  affiliation      String?
+  displayPicKey    String?  @map("display_pic_key")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  classes              Class[]
+  teacherProfiles      TeacherProfile[]
+  children             Child[]
+  memberships          Membership[]
+  verificationRequests VerificationRequest[]
+  notices              Notice[]
+  events               Event[]
+  leaveApplications    LeaveApplication[]
+  feedback             Feedback[]
+  subscription         Subscription?
+
+  @@index([name])
+  @@map("school_profile")
+}
+
+// ---------------------------------------------------------------------------
+// Institution & academics structure
+// ---------------------------------------------------------------------------
+
+/// Replaces the legacy `classKey` string ("EngClass8SecA"); the key is derived for display only.
+model Class {
+  id        String     @id @default(uuid()) @db.Uuid
+  schoolId  String     @map("school_id") @db.Uuid
+  medium    Medium
+  level     ClassLevel
+  section   Section
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+
+  subjects          Subject[]
+  classTeacher      ClassTeacher?
+  children          Child[]
+  memberships       Membership[]
+  academicItems     AcademicItem[]
+  timetables        Timetable[]
+  leaveApplications LeaveApplication[]
+  verificationRequests VerificationRequest[]
+
+  @@unique([schoolId, medium, level, section])
+  @@index([schoolId])
+  @@map("class")
+}
+
+model Subject {
+  id        String   @id @default(uuid()) @db.Uuid
+  classId   String   @map("class_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  allocations      SubjectAllocation[]
+  academicItems    AcademicItem[]
+  syllabusProgress SyllabusProgress[]
+
+  @@unique([classId, name])
+  @@index([classId])
+  @@map("subject")
+}
+
+model TeacherProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  school  SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+
+  allocations  SubjectAllocation[]
+  classTeacher ClassTeacher[]
+
+  @@unique([accountId, schoolId])
+  @@index([schoolId])
+  @@map("teacher_profile")
+}
+
+/// Backs "can this teacher publish to this subject?" (`.docs/Database/03-rbac-data.md`).
+model SubjectAllocation {
+  id        String   @id @default(uuid()) @db.Uuid
+  teacherId String   @map("teacher_id") @db.Uuid
+  subjectId String   @map("subject_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, subjectId])
+  @@index([subjectId])
+  @@map("subject_allocation")
+}
+
+/// `classId` is unique, which is the integrity guard for "at most one class teacher per class".
+model ClassTeacher {
+  classId     String   @id @map("class_id") @db.Uuid
+  teacherId   String   @map("teacher_id") @db.Uuid
+  allocatedAt DateTime @default(now()) @map("allocated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  class   Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+  @@map("class_teacher")
+}
+
+/// A parent's child. Not an account — children do not log in; the parent acts within their scope.
+model Child {
+  id              String   @id @default(uuid()) @db.Uuid
+  parentAccountId String   @map("parent_account_id") @db.Uuid
+  fullName        String   @map("full_name")
+  schoolId        String?  @map("school_id") @db.Uuid
+  classId         String?  @map("class_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  parent Account        @relation(fields: [parentAccountId], references: [id], onDelete: Cascade)
+  school SchoolProfile? @relation(fields: [schoolId], references: [accountId], onDelete: SetNull)
+  class  Class?         @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  memberships          Membership[]
+  verificationRequests VerificationRequest[]
+  leaveApplications    LeaveApplication[]
+
+  @@index([parentAccountId])
+  @@index([classId])
+  @@map("child")
+}
+
+// ---------------------------------------------------------------------------
+// Membership & verification
+// ---------------------------------------------------------------------------
+
+model VerificationRequest {
+  id                 String             @id @default(uuid()) @db.Uuid
+  requesterAccountId String             @map("requester_account_id") @db.Uuid
+  schoolId           String             @map("school_id") @db.Uuid
+  role               UserRole
+  classId            String?            @map("class_id") @db.Uuid
+  childId            String?            @map("child_id") @db.Uuid
+  status             VerificationStatus @default(PENDING)
+  decidedBy          String?            @map("decided_by") @db.Uuid
+  decidedAt          DateTime?          @map("decided_at")
+  payload            Json?
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  requester Account       @relation("VerificationRequester", fields: [requesterAccountId], references: [id], onDelete: Cascade)
+  school    SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+  class     Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  child     Child?        @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@index([requesterAccountId])
+  @@index([schoolId, status])
+  @@map("verification_request")
+}
+
+/// The row every academic authorization check reads: it scopes an account to a
+/// (school, role, class?, child?) and records whether that scope is VERIFIED.
+model Membership {
+  id        String             @id @default(uuid()) @db.Uuid
+  accountId String             @map("account_id") @db.Uuid
+  schoolId  String             @map("school_id") @db.Uuid
+  role      UserRole
+  classId   String?            @map("class_id") @db.Uuid
+  childId   String?            @map("child_id") @db.Uuid
+  /// Non-null stand-in for (class_id, child_id) in the unique constraint below.
+  ///
+  /// `.docs/Database/03-rbac-data.md` names UNIQUE(account_id, school_id, role, class_id, child_id)
+  /// as the guard against duplicate/ambiguous scopes — but Postgres treats NULLs as *distinct*, so
+  /// that constraint would not have stopped duplicate PRINCIPAL or TEACHER memberships, which carry
+  /// no class or child. Those are the rows with the most authority. Postgres 15+ could express this
+  /// with NULLS NOT DISTINCT, but Prisma cannot emit it, and hand-written partial indexes would be
+  /// reverted by every later `migrate dev`.
+  ///
+  /// Always derive this with `membershipScopeKey()` — never set it by hand.
+  scopeKey  String             @map("scope_key")
+  status    VerificationStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  school  SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+  class   Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  child   Child?        @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@unique([accountId, schoolId, role, scopeKey])
+  @@index([accountId, status])
+  @@index([classId, status])
+  @@index([schoolId])
+  @@map("membership")
+}
+
+// ---------------------------------------------------------------------------
+// Academic content
+// ---------------------------------------------------------------------------
+
+model AcademicItem {
+  id              String           @id @default(uuid()) @db.Uuid
+  type            AcademicItemType
+  classId         String           @map("class_id") @db.Uuid
+  subjectId       String           @map("subject_id") @db.Uuid
+  authorAccountId String           @map("author_account_id") @db.Uuid
+  title           String
+  body            String
+  imageKey        String?          @map("image_key")
+  dueAt           DateTime?        @map("due_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  author  Account @relation(fields: [authorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([classId, createdAt])
+  @@index([subjectId])
+  @@index([authorAccountId])
+  @@map("academic_item")
+}
+
+model Notice {
+  id              String    @id @default(uuid()) @db.Uuid
+  schoolId        String    @map("school_id") @db.Uuid
+  authorAccountId String    @map("author_account_id") @db.Uuid
+  title           String
+  body            String
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+  author Account       @relation(fields: [authorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
+  @@index([authorAccountId])
+  @@map("notice")
+}
+
+model Event {
+  id        String    @id @default(uuid()) @db.Uuid
+  schoolId  String    @map("school_id") @db.Uuid
+  title     String
+  body      String
+  eventAt   DateTime  @map("event_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+
+  @@index([schoolId, eventAt])
+  @@map("event")
+}
+
+model Timetable {
+  id        String   @id @default(uuid()) @db.Uuid
+  classId   String   @map("class_id") @db.Uuid
+  imageKey  String   @map("image_key")
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, version])
+  @@index([classId])
+  @@map("timetable")
+}
+
+model SyllabusProgress {
+  id        String   @id @default(uuid()) @db.Uuid
+  subjectId String   @map("subject_id") @db.Uuid
+  topic     String
+  percent   Int      @default(0)
+  updatedBy String?  @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, topic])
+  @@index([subjectId])
+  @@map("syllabus_progress")
+}
+
+/// Replaces the legacy VIEWED_BY[] arrays. The unique constraint makes "mark as read" idempotent.
+model ReadReceipt {
+  id          String             @id @default(uuid()) @db.Uuid
+  subjectType ReadReceiptSubject @map("subject_type")
+  subjectId   String             @map("subject_id") @db.Uuid
+  accountId   String             @map("account_id") @db.Uuid
+  readAt      DateTime           @default(now()) @map("read_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectType, subjectId, accountId])
+  @@index([accountId])
+  @@map("read_receipt")
+}
+
+// ---------------------------------------------------------------------------
+// Workflows
+// ---------------------------------------------------------------------------
+
+model LeaveApplication {
+  id                 String      @id @default(uuid()) @db.Uuid
+  kind               LeaveKind
+  applicantAccountId String      @map("applicant_account_id") @db.Uuid
+  childId            String?     @map("child_id") @db.Uuid
+  classId            String?     @map("class_id") @db.Uuid
+  schoolId           String      @map("school_id") @db.Uuid
+  startDate          DateTime    @map("start_date") @db.Date
+  endDate            DateTime    @map("end_date") @db.Date
+  reason             String
+  status             LeaveStatus @default(RECEIVED)
+  decidedBy          String?     @map("decided_by") @db.Uuid
+  decidedAt          DateTime?   @map("decided_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  applicant Account       @relation(fields: [applicantAccountId], references: [id], onDelete: Cascade)
+  child     Child?        @relation(fields: [childId], references: [id], onDelete: SetNull)
+  class     Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  school    SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+
+  @@index([applicantAccountId])
+  @@index([classId, status])
+  @@index([schoolId, status])
+  @@map("leave_application")
+}
+
+model Feedback {
+  id              String         @id @default(uuid()) @db.Uuid
+  kind            FeedbackKind
+  authorAccountId String         @map("author_account_id") @db.Uuid
+  schoolId        String         @map("school_id") @db.Uuid
+  body            String
+  status          FeedbackStatus @default(OPEN)
+  reviewedBy      String?        @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime?      @map("reviewed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  author Account       @relation(fields: [authorAccountId], references: [id], onDelete: Cascade)
+  school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+
+  @@index([authorAccountId])
+  @@index([schoolId, status])
+  @@map("feedback")
+}
+
+// ---------------------------------------------------------------------------
+// Social
+// ---------------------------------------------------------------------------
+
+model Post {
+  id              String    @id @default(uuid()) @db.Uuid
+  authorAccountId String    @map("author_account_id") @db.Uuid
+  body            String
+  imageKey        String?   @map("image_key")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  author Account @relation(fields: [authorAccountId], references: [id], onDelete: Cascade)
+
+  likes    PostLike[]
+  comments PostComment[]
+
+  @@index([authorAccountId, createdAt])
+  @@map("post")
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, accountId])
+  @@index([accountId])
+  @@map("post_like")
+}
+
+model PostComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @map("post_id") @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([accountId])
+  @@map("post_comment")
+}
+
+model Follow {
+  id                String   @id @default(uuid()) @db.Uuid
+  followerAccountId String   @map("follower_account_id") @db.Uuid
+  followeeAccountId String   @map("followee_account_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  follower Account @relation("Follower", fields: [followerAccountId], references: [id], onDelete: Cascade)
+  followee Account @relation("Followee", fields: [followeeAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([followerAccountId, followeeAccountId])
+  @@index([followeeAccountId])
+  @@map("follow")
+}
+
+/// Symmetric relationship. Services must order the pair (a < b) before writing, so the unique
+/// constraint cannot be bypassed by swapping the two ids.
+model Connection {
+  id          String           @id @default(uuid()) @db.Uuid
+  aAccountId  String           @map("a_account_id") @db.Uuid
+  bAccountId  String           @map("b_account_id") @db.Uuid
+  status      ConnectionStatus @default(PENDING)
+  requestedBy String           @map("requested_by") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  a Account @relation("ConnectionA", fields: [aAccountId], references: [id], onDelete: Cascade)
+  b Account @relation("ConnectionB", fields: [bAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([aAccountId, bAccountId])
+  @@index([bAccountId, status])
+  @@map("connection")
+}
+
+model MessageThread {
+  id           String   @id @default(uuid()) @db.Uuid
+  participantA String   @map("participant_a") @db.Uuid
+  participantB String   @map("participant_b") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  a Account @relation("ThreadParticipantA", fields: [participantA], references: [id], onDelete: Cascade)
+  b Account @relation("ThreadParticipantB", fields: [participantB], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  @@unique([participantA, participantB])
+  @@index([participantB])
+  @@map("message_thread")
+}
+
+model Message {
+  id              String    @id @default(uuid()) @db.Uuid
+  threadId        String    @map("thread_id") @db.Uuid
+  senderAccountId String    @map("sender_account_id") @db.Uuid
+  body            String
+  readAt          DateTime? @map("read_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender Account       @relation(fields: [senderAccountId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([senderAccountId])
+  @@map("message")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications & billing
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id                 String    @id @default(uuid()) @db.Uuid
+  recipientAccountId String    @map("recipient_account_id") @db.Uuid
+  /// Free-form because notification types grow per module; the closed set is the *category* below.
+  type               String
+  payload            Json?
+  readAt             DateTime? @map("read_at")
+  /// Idempotency key for the async fan-out: a redelivered event must not duplicate the row.
+  eventId            String?   @unique @map("event_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  recipient Account @relation(fields: [recipientAccountId], references: [id], onDelete: Cascade)
+
+  @@index([recipientAccountId, readAt])
+  @@map("notification")
+}
+
+model NotificationPref {
+  id        String               @id @default(uuid()) @db.Uuid
+  accountId String               @map("account_id") @db.Uuid
+  category  NotificationCategory
+  enabled   Boolean              @default(true)
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, category])
+  @@map("notification_pref")
+}
+
+model PushToken {
+  id         String         @id @default(uuid()) @db.Uuid
+  accountId  String         @map("account_id") @db.Uuid
+  platform   DevicePlatform
+  token      String         @unique
+  lastSeenAt DateTime       @default(now()) @map("last_seen_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("push_token")
+}
+
+model Plan {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  limits    Json?
+  features  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plan")
+}
+
+model Subscription {
+  id          String             @id @default(uuid()) @db.Uuid
+  schoolId    String             @unique @map("school_id") @db.Uuid
+  planId      String             @map("plan_id") @db.Uuid
+  status      SubscriptionStatus @default(TRIALING)
+  periodStart DateTime           @map("period_start")
+  periodEnd   DateTime           @map("period_end")
+  providerRef String?            @map("provider_ref")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+  plan   Plan          @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([status])
+  @@map("subscription")
+}
+
+/// Append-only record of authorization-relevant decisions (`.docs/Database/03-rbac-data.md`):
+/// verification decisions, membership revocations, class-teacher allocation, leave decisions,
+/// role changes, subscription changes. No FK on the actor so the trail survives account deletion.
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorAccountId String?  @map("actor_account_id") @db.Uuid
+  action         String
+  entity         String
+  entityId       String?  @map("entity_id")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([actorAccountId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}

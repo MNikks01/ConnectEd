@@ -26,14 +26,14 @@ On top of this academic backbone, it layers a **familiar social experience** —
 
 ## Who uses it?
 
-| Actor | Where they work | What they primarily do |
-|---|---|---|
-| **School** (institution admin) | Website only | Set up classes, verify members, publish notices/events, manage the academic system |
-| **Principal** | Mobile + web | Oversee the school, approve teacher leave, view academics, handle complaints |
-| **Teacher** | Mobile + web | Publish homework/projects, update syllabus, approve student leave (if class teacher) |
-| **Parent** | Mobile + web | Track a child's homework, timetable, notices; apply for the child's leave |
-| **Student** | Mobile + web | View homework, timetable, syllabus, notices; use social features |
-| **General User** | Mobile + web | Use only the social layer (no school affiliation) |
+| Actor                          | Where they work | What they primarily do                                                               |
+| ------------------------------ | --------------- | ------------------------------------------------------------------------------------ |
+| **School** (institution admin) | Website only    | Set up classes, verify members, publish notices/events, manage the academic system   |
+| **Principal**                  | Mobile + web    | Oversee the school, approve teacher leave, view academics, handle complaints         |
+| **Teacher**                    | Mobile + web    | Publish homework/projects, update syllabus, approve student leave (if class teacher) |
+| **Parent**                     | Mobile + web    | Track a child's homework, timetable, notices; apply for the child's leave            |
+| **Student**                    | Mobile + web    | View homework, timetable, syllabus, notices; use social features                     |
+| **General User**               | Mobile + web    | Use only the social layer (no school affiliation)                                    |
 
 ## Why does it exist?
 
@@ -42,8 +42,8 @@ The product exists to **digitise and unify school–family communication in one 
 - A **Subscription** area on the website (currently a placeholder — see [Missing Features](./16-missing-features.md)), implying a paid/subscription model for schools.
 - **AdMob banner advertising** wired into the mobile app, implying an ad-supported revenue stream for the consumer side.
 
-**Assumption:** The business model is a hybrid of *school subscriptions* (institutional SaaS) and *advertising* (consumer app). This is inferred from the presence of a subscription route and Google Mobile Ads configuration; no pricing, billing, or entitlement logic exists in the code to confirm it.
+**Assumption:** The business model is a hybrid of _school subscriptions_ (institutional SaaS) and _advertising_ (consumer app). This is inferred from the presence of a subscription route and Google Mobile Ads configuration; no pricing, billing, or entitlement logic exists in the code to confirm it.
 
 ## One-line positioning
 
-> *"A single app where a school runs its daily academics and its whole community stays connected — homework, notices, timetables and leave on one side; profiles, posts, followers and messages on the other."*
+> _"A single app where a school runs its daily academics and its whole community stays connected — homework, notices, timetables and leave on one side; profiles, posts, followers and messages on the other."_

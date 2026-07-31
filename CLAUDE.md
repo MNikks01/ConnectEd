@@ -4,67 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-This repo contains **documentation only** — there is no application source code here. It is a
-reverse-engineered Product Requirements Documentation (PRD) set for the **ConnectEdApp / GetConnected**
-ecosystem, reconstructed from source-code analysis of two *external* repos (`ConnectEdApp/` mobile and
-`getconnected/` web) that are **not present in this working directory**. All 21 documents live under `docs/`.
+**ConnectEd** — a K-12 school-community platform (web brand _GetConnected_) being **rebuilt** on a modern stack.
+The repo is currently in the **documentation + project-setup** phase: engineering docs are complete under
+[`.docs/`](.docs/); application code is scaffolded but not yet implemented.
 
-There is no build, lint, test, or run step. Work here is reading and editing Markdown. Preview rendering
-with any Markdown viewer if needed.
+Two document sets — do not confuse them:
 
-## The product being documented
+- [`.docs/`](.docs/) — **forward-looking engineering docs** for the rebuild. **Source of truth.**
+- [`docs/`](docs/) — **legacy reverse-engineered PRD** of the original Firebase app. **Domain reference only.**
+  Where the two disagree, `.docs/` wins; the rebuild deliberately reverses several legacy choices (see
+  [`.docs/ADR/`](.docs/ADR/)).
 
-ConnectEdApp (web brand **GetConnected**) is a K-12 school-community platform combining an e-schooling
-academic system with a social network layer. Two front-ends share **one Firebase backend** (project
-`random-21953`) with **no custom API server** — all reads/writes are client-side:
+## Stack (decided — see ADRs)
 
-- **ConnectEdApp** — React Native / Expo (Android), for individual users.
-- **GetConnected** — React web app on Firebase Hosting, for school admins (school portal) and desktop users.
+- **Monorepo:** pnpm workspaces + Turborepo — `apps/web`, `apps/api`, `packages/{types,ui,config}`.
+- **Frontend:** Next.js (App Router) + React + TanStack Query.
+- **Backend:** Node.js + Express + Prisma (modular monolith).
+- **Database:** PostgreSQL. **Cache/queue:** Redis (BullMQ). **Media:** S3-compatible (MinIO locally).
+- **Auth:** JWT access + rotating refresh, argon2id hashing. **AuthZ:** server-enforced RBAC + verification.
+- **CI/CD:** GitHub Actions + Changesets + CodeRabbit + Husky. **Observability:** Prometheus/Grafana/Loki/Tempo.
 
-Hard rule: **school accounts are web-only** (mobile login is rejected). Six actors: Student, Parent,
-Teacher, Principal, General User (`USER_CURRENT_STATUS` on a `USERS` doc), and School (separate `SCHOOLS`
-collection). Academic actors must be **school-verified** (`VERIFIED_*` flags) before class data unlocks —
-this verification workflow is the product's spine.
+## The one rule that defines the product
 
-## Documentation structure
+**All authorization is server-enforced** on every request against role + verification state + resource ownership.
+The legacy app had _no_ server-side access control and stored _plaintext passwords_ — fixing this is the whole
+point of the rebuild. The [permission matrix](.docs/PRD/09-permissions-matrix.md) is the contract; every scoped
+endpoint needs positive **and** negative permission tests. Never gate access only on the client.
 
-- `docs/README.md` — one-page product summary and reading guide (start here for product context).
-- `docs/TABLE_OF_CONTENTS.md` — index of all docs and the writing conventions (read before editing).
-- `docs/01`–`docs/18` — numbered docs, ordered narrative → features → screens → journeys → technical layer
-  (Firebase/Firestore/permissions) → notifications/search/settings → gaps/future/full-flow.
-- `docs/GLOSSARY.md` — domain terminology.
+Other invariants: school (institution) accounts are **web-only**; passwords are **never** stored/logged in
+plaintext; verification gates all academic reads/writes; academic writes are transactional with async
+notification fan-out.
 
-When adding or restructuring docs, keep `README.md`, `TABLE_OF_CONTENTS.md`, and the numbered filename
-scheme in sync — they cross-link each other with relative paths.
+## Where things live
 
-## Writing conventions (enforced across all docs — match them when editing)
+| Path                   | What                                                                      |
+| ---------------------- | ------------------------------------------------------------------------- |
+| [`.docs/`](.docs/)     | All engineering docs (start at [`.docs/README.md`](.docs/README.md)).     |
+| [`.agents/`](.agents/) | Team role charters (also usable as subagent personas).                    |
+| `apps/web`, `apps/api` | Next.js app / Express API (see each folder's `CLAUDE.md`).                |
+| `packages/*`           | Shared `types`, `ui` design system, `config` (eslint/tsconfig/prettier).  |
+| `infrastructure/`      | docker, k8s, helm, terraform, nginx, and the observability stack configs. |
+| `scripts/`             | Tooling scripts (e.g. optional `setup-claude.sh`).                        |
 
-- Every claim is **grounded in observed source code** (query paths, field names, navigation stacks,
-  constants). Do not add product behavior that isn't evidenced.
-- **Assumption** — a stated inference not fully provable from code, always with its reasoning.
-- **Inferred** — a lighter guess from naming/structure; likely but unverified.
-- `MONOSPACE_CAPS` — a verbatim Firestore field / collection / document identifier from the code
-  (e.g. `USER_CURRENT_STATUS`, `VERIFIED_TEACHER`, `PROJECTS_&_HOMEWORKS`). Preserve exact casing.
-- "Class" always means a **Medium + Class + Section** combination encoded as one key, e.g. `EngClass5SecA`.
+## Working here
 
-## Domain facts that span multiple docs
+- **Git flow:** branch off `development` → PR into `development` → release PR to `main` (production). Never commit
+  directly to `main`/`development`. Conventional Commits; include a Changeset for shippable changes. Full rules:
+  [`.docs/CI-CD/00-git-flow.md`](.docs/CI-CD/00-git-flow.md).
+- **Before a PR:** satisfy the relevant [`.docs/Checklists/`](.docs/Checklists/) and update docs/ADRs.
+- **Significant/hard-to-reverse decision?** Write an ADR ([`.docs/ADR/`](.docs/ADR/)).
+- **Commands** (live after project setup): see [`.docs/Setup/00-getting-started.md`](.docs/Setup/00-getting-started.md).
+- Local settings `.claude/settings.local.json` are gitignored.
 
-These recur throughout and are easy to get wrong; they require reading several files to reconstruct:
+## Conventions
 
-- **Two root collections only:** `USERS` and `SCHOOLS`. The Firebase UID is the document ID in each.
-- **Name-as-path-segment:** an entity's own display name is a path segment
-  (`USERS/{uid}/{USER_NAME}/…`, `SCHOOLS/{uid}/{SCHOOL_NAME}/…`, stored as `USER_PATH_COLLECTION` /
-  `SCHOOL_PATH_COLLECTION`). Renaming would orphan the subtree.
-- **Class academic data** nests under `SCHOOLS/{uid}/{name}/CLASSES_DETAILS/CLASSES/{classKey}/…`.
-- **Real-time everywhere:** the apps rely on `onSnapshot` listeners for feeds, badges, homework, notices,
-  messages, and approvals.
-- **No security rules exist** in either source repo — access control is described as *intended* and is
-  enforced only by client-side UI gating and query construction, not by the backend. Flag this whenever
-  discussing permissions or data access ([`docs/12`](docs/12-permissions-and-roles.md),
-  [`docs/16`](docs/16-missing-features.md)).
-- **No Cloud Functions:** all business logic (fan-out writes, verification, push) runs client-side with no
-  transactional guarantee.
-- **Push** is via **Expo** (client POSTs to `https://exp.host/--/api/v2/push/send`), not direct FCM; tokens
-  live in `PUSH_NOTIFICATION` on the user doc.
-- Known documented security concern: plaintext passwords stored in Firestore (`USER_PWD`, `SCHOOL_PASSWORD`)
-  alongside Firebase Auth.
+- TypeScript strict everywhere; no `any` at boundaries without justification; zod validates all external input.
+- API modules follow routes → controllers → services → repositories; **Prisma only in repositories**; modules
+  cross only via each other's public service interface + domain events ([`.docs/Architecture/01-modules.md`](.docs/Architecture/01-modules.md)).
+- Docs use status banners, `FR-`/`NFR-`/`ADR-` IDs, and Mermaid (no external images).

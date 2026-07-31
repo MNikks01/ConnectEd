@@ -11,12 +11,14 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** Mobile app (primary).
 
 **Goals**
+
 - Know exactly what homework, projects and notices apply to each child.
 - Switch between her two children quickly (the app has a "currently selected child" concept).
 - Apply for her child's leave without writing a paper note.
 - See the class timetable and how much syllabus has been covered.
 
 **Frustrations the product removes**
+
 - Missing notices buried in a WhatsApp group.
 - Not knowing whether homework was actually assigned.
 
@@ -33,6 +35,7 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** Mobile app.
 
 **Goals**
+
 - Check what's due today and this week.
 - See the timetable and syllabus progress before exams.
 - Stay connected — post, follow the school, message friends.
@@ -48,6 +51,7 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** Mobile app for publishing; occasionally the website.
 
 **Goals**
+
 - Publish homework / assignments / projects to a specific subject + class and auto-notify parents.
 - Update syllabus coverage as topics are taught.
 - As class teacher, approve or reject leave applications from her class's students/parents.
@@ -65,6 +69,7 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** Mobile app + website.
 
 **Goals**
+
 - Oversee academic communication across all classes.
 - Approve/reject **teachers'** leave applications (routed to the principal).
 - Monitor complaints and feedback.
@@ -80,6 +85,7 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** **Website only** (blocked on mobile).
 
 **Goals**
+
 - Create the school's full class structure (mediums → classes → sections → subjects).
 - Verify incoming member requests (students, parents, teachers, principal).
 - Manage verified members, allocate class teachers.
@@ -98,6 +104,7 @@ Personas below are realistic constructions inferred from the roles, fields, and 
 - **Devices:** Mobile app.
 
 **Goals**
+
 - Follow schools he's interested in, connect with friends, post and message.
 
 **Notes:** Sees **only** the social layer (Home feed, Friends/Connections, Messages, Create Post, Account, Find Schools, Find Friends). No academic drawer entries. Chosen by selecting "User" at registration.

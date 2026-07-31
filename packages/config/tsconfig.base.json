@@ -1,0 +1,4 @@
+{
+  "//": "Re-export of the root tsconfig.base.json so packages can extend @connected/config/tsconfig.base.json. Keep in sync with /tsconfig.base.json.",
+  "extends": "../../tsconfig.base.json"
+}

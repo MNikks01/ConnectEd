@@ -1,0 +1,14 @@
+{
+  "//": "Build config — drops tests, seed, and tooling so dist/ ships only runtime code.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/__tests__/**",
+    "prisma",
+    "prisma.config.ts",
+    "vitest.config.ts"
+  ]
+}

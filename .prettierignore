@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+.turbo
+*.md.tmp
+
+# Generated Prisma client
+apps/api/src/generated

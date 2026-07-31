@@ -1,1 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Caches
+.turbo/
+coverage/
+.eslintcache
+
+# Generated Prisma client — rebuilt by `prisma generate` on install
+apps/api/src/generated/
+
+# Environment — never commit real secrets (see .env.example)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local Claude Code settings
 .claude/settings.local.json
+
+# Next.js
+apps/web/.next/
+apps/web/next-env.d.ts

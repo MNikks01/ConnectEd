@@ -9,12 +9,14 @@
 
 ### Confirmed push notification
 
-| Event | Trigger | Recipients | Message (observed) |
-|---|---|---|---|
+| Event                 | Trigger                                                   | Recipients                  | Message (observed)                                                                                        |
+| --------------------- | --------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **New academic work** | Teacher publishes a Daily Homework / Assignment / Project | Parents of the target class | Title: `ConnectEdApp` · Body: *"New Homework/Assignment/Project by {teacher} for the subject of {subject} | for {class} {section}"* · data: `{ type: 'Projects & Homeworks', subject }` |
 
 ### Inferred / likely-intended push notifications
+
 The token infrastructure exists app-wide, so the following are plausible extensions but **were not confirmed** as implemented push sends:
+
 - New notice posted (**Assumption** — not confirmed).
 - New message received (**Assumption** — handled as in-app badge; push not confirmed).
 - Connection request received (**Assumption** — badge only confirmed).
@@ -24,13 +26,13 @@ The token infrastructure exists app-wide, so the following are plausible extensi
 
 The apps compute **live unread counts** from Firestore listeners and render them as badges:
 
-| Badge | Source | Shown to |
-|---|---|---|
-| Unread **messages** | `MESSAGES_RECIEVED` where `IS_VIEWED = false` | All users |
-| Pending **connection requests** | `REQUESTS_RECIEVED` count | All users |
-| Unviewed **notices** | `NOTICE_BOARD` notices whose `VIEWED_BY` excludes the user | Verified members |
-| Unviewed **homework/assignments/projects** | class work whose `VIEWED_BY` excludes the user | Students, parents |
-| Received **leave applications** | class `LEAVE_APPLICATION/RECIEVED` (teachers) / `ALL_TEACHERS/.../RECIEVED` (principals) | Class teachers, principals |
+| Badge                                      | Source                                                                                   | Shown to                   |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- | -------------------------- |
+| Unread **messages**                        | `MESSAGES_RECIEVED` where `IS_VIEWED = false`                                            | All users                  |
+| Pending **connection requests**            | `REQUESTS_RECIEVED` count                                                                | All users                  |
+| Unviewed **notices**                       | `NOTICE_BOARD` notices whose `VIEWED_BY` excludes the user                               | Verified members           |
+| Unviewed **homework/assignments/projects** | class work whose `VIEWED_BY` excludes the user                                           | Students, parents          |
+| Received **leave applications**            | class `LEAVE_APPLICATION/RECIEVED` (teachers) / `ALL_TEACHERS/.../RECIEVED` (principals) | Class teachers, principals |
 
 Read state is cleared by writing the user's id into the item's `VIEWED_BY` (or setting `IS_VIEWED`) when they open it.
 

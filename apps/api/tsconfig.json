@@ -1,0 +1,13 @@
+{
+  "//": "NodeNext, not the base's Bundler resolution: this is a real Node process compiled by tsc and run by node, so relative imports carry explicit .js extensions.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "//include": "prisma/ and the config files are included so they are type-checked and lintable; tsconfig.build.json drops them from the shipped output.",
+  "include": ["src", "prisma", "prisma.config.ts", "vitest.config.ts"],
+  "references": [{ "path": "../../packages/types" }]
+}

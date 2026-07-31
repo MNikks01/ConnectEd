@@ -1,0 +1,24 @@
+# Code ownership → auto-requests reviewers. Replace @connected/* teams with real teams/users.
+# See .docs/CI-CD/00-git-flow.md and .docs/CI-CD/02-code-review.md
+
+# Default
+*                           @MNikks01
+
+# Backend / API
+/apps/api/                  @MNikks01
+# Database schema & migrations are high-risk — require DB/architect review
+/apps/api/prisma/           @MNikks01
+
+# Frontend
+/apps/web/                  @MNikks01
+
+# Shared packages
+/packages/                  @MNikks01
+
+# Infrastructure & CI
+/infrastructure/            @MNikks01
+/.github/                   @MNikks01
+
+# Security & architecture docs
+/.docs/Security/            @MNikks01
+/.docs/ADR/                 @MNikks01

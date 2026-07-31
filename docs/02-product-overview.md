@@ -7,18 +7,21 @@
 ConnectEdApp envisions every school as a hub. Around that hub orbit its students, their parents, its teachers and its principal, plus a wider circle of followers and friends. The platform's vision is to replace fragmented school–home communication (paper diaries, informal chat groups, phone trees) with a **single, structured, role-aware system**, and to make that system engaging by wrapping it in a **social-network experience** people already understand.
 
 The dual nature is deliberate:
-- The **e-schooling side** provides the *utility* that gets a school to adopt the app (homework, notices, timetable, leave, syllabus).
-- The **social side** provides the *stickiness* that keeps individuals returning daily (feed, follows, friends, messaging).
+
+- The **e-schooling side** provides the _utility_ that gets a school to adopt the app (homework, notices, timetable, leave, syllabus).
+- The **social side** provides the _stickiness_ that keeps individuals returning daily (feed, follows, friends, messaging).
 
 ## 2.2 Product Goals
 
 ### Business goals
+
 - **B‑1** Become the default digital communication channel between a school and its families.
 - **B‑2** Onboard schools as institutional accounts and grow each school's verified member base (students, parents, teachers).
 - **B‑3** Monetise through school subscriptions (**Assumption** — subscription route present but unimplemented) and consumer advertising (AdMob configured in mobile app).
 - **B‑4** Build a defensible social graph (a school's followers + members' friendships) that increases switching cost.
 
 ### User goals
+
 - **U‑1 (Parents)** Never miss a child's homework, notice, event, or timetable change; apply for leave without paperwork.
 - **U‑2 (Students)** See what is due, what's been taught, and when; stay socially connected to friends and school.
 - **U‑3 (Teachers)** Publish work to the exact right class in seconds and notify families automatically.
@@ -26,6 +29,7 @@ The dual nature is deliberate:
 - **U‑5 (Everyone)** Have a profile, post updates, follow schools/people, and message privately.
 
 ### Platform goals
+
 - **P‑1** Serve individuals on mobile and institutions on desktop from **one shared data model** so both experiences stay in sync in real time.
 - **P‑2** Guarantee data integrity through a **verification gate** — only school-approved members see class-level academic data.
 - **P‑3** Deliver academic events in real time via live Firestore listeners and push notifications.
@@ -46,16 +50,16 @@ Exactly the following actor types exist in the product (proven by `USER_CURRENT_
 
 ### Platform access matrix
 
-| Actor | Mobile app | Website |
-|---|:---:|:---:|
-| Student | ✅ primary | ✅ |
-| Parent | ✅ primary | ✅ |
-| Teacher | ✅ primary | ✅ |
-| Principal | ✅ primary | ✅ |
-| General User | ✅ | ✅ |
-| School | ❌ blocked | ✅ only |
+| Actor        | Mobile app | Website |
+| ------------ | :--------: | :-----: |
+| Student      | ✅ primary |   ✅    |
+| Parent       | ✅ primary |   ✅    |
+| Teacher      | ✅ primary |   ✅    |
+| Principal    | ✅ primary |   ✅    |
+| General User |     ✅     |   ✅    |
+| School       | ❌ blocked | ✅ only |
 
-*(Mobile blocks school accounts explicitly; see `Screens/MainScreen.js`.)*
+_(Mobile blocks school accounts explicitly; see `Screens/MainScreen.js`.)_
 
 ## 2.4 Geographic / market signals
 

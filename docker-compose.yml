@@ -1,0 +1,129 @@
+# Local development dependencies for ConnectEd.
+# Usage: docker compose up -d
+# App processes (api/web) run on the host via `pnpm dev`; this file provides backing services.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: connected
+      POSTGRES_PASSWORD: connected
+      POSTGRES_DB: connected
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U connected']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Observability (ADR-0011) -------------------------------------------------------------
+  #
+  # Behind a profile, so the everyday `docker compose up -d` still starts only what the app needs.
+  # Bring the stack up with:
+  #
+  #   docker compose --profile observability up -d
+  #
+  # Then Grafana is on http://localhost:3001 (anonymous admin locally — no login to fumble).
+  # Configs are version-controlled in infrastructure/ and mounted read-only: dashboards and alerts
+  # are code, and edits made in the Grafana UI are discarded on restart by design.
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    profiles: [observability]
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      # Tempo's metrics generator remote-writes span metrics here.
+      - '--web.enable-remote-write-receiver'
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./infrastructure/prometheus:/etc/prometheus:ro
+      - prometheusdata:/prometheus
+    extra_hosts:
+      # The API runs on the host, not in compose. Docker Desktop provides this name already;
+      # the mapping is what makes the same file work on Linux.
+      - 'host.docker.internal:host-gateway'
+
+  loki:
+    image: grafana/loki:3.3.2
+    profiles: [observability]
+    restart: unless-stopped
+    command: ['-config.file=/etc/loki/loki-config.yaml']
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./infrastructure/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - lokidata:/loki
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: [observability]
+    restart: unless-stopped
+    command: ['-config.file=/etc/tempo/tempo.yaml']
+    ports:
+      - '3200:3200' # query API
+      - '4318:4318' # OTLP/HTTP — matches OTEL_EXPORTER_OTLP_ENDPOINT
+      - '4317:4317' # OTLP/gRPC
+    volumes:
+      - ./infrastructure/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempodata:/var/tempo
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    profiles: [observability]
+    restart: unless-stopped
+    depends_on: [prometheus, loki, tempo]
+    ports:
+      - '3001:3000' # 3000 is the web app
+    environment:
+      # Local convenience only. Deployed Grafana uses real auth — see infrastructure/CLAUDE.md.
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+
+volumes:
+  pgdata:
+  miniodata:
+  prometheusdata:
+  lokidata:
+  tempodata:
+  grafanadata:
