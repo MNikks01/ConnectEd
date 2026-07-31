@@ -1,22 +1,40 @@
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { bodyAs, type ErrorBody } from './support/body.js';
 import { createApp } from '../app.js';
-import { ForbiddenError, ValidationFailedError } from '../shared/errors/index.js';
+import {
+  AppError,
+  ErrorCode,
+  ForbiddenError,
+  ValidationFailedError,
+} from '../shared/errors/index.js';
+import type { ErrorMapper } from '../shared/errors/mapping.js';
+import type { ErrorLogger } from '../shared/logger/index.js';
 import { CORRELATION_ID_HEADER, correlationId } from '../shared/middleware/correlation-id.js';
 import { errorHandler } from '../shared/middleware/error-handler.js';
 
+/**
+ * The middleware depends on `Pick<Logger, 'warn' | 'error'>`, so a two-method object satisfies it
+ * with no cast — which is the point of narrowing the dependency instead of taking all of pino.
+ */
+function fakeLogger(): ErrorLogger {
+  return { warn: vi.fn(), error: vi.fn() };
+}
+
 /** Minimal app that pushes a chosen error through the real middleware chain. */
-function appThatThrows(thrown: unknown) {
+function appThatThrows(
+  thrown: unknown,
+  options: { logger?: ErrorLogger; mappers?: readonly ErrorMapper[] } = {},
+) {
   const app = express();
   app.use(correlationId());
   app.get('/boom', () => {
     throw thrown;
   });
-  app.use(errorHandler());
+  app.use(errorHandler({ logger: options.logger ?? fakeLogger(), mappers: options.mappers }));
   return app;
 }
 
@@ -25,10 +43,7 @@ describe('error envelope', () => {
     const response = await request(createApp()).get('/api/v1/does-not-exist');
 
     expect(response.status).toBe(404);
-    expect(bodyAs<ErrorBody>(response).error).toMatchObject({
-      code: 'NOT_FOUND',
-      status: 404,
-    });
+    expect(bodyAs<ErrorBody>(response).error).toMatchObject({ code: 'NOT_FOUND', status: 404 });
     expect(typeof bodyAs<ErrorBody>(response).error.correlationId).toBe('string');
   });
 
@@ -53,8 +68,7 @@ describe('error envelope', () => {
   });
 
   it('converts an escaped ZodError into a 422 with per-field details', async () => {
-    const schema = z.object({ email: z.email() });
-    const parsed = schema.safeParse({ email: 'nope' });
+    const parsed = z.object({ email: z.email() }).safeParse({ email: 'nope' });
     expect(parsed.success).toBe(false);
 
     const response = await request(appThatThrows(parsed.error)).get('/boom');
@@ -87,6 +101,62 @@ describe('error envelope', () => {
 
     expect(response.status).toBe(400);
     expect(bodyAs<ErrorBody>(response).error.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('error mapping is open for extension', () => {
+  /** Stands in for the Prisma mapper S0-6 will add, or the JWT mapper S0-7 will add. */
+  class ForeignLibraryError extends Error {
+    readonly foreignCode = 'P2002';
+  }
+
+  const foreignMapper: ErrorMapper = (error) =>
+    error instanceof ForeignLibraryError
+      ? new AppError(ErrorCode.CONFLICT, 409, 'That record already exists.')
+      : undefined;
+
+  it('maps a foreign error type without the middleware or normalizer changing', async () => {
+    const response = await request(
+      appThatThrows(new ForeignLibraryError('unique constraint violated'), {
+        mappers: [foreignMapper],
+      }),
+    ).get('/boom');
+
+    expect(response.status).toBe(409);
+    expect(bodyAs<ErrorBody>(response).error.code).toBe('CONFLICT');
+  });
+
+  it('still falls back to an opaque 500 for anything no mapper claims', async () => {
+    const response = await request(
+      appThatThrows(new Error('some driver internal'), { mappers: [foreignMapper] }),
+    ).get('/boom');
+
+    expect(response.status).toBe(500);
+    expect(bodyAs<ErrorBody>(response).error.code).toBe('INTERNAL');
+  });
+});
+
+describe('error logging', () => {
+  it('logs 5xx with the original error so the stack reaches the logs', async () => {
+    const logger = fakeLogger();
+
+    await request(appThatThrows(new Error('boom'), { logger })).get('/boom');
+
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.warn).not.toHaveBeenCalled();
+    const [context] = vi.mocked(logger.error).mock.calls[0] ?? [];
+    expect(context).toHaveProperty('err');
+  });
+
+  it('logs 4xx without a stack — expected client errors are high volume', async () => {
+    const logger = fakeLogger();
+
+    await request(appThatThrows(new ForbiddenError(), { logger })).get('/boom');
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.error).not.toHaveBeenCalled();
+    const [context] = vi.mocked(logger.warn).mock.calls[0] ?? [];
+    expect(context).not.toHaveProperty('err');
   });
 });
 

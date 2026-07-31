@@ -1,16 +1,19 @@
 /**
  * The single global error middleware (`.docs/API/02-error-model.md`).
  *
- * Everything the API returns as an error passes through here, so the envelope is guaranteed to be
- * consistent. 5xx bodies never carry stack traces, SQL, or driver messages — those go to the logs
- * keyed by `correlationId`, which the client receives and can quote to support.
+ * Its one job is the HTTP concern: decide status, log, and write the envelope. Deciding *what* a
+ * thrown value means lives in `errors/mapping.ts`, so adding support for a new error source does
+ * not touch this file.
+ *
+ * 5xx bodies never carry stack traces, SQL, or driver messages — those go to the logs keyed by
+ * `correlationId`, which the client receives and can quote to support.
  */
-import { ZodError } from 'zod';
+import { createErrorNormalizer } from '../errors/mapping.js';
 
-import { AppError, ErrorCode, isAppError, type ErrorDetail } from '../errors/index.js';
-import { logger } from '../logger/index.js';
-
-import type { NextFunction, Request, Response } from 'express';
+import type { ErrorDetail } from '../errors/index.js';
+import type { ErrorMapper } from '../errors/mapping.js';
+import type { ErrorLogger } from '../logger/index.js';
+import type { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 
 export interface ErrorEnvelope {
   error: {
@@ -22,36 +25,15 @@ export interface ErrorEnvelope {
   };
 }
 
-function zodToDetails(error: ZodError): ErrorDetail[] {
-  return error.issues.map((issue) => ({
-    field: issue.path.join('.') || '(root)',
-    issue: issue.message,
-  }));
+export interface ErrorHandlerOptions {
+  logger: ErrorLogger;
+  /** Extra mappers for foreign error types; defaults cover zod and malformed JSON. */
+  mappers?: readonly ErrorMapper[];
 }
 
-/** Normalizes anything thrown into an AppError without leaking internals to the client. */
-function toAppError(error: unknown): AppError {
-  if (isAppError(error)) return error;
+export function errorHandler({ logger, mappers }: ErrorHandlerOptions): ErrorRequestHandler {
+  const normalize = createErrorNormalizer(mappers);
 
-  // Schemas that escape a route's own validation still deserve a proper 422.
-  if (error instanceof ZodError) {
-    return new AppError(
-      ErrorCode.VALIDATION_FAILED,
-      422,
-      'The request failed validation.',
-      zodToDetails(error),
-    );
-  }
-
-  // Express' body parser rejects malformed JSON with a 400-tagged SyntaxError.
-  if (error instanceof SyntaxError && 'body' in error) {
-    return new AppError(ErrorCode.VALIDATION_FAILED, 400, 'The request body is not valid JSON.');
-  }
-
-  return new AppError(ErrorCode.INTERNAL, 500, 'An unexpected error occurred.');
-}
-
-export function errorHandler() {
   return (error: unknown, req: Request, res: Response, next: NextFunction): void => {
     // Express cannot rewrite headers once streaming has begun; hand back to its default handler.
     if (res.headersSent) {
@@ -59,7 +41,7 @@ export function errorHandler() {
       return;
     }
 
-    const appError = toAppError(error);
+    const appError = normalize(error);
     const correlationId = req.correlationId;
 
     const logContext = {

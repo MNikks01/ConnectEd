@@ -1,19 +1,24 @@
 /**
- * API entrypoint: start tracing, bind the server, and shut down cleanly.
+ * API entrypoint: build the dependency graph, start tracing, bind the server, shut down cleanly.
  *
- * The tracing import is deliberately first, and the rest are dynamic — OpenTelemetry patches
- * libraries at import time, so it has to run before Express and friends are loaded. Static imports
- * are hoisted and would defeat that.
+ * The tracing import is deliberately first and the rest are dynamic — OpenTelemetry patches
+ * libraries at import time, so it has to run before Express and friends load. Static imports are
+ * hoisted and would defeat that.
  */
-import { startTracing, stopTracing } from './shared/observability/tracing.js';
+import { startTracing } from './shared/observability/tracing.js';
 
-startTracing();
+const { loadConfig } = await import('./shared/config/index.js');
+const { createLogger } = await import('./shared/logger/index.js');
+
+const config = loadConfig();
+const tracing = startTracing(config);
+const logger = createLogger(config);
 
 const { createApp } = await import('./app.js');
-const { config } = await import('./shared/config/index.js');
-const { logger } = await import('./shared/logger/index.js');
 
-const app = createApp();
+// Readiness checks register here as their dependencies land:
+//   readiness.register({ name: 'postgres', probe: () => prisma.$queryRaw`SELECT 1` })  // S0-6
+const app = createApp({ config, logger });
 
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
@@ -42,7 +47,7 @@ function shutdown(signal: string): void {
 
   server.close(() => {
     void (async () => {
-      await stopTracing();
+      await tracing.stop();
       logger.info('Shutdown complete');
       process.exit(0);
     })();

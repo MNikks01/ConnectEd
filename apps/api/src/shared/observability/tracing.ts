@@ -1,9 +1,9 @@
 /**
  * OpenTelemetry tracing → Tempo (ADR-0011).
  *
- * Must be started before the instrumented libraries are imported, so `src/index.ts` imports this
- * module first. Auto-instrumentation covers HTTP, Express, and later Prisma and Redis; domain
- * modules add custom spans around their own operations.
+ * Must start before the instrumented libraries are imported, so `src/index.ts` imports this module
+ * first. Auto-instrumentation covers HTTP, Express, and later Prisma and Redis; domain modules add
+ * custom spans around their own operations.
  *
  * Tracing stays off unless OTEL_EXPORTER_OTLP_ENDPOINT is set — a local dev run without a collector
  * should not spew export failures.
@@ -12,14 +12,20 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
-import { config } from '../config/index.js';
+import type { Config } from '../config/index.js';
 
-let sdk: NodeSDK | undefined;
+/** Returned so the caller owns the handle, rather than this module keeping process-wide state. */
+export interface Tracing {
+  /** Flushes pending spans; called from the shutdown path so in-flight traces are not lost. */
+  stop: () => Promise<void>;
+}
 
-export function startTracing(): void {
-  if (!config.OTEL_EXPORTER_OTLP_ENDPOINT || config.isTest) return;
+const NOOP_TRACING: Tracing = { stop: () => Promise.resolve() };
 
-  sdk = new NodeSDK({
+export function startTracing(config: Config): Tracing {
+  if (!config.OTEL_EXPORTER_OTLP_ENDPOINT || config.isTest) return NOOP_TRACING;
+
+  const sdk = new NodeSDK({
     serviceName: config.OTEL_SERVICE_NAME,
     traceExporter: new OTLPTraceExporter({
       url: `${config.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
@@ -33,10 +39,6 @@ export function startTracing(): void {
   });
 
   sdk.start();
-}
 
-/** Flushes pending spans; called from the shutdown path so in-flight traces are not lost. */
-export async function stopTracing(): Promise<void> {
-  await sdk?.shutdown();
-  sdk = undefined;
+  return { stop: () => sdk.shutdown() };
 }

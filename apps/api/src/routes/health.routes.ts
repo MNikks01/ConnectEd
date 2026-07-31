@@ -1,17 +1,26 @@
 /**
  * Operational endpoints. These sit outside `/api/v1` — they are infrastructure contracts
  * (probes, scrapers), not part of the versioned public API.
+ *
+ * Dependencies arrive as arguments rather than module imports, so these routes can be exercised
+ * against a stub registry without touching global state or the environment.
  */
 import { Router } from 'express';
 
-import { runReadinessChecks } from '../shared/health/readiness.js';
-import { config } from '../shared/config/index.js';
 import { ErrorCode } from '../shared/errors/index.js';
-import { registry } from '../shared/observability/metrics.js';
 
+import type { ReadinessRegistry } from '../shared/health/readiness.js';
+import type { Metrics } from '../shared/observability/metrics.js';
 import type { Request, Response } from 'express';
 
-export function healthRoutes(): Router {
+export interface HealthRoutesOptions {
+  readiness: ReadinessRegistry;
+  metrics: Metrics;
+  /** When false, `/metrics` 404s. Network-level restriction is handled by the infra. */
+  metricsEnabled: boolean;
+}
+
+export function healthRoutes({ readiness, metrics, metricsEnabled }: HealthRoutesOptions): Router {
   const router = Router();
 
   /**
@@ -24,7 +33,7 @@ export function healthRoutes(): Router {
 
   /** Readiness. Fails closed with 503 so the load balancer stops routing traffic here. */
   router.get('/readyz', async (req: Request, res: Response) => {
-    const { ready, results } = await runReadinessChecks();
+    const { ready, results } = await readiness.run();
 
     if (ready) {
       res.status(200).json({ status: 'ready', checks: results });
@@ -44,18 +53,15 @@ export function healthRoutes(): Router {
     });
   });
 
-  /**
-   * Prometheus scrape target. Exposure is also restricted at the network layer
-   * (`.docs/Monitoring/00-observability.md`); this flag is the in-process half of that.
-   */
+  /** Prometheus scrape target. */
   router.get('/metrics', async (_req: Request, res: Response) => {
-    if (!config.METRICS_ENABLED) {
+    if (!metricsEnabled) {
       res.status(404).end();
       return;
     }
 
-    res.setHeader('Content-Type', registry.contentType);
-    res.status(200).send(await registry.metrics());
+    res.setHeader('Content-Type', metrics.registry.contentType);
+    res.status(200).send(await metrics.registry.metrics());
   });
 
   return router;
