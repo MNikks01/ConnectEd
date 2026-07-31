@@ -33,17 +33,17 @@ modules/<name>/
 
 ## Module map
 
-| Module | Owns | Key events emitted |
-|---|---|---|
-| `auth` | credentials, tokens, sessions | `user.registered`, `user.loggedIn` |
-| `accounts` | user/school profiles, roles | `role.declared` |
-| `institution` | schools, classes, subjects, class-teacher allocation | `class.created`, `classTeacher.allocated` |
-| `verification` | verification requests + decisions | `verification.submitted`, `verification.decided` |
-| `academics` | homework/assignment/project, notice, event, timetable, syllabus | `homework.published`, `notice.published`, `event.created` |
-| `workflows` | leave applications, complaints/suggestions | `leave.submitted`, `leave.decided`, `complaint.submitted` |
-| `social` | posts, likes, comments, follow, connections, messages | `post.created`, `message.sent`, `connection.requested` |
-| `notifications` | notification records, dispatch, preferences, push tokens | `notification.dispatched` |
-| `billing` | plans, subscriptions, entitlements, webhooks | `subscription.changed` |
+| Module          | Owns                                                            | Key events emitted                                        |
+| --------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| `auth`          | credentials, tokens, sessions                                   | `user.registered`, `user.loggedIn`                        |
+| `accounts`      | user/school profiles, roles                                     | `role.declared`                                           |
+| `institution`   | schools, classes, subjects, class-teacher allocation            | `class.created`, `classTeacher.allocated`                 |
+| `verification`  | verification requests + decisions                               | `verification.submitted`, `verification.decided`          |
+| `academics`     | homework/assignment/project, notice, event, timetable, syllabus | `homework.published`, `notice.published`, `event.created` |
+| `workflows`     | leave applications, complaints/suggestions                      | `leave.submitted`, `leave.decided`, `complaint.submitted` |
+| `social`        | posts, likes, comments, follow, connections, messages           | `post.created`, `message.sent`, `connection.requested`    |
+| `notifications` | notification records, dispatch, preferences, push tokens        | `notification.dispatched`                                 |
+| `billing`       | plans, subscriptions, entitlements, webhooks                    | `subscription.changed`                                    |
 
 ## Dependency direction
 

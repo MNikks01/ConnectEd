@@ -7,8 +7,8 @@ Date: 2026-07-28
 
 The legacy app had **no Firestore/Storage security rules**; access control was purely client-side UI gating and
 query construction. Any client could read/write outside intended bounds. This is the single most important defect
-the rebuild must fix. The product depends on a hard guarantee: *no member sees a class's academics without
-server-verified membership.*
+the rebuild must fix. The product depends on a hard guarantee: _no member sees a class's academics without
+server-verified membership._
 
 ## Decision
 
@@ -30,6 +30,6 @@ endpoint.
 ## Alternatives
 
 - **Client-side gating (legacy)** — rejected outright; it is the vulnerability.
-- **Database RLS (Postgres row-level security)** — powerful, considered as an *additional* layer later; v1
+- **Database RLS (Postgres row-level security)** — powerful, considered as an _additional_ layer later; v1
   enforces in the service layer for clarity and testability. Revisit in a future ADR if we expose the DB more
   directly.

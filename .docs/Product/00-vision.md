@@ -30,7 +30,7 @@ Delivered as:
 - **Web app** (Next.js) — used by **school administrators** (school portal) and by individuals on desktop.
 - **Mobile app** (future phase — React Native/Expo) — used by individuals.
 
-> **Hard product rule (carried from legacy):** *school (institution) accounts are web-only.* Schools are
+> **Hard product rule (carried from legacy):** _school (institution) accounts are web-only._ Schools are
 > administered from the website; individuals use web now and mobile later.
 
 ## Why it exists / business model
@@ -43,14 +43,14 @@ entitlements and billing are real backend concerns, not placeholders.
 
 ## What changes vs. the legacy Firebase app
 
-| Concern | Legacy (Firebase) | ConnectEd rebuild |
-|---|---|---|
-| Backend | Client talks straight to Firebase; no server | Node/Express API server; clients never touch the DB |
-| Access control | **None** (no security rules; client-gated) | **Server-enforced RBAC** + verification on every request |
-| Passwords | Plaintext in Firestore (`USER_PWD`) | Hashed (argon2/bcrypt); never stored in plaintext |
-| Data store | Firestore nested subcollections keyed by names | PostgreSQL relational schema, stable numeric/UUID keys |
-| Business logic | Client-side fan-out, no transactions | Server-side, transactional, testable |
-| Push | Client POSTs Expo push API directly | Server-owned notification service |
+| Concern        | Legacy (Firebase)                              | ConnectEd rebuild                                        |
+| -------------- | ---------------------------------------------- | -------------------------------------------------------- |
+| Backend        | Client talks straight to Firebase; no server   | Node/Express API server; clients never touch the DB      |
+| Access control | **None** (no security rules; client-gated)     | **Server-enforced RBAC** + verification on every request |
+| Passwords      | Plaintext in Firestore (`USER_PWD`)            | Hashed (argon2/bcrypt); never stored in plaintext        |
+| Data store     | Firestore nested subcollections keyed by names | PostgreSQL relational schema, stable numeric/UUID keys   |
+| Business logic | Client-side fan-out, no transactions           | Server-side, transactional, testable                     |
+| Push           | Client POSTs Expo push API directly            | Server-owned notification service                        |
 
 These reversals are individually justified in [`../ADR/`](../ADR/).
 

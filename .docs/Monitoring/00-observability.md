@@ -6,12 +6,12 @@ Implements `ADR-0011`. Three signals, one pane of glass (Grafana).
 
 ## Signals
 
-| Signal | Tool | What |
-|---|---|---|
-| Metrics | Prometheus | RED (Rate, Errors, Duration) per endpoint; queue depth; DB pool; cache hit rate; business KPIs. |
-| Logs | Loki | Structured JSON logs, correlated by `traceId`/`correlationId`. |
-| Traces | Tempo (OpenTelemetry) | Distributed traces web → api → db/queue/providers. |
-| Dashboards/Alerts | Grafana | Panels + alert rules over the above. |
+| Signal            | Tool                  | What                                                                                            |
+| ----------------- | --------------------- | ----------------------------------------------------------------------------------------------- |
+| Metrics           | Prometheus            | RED (Rate, Errors, Duration) per endpoint; queue depth; DB pool; cache hit rate; business KPIs. |
+| Logs              | Loki                  | Structured JSON logs, correlated by `traceId`/`correlationId`.                                  |
+| Traces            | Tempo (OpenTelemetry) | Distributed traces web → api → db/queue/providers.                                              |
+| Dashboards/Alerts | Grafana               | Panels + alert rules over the above.                                                            |
 
 ## Instrumentation (in `apps/api`)
 

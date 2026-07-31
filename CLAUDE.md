@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-**ConnectEd** — a K-12 school-community platform (web brand *GetConnected*) being **rebuilt** on a modern stack.
+**ConnectEd** — a K-12 school-community platform (web brand _GetConnected_) being **rebuilt** on a modern stack.
 The repo is currently in the **documentation + project-setup** phase: engineering docs are complete under
 [`.docs/`](.docs/); application code is scaffolded but not yet implemented.
 
@@ -27,7 +27,7 @@ Two document sets — do not confuse them:
 ## The one rule that defines the product
 
 **All authorization is server-enforced** on every request against role + verification state + resource ownership.
-The legacy app had *no* server-side access control and stored *plaintext passwords* — fixing this is the whole
+The legacy app had _no_ server-side access control and stored _plaintext passwords_ — fixing this is the whole
 point of the rebuild. The [permission matrix](.docs/PRD/09-permissions-matrix.md) is the contract; every scoped
 endpoint needs positive **and** negative permission tests. Never gate access only on the client.
 
@@ -37,14 +37,14 @@ notification fan-out.
 
 ## Where things live
 
-| Path | What |
-|---|---|
-| [`.docs/`](.docs/) | All engineering docs (start at [`.docs/README.md`](.docs/README.md)). |
-| [`.agents/`](.agents/) | Team role charters (also usable as subagent personas). |
-| `apps/web`, `apps/api` | Next.js app / Express API (see each folder's `CLAUDE.md`). |
-| `packages/*` | Shared `types`, `ui` design system, `config` (eslint/tsconfig/prettier). |
-| `infrastructure/` | docker, k8s, helm, terraform, nginx, and the observability stack configs. |
-| `scripts/` | Tooling scripts (e.g. optional `setup-claude.sh`). |
+| Path                   | What                                                                      |
+| ---------------------- | ------------------------------------------------------------------------- |
+| [`.docs/`](.docs/)     | All engineering docs (start at [`.docs/README.md`](.docs/README.md)).     |
+| [`.agents/`](.agents/) | Team role charters (also usable as subagent personas).                    |
+| `apps/web`, `apps/api` | Next.js app / Express API (see each folder's `CLAUDE.md`).                |
+| `packages/*`           | Shared `types`, `ui` design system, `config` (eslint/tsconfig/prettier).  |
+| `infrastructure/`      | docker, k8s, helm, terraform, nginx, and the observability stack configs. |
+| `scripts/`             | Tooling scripts (e.g. optional `setup-claude.sh`).                        |
 
 ## Working here
 

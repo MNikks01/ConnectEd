@@ -11,18 +11,18 @@ Goal: a running, observable, secure **platform skeleton** — no user-facing fea
 
 ## Backlog (committed)
 
-| # | Item | Owner (agent) | DoD |
-|---|---|---|---|
-| S0-1 | Monorepo config (pnpm, turbo, tsconfig, eslint, prettier) | devops/architect | `pnpm build/lint/type-check` green |
-| S0-2 | Husky + lint-staged + commitlint + changesets | devops | hooks fire locally; changeset check in CI |
-| S0-3 | GitHub Actions CI (`ci.yml`) + branch protection | devops | required checks enforced on `development`/`main` |
-| S0-4 | Docker Compose (postgres, redis, minio) + `.env.example` | devops | `docker compose up` healthy |
-| S0-5 | API skeleton (Express, error mw, health/ready, logging, OTel) | backend | `/healthz`,`/readyz`,`/metrics` respond |
-| S0-6 | Prisma schema v1 + first migration + seed | db | `migrate dev` + `db seed` work |
-| S0-7 | Auth module (register/login/refresh/logout, argon2, RBAC mw) | backend/security | auth flow + permission tests pass |
-| S0-8 | Web skeleton (Next.js App Router, api-client, auth pages) | frontend | login works against API |
-| S0-9 | Observability compose (prometheus/grafana/loki/tempo) | devops | dashboards show live traffic |
-| S0-10 | CODEOWNERS, PR template, CodeRabbit config | architect | review routing works |
+| #     | Item                                                          | Owner (agent)    | DoD                                              |
+| ----- | ------------------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| S0-1  | Monorepo config (pnpm, turbo, tsconfig, eslint, prettier)     | devops/architect | `pnpm build/lint/type-check` green               |
+| S0-2  | Husky + lint-staged + commitlint + changesets                 | devops           | hooks fire locally; changeset check in CI        |
+| S0-3  | GitHub Actions CI (`ci.yml`) + branch protection              | devops           | required checks enforced on `development`/`main` |
+| S0-4  | Docker Compose (postgres, redis, minio) + `.env.example`      | devops           | `docker compose up` healthy                      |
+| S0-5  | API skeleton (Express, error mw, health/ready, logging, OTel) | backend          | `/healthz`,`/readyz`,`/metrics` respond          |
+| S0-6  | Prisma schema v1 + first migration + seed                     | db               | `migrate dev` + `db seed` work                   |
+| S0-7  | Auth module (register/login/refresh/logout, argon2, RBAC mw)  | backend/security | auth flow + permission tests pass                |
+| S0-8  | Web skeleton (Next.js App Router, api-client, auth pages)     | frontend         | login works against API                          |
+| S0-9  | Observability compose (prometheus/grafana/loki/tempo)         | devops           | dashboards show live traffic                     |
+| S0-10 | CODEOWNERS, PR template, CodeRabbit config                    | architect        | review routing works                             |
 
 ## Ceremonies
 

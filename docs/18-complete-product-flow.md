@@ -31,7 +31,7 @@ The moment a member is verified, their app unlocks the academic modules scoped t
 
 Now the system does its real job:
 
-- A **teacher** opens **Projects & Homeworks**, picks a subject, chooses **Daily Homework / Assignment / Project**, writes it, optionally attaches an image, sets a due date, and publishes. Instantly the work appears in the class's students' and parents' apps as an **unread badge**, and the class's **parents receive a push notification**: *"New Homework by Priya for the subject of Science | for Class 7 A."* When a parent opens it, it's marked as read.
+- A **teacher** opens **Projects & Homeworks**, picks a subject, chooses **Daily Homework / Assignment / Project**, writes it, optionally attaches an image, sets a due date, and publishes. Instantly the work appears in the class's students' and parents' apps as an **unread badge**, and the class's **parents receive a push notification**: _"New Homework by Priya for the subject of Science | for Class 7 A."_ When a parent opens it, it's marked as read.
 - The **school/principal** posts **notices** and creates **upcoming events**; these fan out to every member's notice board and badge as unread.
 - The **school** uploads each class's **timetable** image; teachers keep **Syllabus Covered** up to date so parents can see how much curriculum has been taught.
 - A **parent** whose child is unwell files a **Leave Application**; it lands in the **class teacher's** received queue (badged), and the class teacher **accepts or rejects** it. A **teacher** needing leave applies too — but their application routes to the **principal**.
@@ -57,6 +57,7 @@ This social layer is what turns a utilitarian school tool into something people 
 ## Act 5 — The business behind it
 
 The product is positioned to monetise two ways:
+
 - **Schools** are meant to pay via a **Subscription** (the route exists but is unbuilt today).
 - The **consumer app** shows **banner ads** (AdMob) to individual users.
 

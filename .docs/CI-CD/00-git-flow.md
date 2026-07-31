@@ -7,13 +7,13 @@ The exact flow requested: **feature branch → PR to `development` → merge →
 
 ## Branches
 
-| Branch | Role | Protected | Deploys to |
-|---|---|:--:|---|
-| `main` | Production. Always releasable. | ✅ | production (gated) |
-| `development` | Integration. Default PR target. | ✅ | dev/staging |
-| `feature/*` | New work. Branch off `development`. | — | preview (optional) |
-| `fix/*`, `chore/*`, `docs/*` | Same as feature, typed by intent. | — | preview |
-| `hotfix/*` | Urgent prod fix; branch off `main`, PR to `main` **and** back-merge to `development`. | — | production |
+| Branch                       | Role                                                                                  | Protected | Deploys to         |
+| ---------------------------- | ------------------------------------------------------------------------------------- | :-------: | ------------------ |
+| `main`                       | Production. Always releasable.                                                        |    ✅     | production (gated) |
+| `development`                | Integration. Default PR target.                                                       |    ✅     | dev/staging        |
+| `feature/*`                  | New work. Branch off `development`.                                                   |     —     | preview (optional) |
+| `fix/*`, `chore/*`, `docs/*` | Same as feature, typed by intent.                                                     |     —     | preview            |
+| `hotfix/*`                   | Urgent prod fix; branch off `main`, PR to `main` **and** back-merge to `development`. |     —     | production         |
 
 ## Rules
 

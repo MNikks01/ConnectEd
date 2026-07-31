@@ -5,12 +5,12 @@
 Operational playbooks for on-call. Every alert links here. Each runbook: **symptoms → diagnosis → mitigation →
 resolution → follow-up**.
 
-| Runbook | Covers |
-|---|---|
-| [`api-outage.md`](./api-outage.md) | API 5xx / down / high latency |
-| [`db-restore.md`](./db-restore.md) | Postgres failure, restore, PITR |
-| [`redis-outage.md`](./redis-outage.md) | Cache/queue down |
-| [`queue-backlog.md`](./queue-backlog.md) | Notification/job backlog & DLQ |
+| Runbook                                          | Covers                                |
+| ------------------------------------------------ | ------------------------------------- |
+| [`api-outage.md`](./api-outage.md)               | API 5xx / down / high latency         |
+| [`db-restore.md`](./db-restore.md)               | Postgres failure, restore, PITR       |
+| [`redis-outage.md`](./redis-outage.md)           | Cache/queue down                      |
+| [`queue-backlog.md`](./queue-backlog.md)         | Notification/job backlog & DLQ        |
 | [`incident-response.md`](./incident-response.md) | Sev classification, comms, postmortem |
 
 ## On-call basics

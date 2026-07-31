@@ -2,11 +2,11 @@
 
 Shared workspace packages consumed by `apps/web` and `apps/api`.
 
-| Package | Purpose | Notes |
-|---|---|---|
-| `types` | Shared DTOs, enums, and the permission-matrix types. **Derived from the API's zod schemas** so client and server can't drift. | The single source for request/response shapes. Import here instead of redefining. |
-| `ui` | Design system: tokens (color/typography/spacing/elevation) + primitives (button/form/modal/table/notification). Theme-aware + responsive + WCAG AA. | Owned by the ui-designer charter; consumed by `apps/web` (and mobile later). |
-| `config` | Shared `tsconfig` base, ESLint config (incl. import-boundary rules), Prettier config. | Every app/package extends these — one source for tooling. |
+| Package  | Purpose                                                                                                                                             | Notes                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `types`  | Shared DTOs, enums, and the permission-matrix types. **Derived from the API's zod schemas** so client and server can't drift.                       | The single source for request/response shapes. Import here instead of redefining. |
+| `ui`     | Design system: tokens (color/typography/spacing/elevation) + primitives (button/form/modal/table/notification). Theme-aware + responsive + WCAG AA. | Owned by the ui-designer charter; consumed by `apps/web` (and mobile later).      |
+| `config` | Shared `tsconfig` base, ESLint config (incl. import-boundary rules), Prettier config.                                                               | Every app/package extends these — one source for tooling.                         |
 
 ## Rules
 

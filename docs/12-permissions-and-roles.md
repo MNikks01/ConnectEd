@@ -4,14 +4,14 @@
 
 ## 12.1 Roles
 
-| Role | Identifier | Platform | Scope |
-|---|---|---|---|
-| Student | `USER_CURRENT_STATUS = STUDENT` | M/W | One class of one school |
-| Parent | `= PARENT` | M/W | One or more children, each in a class |
-| Teacher | `= TEACHER` | M/W | Subjects + optional class-teacher role |
-| Principal | `= PRINCIPAL` | M/W | Whole school |
-| General User | empty/undefined | M/W | Social only |
-| School | `SCHOOLS` collection | **W only** | Owns all academic + admin data |
+| Role         | Identifier                      | Platform   | Scope                                  |
+| ------------ | ------------------------------- | ---------- | -------------------------------------- |
+| Student      | `USER_CURRENT_STATUS = STUDENT` | M/W        | One class of one school                |
+| Parent       | `= PARENT`                      | M/W        | One or more children, each in a class  |
+| Teacher      | `= TEACHER`                     | M/W        | Subjects + optional class-teacher role |
+| Principal    | `= PRINCIPAL`                   | M/W        | Whole school                           |
+| General User | empty/undefined                 | M/W        | Social only                            |
+| School       | `SCHOOLS` collection            | **W only** | Owns all academic + admin data         |
 
 ## 12.2 Verification states gate access
 
@@ -23,28 +23,28 @@
 
 Legend: ✅ can do · 👁 view only · ➖ not available/hidden
 
-| Capability | Student | Parent | Teacher | Class Teacher | Principal | School | General User |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Social: post/like/comment/follow/message | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View feed / profiles | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Declare e-schooling status | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Submit verification request | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Approve verification requests | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Publish homework/assignments/projects | ➖ | ➖ | ✅ | ✅ | 👁 | ✅ | ➖ |
-| View homework | 👁 | 👁 | ✅ | ✅ | 👁 | 👁 | ➖ |
-| Publish notices | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ➖ |
-| View notices | 👁 | 👁 | 👁 | 👁 | 👁 | ✅ | ➖ |
-| Upload timetable | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| View timetable | 👁 | 👁 | 👁 | 👁 | 👁 | ✅ | ➖ |
-| Update syllabus coverage | ➖ | ➖ | ✅ | ✅ | 👁 | ✅ | ➖ |
-| Submit leave application | ➖ | ✅ (for child) | ✅ | ✅ | ➖ | ➖ | ➖ |
-| Approve student/parent leave | ➖ | ➖ | ➖ | ✅ | ➖ | 👁 | ➖ |
-| Approve teacher leave | ➖ | ➖ | ➖ | ➖ | ✅ | 👁 | ➖ |
-| Submit complaints/suggestions | ➖ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Review complaints | ➖ | ➖ | 👁 | 👁 | ✅ | ✅ | ➖ |
-| Create events | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Create school & class structure | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Verified members / add-remove / allocate class teacher | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
+| Capability                                             | Student |     Parent     | Teacher | Class Teacher | Principal | School | General User |
+| ------------------------------------------------------ | :-----: | :------------: | :-----: | :-----------: | :-------: | :----: | :----------: |
+| Social: post/like/comment/follow/message               |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ✅   |      ✅      |
+| View feed / profiles                                   |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ✅   |      ✅      |
+| Declare e-schooling status                             |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Submit verification request                            |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Approve verification requests                          |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Publish homework/assignments/projects                  |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| View homework                                          |    👁    |       👁        |   ✅    |      ✅       |     👁     |   👁    |      ➖      |
+| Publish notices                                        |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   ✅   |      ➖      |
+| View notices                                           |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Upload timetable                                       |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| View timetable                                         |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Update syllabus coverage                               |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| Submit leave application                               |   ➖    | ✅ (for child) |   ✅    |      ✅       |    ➖     |   ➖   |      ➖      |
+| Approve student/parent leave                           |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   👁    |      ➖      |
+| Approve teacher leave                                  |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   👁    |      ➖      |
+| Submit complaints/suggestions                          |   ➖    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Review complaints                                      |   ➖    |       ➖       |    👁    |       👁       |    ✅     |   ✅   |      ➖      |
+| Create events                                          |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Create school & class structure                        |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Verified members / add-remove / allocate class teacher |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 
 > Notes: Students explicitly have the **Leave** and **Complaints** modules **hidden** in the mobile drawer. General Users see only social + discovery. Principals generally have **view** access to academic content plus **teacher-leave approval**; whether principals can publish homework is **inferred** as no (that is a teacher/school action) — this could not be fully proven and is an **Assumption**.
 

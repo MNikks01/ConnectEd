@@ -17,6 +17,7 @@ flowchart TD
   G --> H[Allocate class teachers]
   H --> I[Publish first notice / event]
 ```
+
 Endpoints: `/auth/register/school`, `/schools/:id`, `/schools/:id/classes`, `/classes/:id/subjects`,
 `/schools/:id/verifications`, `/classes/:id/class-teacher`, `/schools/:id/notices`.
 
@@ -31,6 +32,7 @@ flowchart TD
   E -->|approve| F[VERIFIED -> academics unlock]
   E -->|reject| G[REJECTED -> may re-apply]
 ```
+
 Endpoints: `/me/role`, `/verifications`, `/verifications/:id/decision`, `/me/verifications`.
 
 ## Teacher publishes homework
@@ -45,6 +47,7 @@ flowchart TD
   F --> G[Verified parents/students notified]
   G --> H[Members open -> marked read]
 ```
+
 Endpoints: `/classes/:id/homework`, `/homework/:id`, `/notifications`.
 
 ## Parent daily use

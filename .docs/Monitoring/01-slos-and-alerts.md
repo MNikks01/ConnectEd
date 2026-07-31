@@ -4,14 +4,14 @@
 
 ## SLIs / SLOs
 
-| SLI | SLO | Error budget |
-|---|---|---|
-| API availability (non-5xx / total) | 99.9% / 30d | 43m 12s / 30d |
-| Read latency p95 | < 300 ms | — |
-| Write latency p95 | < 600 ms | — |
-| Homework publish → notification (median) | < 10 s | — |
-| Notification delivery success | ≥ 99.5% | — |
-| Job queue processing lag p95 | < 30 s | — |
+| SLI                                      | SLO         | Error budget  |
+| ---------------------------------------- | ----------- | ------------- |
+| API availability (non-5xx / total)       | 99.9% / 30d | 43m 12s / 30d |
+| Read latency p95                         | < 300 ms    | —             |
+| Write latency p95                        | < 600 ms    | —             |
+| Homework publish → notification (median) | < 10 s      | —             |
+| Notification delivery success            | ≥ 99.5%     | —             |
+| Job queue processing lag p95             | < 30 s      | —             |
 
 ## Alerting policy
 

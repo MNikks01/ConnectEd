@@ -4,12 +4,12 @@
 
 ## Environments
 
-| Env | Purpose | Data | Deploy trigger |
-|---|---|---|---|
-| `local` | Developer machine | Seed/demo (Docker Compose) | manual |
-| `dev` | Integration | Anonymized/seed | merge to `development` |
-| `staging` | Pre-prod, prod-like | Anonymized | merge to `development` (or release candidate) |
-| `production` | Live | Real | merge to `main` (gated) |
+| Env          | Purpose             | Data                       | Deploy trigger                                |
+| ------------ | ------------------- | -------------------------- | --------------------------------------------- |
+| `local`      | Developer machine   | Seed/demo (Docker Compose) | manual                                        |
+| `dev`        | Integration         | Anonymized/seed            | merge to `development`                        |
+| `staging`    | Pre-prod, prod-like | Anonymized                 | merge to `development` (or release candidate) |
+| `production` | Live                | Real                       | merge to `main` (gated)                       |
 
 12-factor config: everything via env vars. No env-specific code branches.
 

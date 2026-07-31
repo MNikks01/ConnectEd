@@ -13,10 +13,10 @@ Implements `ADR-0007`.
 
 ## Tokens
 
-| Token | Type | TTL | Storage | Notes |
-|---|---|---|---|---|
-| Access | JWT (signed, `RS256`/`EdDSA`) | ~15 min | in-memory (web), secure store (mobile) | claims: `sub`, `accountType`, `role`, compact verified-contexts |
-| Refresh | opaque random | ~30 days | httpOnly+Secure+SameSite cookie (web); body (mobile) | rotating **family**, stored hashed server-side |
+| Token   | Type                          | TTL      | Storage                                              | Notes                                                           |
+| ------- | ----------------------------- | -------- | ---------------------------------------------------- | --------------------------------------------------------------- |
+| Access  | JWT (signed, `RS256`/`EdDSA`) | ~15 min  | in-memory (web), secure store (mobile)               | claims: `sub`, `accountType`, `role`, compact verified-contexts |
+| Refresh | opaque random                 | ~30 days | httpOnly+Secure+SameSite cookie (web); body (mobile) | rotating **family**, stored hashed server-side                  |
 
 - **Rotation + reuse detection:** each refresh mints a new token and invalidates the prior; presenting a used
   token revokes the whole family (theft response).

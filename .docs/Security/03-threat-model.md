@@ -20,14 +20,14 @@ providers (external).
 
 ## STRIDE
 
-| Threat | Example | Mitigation |
-|---|---|---|
-| **Spoofing** | Forged identity / stolen token | Strong auth, short-lived JWT, refresh rotation + reuse detection, TLS. |
-| **Tampering** | Client alters role/verification to read a class | Server-side authZ (`ADR-0006`); never trust client claims for scoped data; DB constraints. |
-| **Repudiation** | Deny approving/removing a member | `audit_log` with actor + timestamp on all sensitive actions. |
-| **Information disclosure** | Enumerate resources; leak PII/stack traces | 404-for-out-of-scope; scoped queries; no internals in errors; PII minimization; signed URLs for media. |
-| **Denial of service** | Auth brute force, spam, hot endpoints | Rate limiting, lockout/backoff, pagination caps, queue-based fan-out, WAF/CDN in prod. |
-| **Elevation of privilege** | Student acts as teacher/school | Least-privilege policies + verification checks + permission test matrix. |
+| Threat                     | Example                                         | Mitigation                                                                                             |
+| -------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Spoofing**               | Forged identity / stolen token                  | Strong auth, short-lived JWT, refresh rotation + reuse detection, TLS.                                 |
+| **Tampering**              | Client alters role/verification to read a class | Server-side authZ (`ADR-0006`); never trust client claims for scoped data; DB constraints.             |
+| **Repudiation**            | Deny approving/removing a member                | `audit_log` with actor + timestamp on all sensitive actions.                                           |
+| **Information disclosure** | Enumerate resources; leak PII/stack traces      | 404-for-out-of-scope; scoped queries; no internals in errors; PII minimization; signed URLs for media. |
+| **Denial of service**      | Auth brute force, spam, hot endpoints           | Rate limiting, lockout/backoff, pagination caps, queue-based fan-out, WAF/CDN in prod.                 |
+| **Elevation of privilege** | Student acts as teacher/school                  | Least-privilege policies + verification checks + permission test matrix.                               |
 
 ## Abuse cases specific to ConnectEd
 

@@ -13,9 +13,7 @@ All errors share one shape:
     "message": "You must be a verified member of this class.",
     "status": 403,
     "correlationId": "b1f2...",
-    "details": [
-      { "field": "startDate", "issue": "must be before endDate" }
-    ]
+    "details": [{ "field": "startDate", "issue": "must be before endDate" }]
   }
 }
 ```
@@ -27,19 +25,19 @@ All errors share one shape:
 
 ## Error catalogue (representative)
 
-| code | HTTP | Meaning |
-|---|---|---|
-| `VALIDATION_FAILED` | 422 | Request failed schema validation (`details` populated). |
-| `UNAUTHENTICATED` | 401 | Missing/invalid/expired access token. |
-| `TOKEN_REUSE_DETECTED` | 401 | Refresh reuse; session family revoked. |
-| `FORBIDDEN` | 403 | Authenticated but not permitted. |
-| `VERIFICATION_REQUIRED` | 403 | Actor not a verified member for this context. |
-| `SCHOOL_WEB_ONLY` | 403 | School account attempted mobile login. |
-| `NOT_FOUND` | 404 | Resource missing or out of scope. |
-| `CONFLICT` | 409 | Duplicate or illegal state transition. |
-| `RATE_LIMITED` | 429 | Too many requests. |
-| `DEPENDENCY_UNAVAILABLE` | 503 | DB/Redis/storage/provider down. |
-| `INTERNAL` | 500 | Unexpected; correlationId for support. |
+| code                     | HTTP | Meaning                                                 |
+| ------------------------ | ---- | ------------------------------------------------------- |
+| `VALIDATION_FAILED`      | 422  | Request failed schema validation (`details` populated). |
+| `UNAUTHENTICATED`        | 401  | Missing/invalid/expired access token.                   |
+| `TOKEN_REUSE_DETECTED`   | 401  | Refresh reuse; session family revoked.                  |
+| `FORBIDDEN`              | 403  | Authenticated but not permitted.                        |
+| `VERIFICATION_REQUIRED`  | 403  | Actor not a verified member for this context.           |
+| `SCHOOL_WEB_ONLY`        | 403  | School account attempted mobile login.                  |
+| `NOT_FOUND`              | 404  | Resource missing or out of scope.                       |
+| `CONFLICT`               | 409  | Duplicate or illegal state transition.                  |
+| `RATE_LIMITED`           | 429  | Too many requests.                                      |
+| `DEPENDENCY_UNAVAILABLE` | 503  | DB/Redis/storage/provider down.                         |
+| `INTERNAL`               | 500  | Unexpected; correlationId for support.                  |
 
 ## Handling rules
 

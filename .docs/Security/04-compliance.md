@@ -7,16 +7,16 @@ ConnectEd handles **minors' data**, raising the compliance bar. Finalize with le
 
 ## Data governance
 
-| Concern | Policy |
-|---|---|
-| **Data minimization** | Collect only what a feature needs; no unnecessary PII. |
-| **Encryption in transit** | TLS 1.2+ everywhere. |
-| **Encryption at rest** | DB volume encryption; sensitive columns/app-level encryption where warranted. |
-| **Retention** | User content soft-deleted; hard-purge on retention expiry or erasure request. Audit logs retained longer per policy. |
-| **Access to PII** | Least privilege; internal access audited; no prod PII in dev/test (use anonymized seed). |
-| **Subject rights** | Export (data portability) and delete (erasure) flows; guardian consent for minors. |
-| **Consent** | Parental/guardian consent recorded for student accounts. |
-| **Breach response** | Incident runbook + notification obligations (`Runbooks/`). |
+| Concern                   | Policy                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Data minimization**     | Collect only what a feature needs; no unnecessary PII.                                                               |
+| **Encryption in transit** | TLS 1.2+ everywhere.                                                                                                 |
+| **Encryption at rest**    | DB volume encryption; sensitive columns/app-level encryption where warranted.                                        |
+| **Retention**             | User content soft-deleted; hard-purge on retention expiry or erasure request. Audit logs retained longer per policy. |
+| **Access to PII**         | Least privilege; internal access audited; no prod PII in dev/test (use anonymized seed).                             |
+| **Subject rights**        | Export (data portability) and delete (erasure) flows; guardian consent for minors.                                   |
+| **Consent**               | Parental/guardian consent recorded for student accounts.                                                             |
+| **Breach response**       | Incident runbook + notification obligations (`Runbooks/`).                                                           |
 
 ## Regulatory mapping (indicative — confirm with counsel)
 

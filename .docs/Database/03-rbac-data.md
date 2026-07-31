@@ -18,6 +18,7 @@ Every authorization decision is a function of:
 ## Representative queries (conceptual)
 
 **Can this account read a class's academics?**
+
 ```sql
 -- verified membership in that class (student), or verified parent of a child in that class,
 -- or teacher allocated to a subject in that class, or principal of the school, or the school itself
@@ -28,6 +29,7 @@ LIMIT 1;
 ```
 
 **Can this teacher publish to a subject?**
+
 ```sql
 SELECT 1
 FROM subject_allocation sa
@@ -37,6 +39,7 @@ LIMIT 1;
 ```
 
 **Can this teacher approve a leave application?**
+
 ```sql
 SELECT 1 FROM class_teacher ct
 WHERE ct.teacher_id = :teacherId AND ct.class_id = :leaveClassId

@@ -17,6 +17,7 @@ Loading / Error / Empty / Success / Responsive / Accessible states.
 │ aware)│                                         │
 └───────┴───────────────────────────────────────┘
 ```
+
 Nav items vary by role (see permission matrix). Students: no Leave/Complaints. General user: social only.
 
 ## School portal — dashboard

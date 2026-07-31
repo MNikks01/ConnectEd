@@ -7,6 +7,7 @@ GitHub Actions. Turborepo scopes tasks to changed packages. Workflows live in `.
 ## Workflows
 
 ### `ci.yml` — on PR + push to `development`
+
 ```
 setup (pnpm, node, cache)  →  turbo run:
   - lint          (eslint)
@@ -23,12 +24,15 @@ services for integration tests: postgres + redis (compose or service containers)
 ```
 
 ### `changeset-check.yml` — on PR
+
 Fails if shippable packages changed without a changeset (bot comment guides the author).
 
 ### `preview.yml` — on PR (optional)
+
 Ephemeral preview deploy of `apps/web` (and API) for review.
 
 ### `release.yml` — on push to `main`
+
 ```
 changesets action → version + changelog + tags
 build & push images (api, web, worker) with immutable tags
@@ -38,6 +42,7 @@ post-deploy smoke + health watch
 ```
 
 ### `codeql.yml` — scheduled + PR
+
 Static analysis (CodeQL) for JS/TS.
 
 ## Principles

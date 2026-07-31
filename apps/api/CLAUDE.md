@@ -1,6 +1,6 @@
 # CLAUDE.md — `apps/api`
 
-The ConnectEd API. **Node.js + Express + Prisma (PostgreSQL).** This is the *only* authority for data and business
+The ConnectEd API. **Node.js + Express + Prisma (PostgreSQL).** This is the _only_ authority for data and business
 logic — clients never touch the DB and never make authorization decisions.
 
 > Status: scaffold. Structure below is the target from [`../../.docs/Architecture/01-modules.md`](../../.docs/Architecture/01-modules.md).

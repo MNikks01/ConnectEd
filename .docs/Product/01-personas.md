@@ -5,14 +5,14 @@
 Six actor types. Five are **individual users** (a single account model differentiated by role/status); one is an
 **institution** (school). Every academic role must be **verified by a school** before class data unlocks.
 
-| Actor | Platform | Verified? | Core scope |
-|---|---|---|---|
-| Student | Web (mobile later) | Yes, by school | One class of one school |
-| Parent | Web (mobile later) | Yes, per child | One or more children, each in a class |
-| Teacher | Web (mobile later) | Yes, by school | Subjects taught; optional class-teacher role |
-| Principal | Web (mobile later) | Yes, by school | Whole school (oversight + teacher-leave approval) |
-| General User | Web (mobile later) | N/A | Social features only |
-| School (institution) | **Web only** | Is the verifier | Owns all academic + admin data |
+| Actor                | Platform           | Verified?       | Core scope                                        |
+| -------------------- | ------------------ | --------------- | ------------------------------------------------- |
+| Student              | Web (mobile later) | Yes, by school  | One class of one school                           |
+| Parent               | Web (mobile later) | Yes, per child  | One or more children, each in a class             |
+| Teacher              | Web (mobile later) | Yes, by school  | Subjects taught; optional class-teacher role      |
+| Principal            | Web (mobile later) | Yes, by school  | Whole school (oversight + teacher-leave approval) |
+| General User         | Web (mobile later) | N/A             | Social features only                              |
+| School (institution) | **Web only**       | Is the verifier | Owns all academic + admin data                    |
 
 ---
 
@@ -28,7 +28,7 @@ Six actor types. Five are **individual users** (a single account model different
 - **Goals:** track each child's homework and leave; apply for a child's leave; raise complaints to the school.
 - **Frustrations:** juggling two schools/classes; no proof a message was seen.
 - **Needs:** child switcher; per-child feeds; formal leave workflow with status (received → accepted/rejected).
-- **Access:** view child academics; submit leave *for the child*; submit complaints/suggestions.
+- **Access:** view child academics; submit leave _for the child_; submit complaints/suggestions.
 
 ## Sunita — Teacher (Science) & Class Teacher of 8-A
 
@@ -40,7 +40,7 @@ Six actor types. Five are **individual users** (a single account model different
 ## Anil — Principal
 
 - **Goals:** oversee the school, approve teacher leave, view academics, handle complaints.
-- **Access:** view academics across the school; approve *teacher* leave; review complaints. (Whether a principal
+- **Access:** view academics across the school; approve _teacher_ leave; review complaints. (Whether a principal
   can publish homework is **No** by default — that is a teacher/school action; see permissions matrix.)
 
 ## Meera — General User

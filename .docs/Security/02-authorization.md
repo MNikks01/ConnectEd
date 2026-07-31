@@ -23,14 +23,14 @@ Authorization = **policy(actor, action, resource, context)** evaluated in the **
 
 ```ts
 // packages/types + apps/api/src/shared/authz
-requireRole(actor, [UserRole.TEACHER])
-requireAccountType(actor, AccountType.SCHOOL)
-assertVerifiedMemberOfClass(actor, classId)          // student/parent/teacher/principal paths
-assertTeacherAllocatedToSubject(actor, subjectId)
-assertClassTeacherOf(actor, classId)                 // leave approval (student/parent)
-assertPrincipalOfSchool(actor, schoolId)             // teacher-leave approval
-assertOwnsResource(actor, resource)                  // author-only edit/delete
-assertParentOfVerifiedChild(actor, childId)
+requireRole(actor, [UserRole.TEACHER]);
+requireAccountType(actor, AccountType.SCHOOL);
+assertVerifiedMemberOfClass(actor, classId); // student/parent/teacher/principal paths
+assertTeacherAllocatedToSubject(actor, subjectId);
+assertClassTeacherOf(actor, classId); // leave approval (student/parent)
+assertPrincipalOfSchool(actor, schoolId); // teacher-leave approval
+assertOwnsResource(actor, resource); // author-only edit/delete
+assertParentOfVerifiedChild(actor, childId);
 ```
 
 Each throws a typed `ForbiddenError`/`VerificationRequiredError` (→ 403) or `NotFoundError` (→ 404 for

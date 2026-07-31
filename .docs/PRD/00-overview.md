@@ -14,17 +14,17 @@ This PRD defines **what** ConnectEd must do. The **how** lives in [`../TRD/`](..
 
 ## Modules
 
-| Module | File | Summary |
-|---|---|---|
-| Accounts & Auth | [`01-auth.md`](./01-auth.md) | Registration, login, sessions, account types, roles. |
-| Institution & Classes | [`02-institution.md`](./02-institution.md) | School profile, classes, subjects, class-teacher allocation. |
-| Verification | [`03-verification.md`](./03-verification.md) | Member role verification workflow. |
-| Academics | [`04-academics.md`](./04-academics.md) | Homework/assignments/projects, notices, events, timetable, syllabus. |
-| Workflows | [`05-workflows.md`](./05-workflows.md) | Leave applications, complaints & suggestions. |
-| Social | [`06-social.md`](./06-social.md) | Profiles, posts, follow, connections, messaging. |
-| Notifications | [`07-notifications.md`](./07-notifications.md) | In-app + push notification delivery. |
-| Billing & Entitlements | [`08-billing.md`](./08-billing.md) | School subscriptions, plans, entitlements. |
-| Permissions Matrix | [`09-permissions-matrix.md`](./09-permissions-matrix.md) | Consolidated who-can-do-what (server-enforced). |
+| Module                 | File                                                     | Summary                                                              |
+| ---------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
+| Accounts & Auth        | [`01-auth.md`](./01-auth.md)                             | Registration, login, sessions, account types, roles.                 |
+| Institution & Classes  | [`02-institution.md`](./02-institution.md)               | School profile, classes, subjects, class-teacher allocation.         |
+| Verification           | [`03-verification.md`](./03-verification.md)             | Member role verification workflow.                                   |
+| Academics              | [`04-academics.md`](./04-academics.md)                   | Homework/assignments/projects, notices, events, timetable, syllabus. |
+| Workflows              | [`05-workflows.md`](./05-workflows.md)                   | Leave applications, complaints & suggestions.                        |
+| Social                 | [`06-social.md`](./06-social.md)                         | Profiles, posts, follow, connections, messaging.                     |
+| Notifications          | [`07-notifications.md`](./07-notifications.md)           | In-app + push notification delivery.                                 |
+| Billing & Entitlements | [`08-billing.md`](./08-billing.md)                       | School subscriptions, plans, entitlements.                           |
+| Permissions Matrix     | [`09-permissions-matrix.md`](./09-permissions-matrix.md) | Consolidated who-can-do-what (server-enforced).                      |
 
 ## Cross-cutting product rules (apply to all modules)
 

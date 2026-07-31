@@ -111,4 +111,4 @@ Requirements are grouped by module and numbered. Each is written as an observabl
 ## Module: Monetisation (FR-MON)
 
 - **FR-MON-001** The system shall display banner advertising in the mobile app. (M)
-- **FR-MON-002** *(Planned)* The system shall provide a subscription mechanism for schools. — **Not implemented** (stub only). (W)
+- **FR-MON-002** _(Planned)_ The system shall provide a subscription mechanism for schools. — **Not implemented** (stub only). (W)

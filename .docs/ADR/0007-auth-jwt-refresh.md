@@ -14,7 +14,7 @@ mobile later.
 - **Password hashing:** argon2id (bcrypt as fallback where argon2 unavailable). Never store or log plaintext.
 - **Access token:** short-lived JWT (~15 min) carrying `sub`, `accountType`, `role`, and a compact
   verified-contexts summary. Sensitive operations re-check authorization against the DB, not the token alone.
-- **Refresh token:** opaque, rotating, stored **hashed** server-side as a token *family*; **reuse detection**
+- **Refresh token:** opaque, rotating, stored **hashed** server-side as a token _family_; **reuse detection**
   revokes the whole family. Delivered as an httpOnly, Secure, SameSite cookie on web; returned in body for mobile.
 - **Logout / reset** revoke the refresh family and force re-auth.
 

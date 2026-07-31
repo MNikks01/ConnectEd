@@ -7,13 +7,13 @@ prompt, not the shell). **Not auto-installed.**
 
 ## Marketplaces & plugins
 
-| Plugin | Commands |
-|---|---|
-| Vercel plugin | `npx plugins add vercel/vercel-plugin` |
-| Obsidian skills | `/plugin marketplace add kepano/obsidian-skills` → `/plugin install obsidian@obsidian-skills` |
-| ui-ux-pro-max | `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill` → `/plugin install ui-ux-pro-max@ui-ux-pro-max-skill` |
-| Anthropic example skills | `/plugin marketplace add anthropics/skills` → `/plugin install example-skills@anthropic-agent-skills` |
-| Claude Code setup (official) | `/plugin install claude-code-setup@claude-plugins-official` |
+| Plugin                       | Commands                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Vercel plugin                | `npx plugins add vercel/vercel-plugin`                                                                               |
+| Obsidian skills              | `/plugin marketplace add kepano/obsidian-skills` → `/plugin install obsidian@obsidian-skills`                        |
+| ui-ux-pro-max                | `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill` → `/plugin install ui-ux-pro-max@ui-ux-pro-max-skill` |
+| Anthropic example skills     | `/plugin marketplace add anthropics/skills` → `/plugin install example-skills@anthropic-agent-skills`                |
+| Claude Code setup (official) | `/plugin install claude-code-setup@claude-plugins-official`                                                          |
 
 ## Maintenance commands
 

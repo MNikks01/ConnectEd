@@ -10,10 +10,10 @@ End-to-end workflows, derived from navigation flows and Firestore writes.
 2. **Onboarding** carousel on first launch → Login screen.
 3. **Register** → enter personal details (name, email, mobile, gender, DOB, password) → choose a **status**: Student / Parent / Teacher / User.
 4. Provide **role-specific details**:
-   - *Student:* select school, medium, class, section.
-   - *Parent:* add a child (school, medium, class, section).
-   - *Teacher:* select school, subjects taught.
-   - *User:* nothing further (social only).
+   - _Student:_ select school, medium, class, section.
+   - _Parent:_ add a child (school, medium, class, section).
+   - _Teacher:_ select school, subjects taught.
+   - _User:_ nothing further (social only).
 5. Account is created (Firebase Auth + `USERS` doc); an **Expo push token** is stored.
 6. If an academic status was chosen, a **verification request** is submitted to the school; status shows **Pending**.
 7. User lands on the app: general users go to **Social**; academic users go to **Projects & Homeworks** (drawer home).
@@ -38,7 +38,7 @@ End-to-end workflows, derived from navigation flows and Firestore writes.
 3. On approval, the member moves to **Verified Members**; `VERIFIED_* = true`.
 4. The now-verified user gains access to **class academic data** (homework, notices, timetable, syllabus, leave, complaints scoped to that class/school).
 
-*(For teachers, the school additionally allocates subjects and, optionally, class-teacher status.)*
+_(For teachers, the school additionally allocates subjects and, optionally, class-teacher status.)_
 
 ---
 
@@ -65,10 +65,12 @@ End-to-end workflows, derived from navigation flows and Firestore writes.
 ## J6. Leave approval chains
 
 **Student/Parent leave → Class Teacher**
+
 1. Parent submits leave → lands in class `LEAVE_APPLICATION/RECIEVED`.
 2. Class teacher sees a **badge**, opens the application, **Accepts** or **Rejects** → moves to `ACCEPTED`/`REJECTED`.
 
 **Teacher leave → Principal**
+
 1. Teacher submits leave → lands in `ALL_TEACHERS/LEAVE_APPLICATIONS/.../RECIEVED`.
 2. Principal sees a **badge**, **Accepts** or **Rejects**.
 

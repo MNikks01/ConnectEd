@@ -4,11 +4,11 @@
 
 ## Severity
 
-| Sev | Definition | Response |
-|---|---|---|
+| Sev      | Definition                                                       | Response                                                             |
+| -------- | ---------------------------------------------------------------- | -------------------------------------------------------------------- |
 | **Sev1** | Full outage / data loss / security breach / minors' PII exposure | Page immediately; all-hands; exec + legal (if breach); status comms. |
-| **Sev2** | Major feature broken / severe degradation for many users | Page on-call; dedicated responder; comms. |
-| **Sev3** | Minor/partial impact, workaround exists | Ticket; next business day. |
+| **Sev2** | Major feature broken / severe degradation for many users         | Page on-call; dedicated responder; comms.                            |
+| **Sev3** | Minor/partial impact, workaround exists                          | Ticket; next business day.                                           |
 
 ## Process
 

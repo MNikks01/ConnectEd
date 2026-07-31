@@ -5,29 +5,29 @@
 Legend: ✅ can do · 👁 view only · ➖ not available/hidden. **All enforced on the server** against role,
 verification state, and resource ownership. See [`../Security/02-authorization.md`](../Security/02-authorization.md).
 
-| Capability | Student | Parent | Teacher | Class Teacher | Principal | School | General User |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Social: post/like/comment/follow/message | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View feed / profiles | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Declare academic role | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Submit verification request | ✅ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Approve verification requests | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Publish homework/assignments/projects | ➖ | ➖ | ✅ | ✅ | 👁 | ✅ | ➖ |
-| View homework | 👁 | 👁 | ✅ | ✅ | 👁 | 👁 | ➖ |
-| Publish notices | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ➖ |
-| View notices | 👁 | 👁 | 👁 | 👁 | 👁 | ✅ | ➖ |
-| Create events | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Upload timetable | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| View timetable | 👁 | 👁 | 👁 | 👁 | 👁 | ✅ | ➖ |
-| Update syllabus coverage | ➖ | ➖ | ✅ | ✅ | 👁 | ✅ | ➖ |
-| Submit leave application | ➖ | ✅ (for child) | ✅ | ✅ | ➖ | ➖ | ➖ |
-| Approve student/parent leave | ➖ | ➖ | ➖ | ✅ | ➖ | 👁 | ➖ |
-| Approve teacher leave | ➖ | ➖ | ➖ | ➖ | ✅ | 👁 | ➖ |
-| Submit complaints/suggestions | ➖ | ✅ | ✅ | ✅ | ✅ | ➖ | ➖ |
-| Review complaints | ➖ | ➖ | 👁 | 👁 | ✅ | ✅ | ➖ |
-| Create school & class structure | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Verify/remove members, allocate class teacher | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
-| Manage subscription/billing | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ |
+| Capability                                    | Student |     Parent     | Teacher | Class Teacher | Principal | School | General User |
+| --------------------------------------------- | :-----: | :------------: | :-----: | :-----------: | :-------: | :----: | :----------: |
+| Social: post/like/comment/follow/message      |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ✅   |      ✅      |
+| View feed / profiles                          |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ✅   |      ✅      |
+| Declare academic role                         |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Submit verification request                   |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Approve verification requests                 |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Publish homework/assignments/projects         |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| View homework                                 |    👁    |       👁        |   ✅    |      ✅       |     👁     |   👁    |      ➖      |
+| Publish notices                               |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   ✅   |      ➖      |
+| View notices                                  |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Create events                                 |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Upload timetable                              |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| View timetable                                |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Update syllabus coverage                      |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| Submit leave application                      |   ➖    | ✅ (for child) |   ✅    |      ✅       |    ➖     |   ➖   |      ➖      |
+| Approve student/parent leave                  |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   👁    |      ➖      |
+| Approve teacher leave                         |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   👁    |      ➖      |
+| Submit complaints/suggestions                 |   ➖    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ➖      |
+| Review complaints                             |   ➖    |       ➖       |    👁    |       👁       |    ✅     |   ✅   |      ➖      |
+| Create school & class structure               |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Verify/remove members, allocate class teacher |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Manage subscription/billing                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 
 ## Notes
 

@@ -3,17 +3,17 @@
 Infrastructure-as-code and ops configuration. Owned by the `devops-engineer` charter. Design docs:
 [`../.docs/Deployment/`](../.docs/Deployment/) and [`../.docs/Monitoring/`](../.docs/Monitoring/).
 
-| Dir | Contents |
-|---|---|
-| `docker/` | Multi-stage Dockerfiles for api, web, worker (minimal base, non-root, scanned). |
-| `kubernetes/` | K8s manifests (deployments, services, HPA, probes) — staging/prod. |
-| `helm/` | Helm charts packaging the above. |
-| `terraform/` | Cloud resources (DB, Redis, buckets, networking, secrets). |
-| `nginx/` | Reverse-proxy / ingress config. |
-| `prometheus/` | Scrape configs + alert rules. |
-| `grafana/` | Dashboards (service, DB, queue, business, RUM) + alerting. |
-| `loki/` | Log aggregation config. |
-| `tempo/` | Distributed-tracing config. |
+| Dir               | Contents                                                                         |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `docker/`         | Multi-stage Dockerfiles for api, web, worker (minimal base, non-root, scanned).  |
+| `kubernetes/`     | K8s manifests (deployments, services, HPA, probes) — staging/prod.               |
+| `helm/`           | Helm charts packaging the above.                                                 |
+| `terraform/`      | Cloud resources (DB, Redis, buckets, networking, secrets).                       |
+| `nginx/`          | Reverse-proxy / ingress config.                                                  |
+| `prometheus/`     | Scrape configs + alert rules.                                                    |
+| `grafana/`        | Dashboards (service, DB, queue, business, RUM) + alerting.                       |
+| `loki/`           | Log aggregation config.                                                          |
+| `tempo/`          | Distributed-tracing config.                                                      |
 | `github-actions/` | Reusable composite actions/workflow fragments referenced by `.github/workflows`. |
 
 ## Rules

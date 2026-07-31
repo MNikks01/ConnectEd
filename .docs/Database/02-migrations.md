@@ -10,13 +10,13 @@ committed. The Prisma client is generated into `node_modules/@prisma/client` and
 
 ## Workflow
 
-| Situation | Command |
-|---|---|
+| Situation                | Command                                                |
+| ------------------------ | ------------------------------------------------------ |
 | Change schema during dev | `pnpm --filter api prisma migrate dev --name <change>` |
-| Apply in CI/staging/prod | `pnpm --filter api prisma migrate deploy` |
-| Regenerate client | `pnpm --filter api prisma generate` |
-| Inspect data | `pnpm --filter api prisma studio` |
-| Seed | `pnpm --filter api prisma db seed` |
+| Apply in CI/staging/prod | `pnpm --filter api prisma migrate deploy`              |
+| Regenerate client        | `pnpm --filter api prisma generate`                    |
+| Inspect data             | `pnpm --filter api prisma studio`                      |
+| Seed                     | `pnpm --filter api prisma db seed`                     |
 
 ## Rules
 

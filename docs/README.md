@@ -16,12 +16,12 @@
 
 The product is delivered as **two front-end applications that share a single Firebase backend** (Firebase project `random-21953`):
 
-| Application | Repo | Platform | Primary audience |
-|---|---|---|---|
-| **ConnectEdApp** | `ConnectEdApp/` | React Native / Expo (Android) | Individual users — students, parents, teachers, principals, general users |
+| Application      | Repo            | Platform                         | Primary audience                                                          |
+| ---------------- | --------------- | -------------------------------- | ------------------------------------------------------------------------- |
+| **ConnectEdApp** | `ConnectEdApp/` | React Native / Expo (Android)    | Individual users — students, parents, teachers, principals, general users |
 | **GetConnected** | `getconnected/` | React web app (Firebase Hosting) | School administrators (school portal) **and** individual users on desktop |
 
-A hard rule enforced in code: **school accounts cannot log in on mobile** — they are redirected with *"Please login from desktop computer or laptop."* Schools are administered from the website; individuals primarily use the mobile app but can also use the website.
+A hard rule enforced in code: **school accounts cannot log in on mobile** — they are redirected with _"Please login from desktop computer or laptop."_ Schools are administered from the website; individuals primarily use the mobile app but can also use the website.
 
 ---
 
@@ -64,4 +64,4 @@ Start with the [Table of Contents](./TABLE_OF_CONTENTS.md). Recommended reading 
 
 All conclusions are grounded in the source code (navigation stacks, screen components, Firestore query paths, Storage references, and constants). Firestore has no security-rules file in either repo, so **access control is inferred from client-side query construction and UI gating**, not from server rules. This is called out wherever it matters.
 
-*Documentation reconstructed on 2026-07-03 from repository snapshots.*
+_Documentation reconstructed on 2026-07-03 from repository snapshots._

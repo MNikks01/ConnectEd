@@ -9,19 +9,19 @@ it for academics. Social-only usage is secondary.
 
 ## Metric tree
 
-| Layer | Metric | Target (v1, 6 mo) |
-|---|---|---|
-| Acquisition | Schools onboarded | 25 pilot schools |
-| Activation | Schools that set up ≥1 class + verify ≥10 members within 7 days | ≥ 70% |
-| Activation | Member verification completion rate (request → verified) | ≥ 85% |
-| Engagement | Weekly active verified members / verified members | ≥ 55% |
-| Engagement | Homework read-rate within 24h of publish | ≥ 80% |
-| Engagement | Median time from homework publish → parent notified | < 10 s |
-| Retention | School month-2 retention | ≥ 90% |
-| Retention | Member 4-week retention | ≥ 50% |
-| Reliability | API availability (SLO) | ≥ 99.9% |
-| Reliability | p95 read latency / p95 write latency | < 300 ms / < 600 ms |
-| Business | Trial → paid school conversion | ≥ 30% |
+| Layer       | Metric                                                          | Target (v1, 6 mo)   |
+| ----------- | --------------------------------------------------------------- | ------------------- |
+| Acquisition | Schools onboarded                                               | 25 pilot schools    |
+| Activation  | Schools that set up ≥1 class + verify ≥10 members within 7 days | ≥ 70%               |
+| Activation  | Member verification completion rate (request → verified)        | ≥ 85%               |
+| Engagement  | Weekly active verified members / verified members               | ≥ 55%               |
+| Engagement  | Homework read-rate within 24h of publish                        | ≥ 80%               |
+| Engagement  | Median time from homework publish → parent notified             | < 10 s              |
+| Retention   | School month-2 retention                                        | ≥ 90%               |
+| Retention   | Member 4-week retention                                         | ≥ 50%               |
+| Reliability | API availability (SLO)                                          | ≥ 99.9%             |
+| Reliability | p95 read latency / p95 write latency                            | < 300 ms / < 600 ms |
+| Business    | Trial → paid school conversion                                  | ≥ 30%               |
 
 ## Instrumentation
 
