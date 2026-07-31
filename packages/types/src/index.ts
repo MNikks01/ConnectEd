@@ -1,11 +1,10 @@
 /**
- * @connected/types — shared DTOs, enums, and permission-matrix types.
+ * `@connected/types` — shared DTOs, enums, and request schemas.
  *
- * This is the single source of request/response shapes across apps/api and apps/web.
- * Types here are intended to be DERIVED from the API's zod schemas (see .docs/API) so the
- * client and server cannot drift.
- *
- * Scaffold only — real types land with the auth/accounts modules (Sprint 0).
+ * The single source of request/response shapes across `apps/api` and `apps/web`. Schemas are
+ * defined once here and imported by both, so the client and server cannot drift
+ * (`.docs/Architecture/03-frontend-architecture.md`).
  */
-
-export const CONNECTED_TYPES_PLACEHOLDER = true;
+export * from './auth.js';
+export * from './enums.js';
+export * from './errors.js';
