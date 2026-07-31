@@ -1,0 +1,411 @@
+/**
+ * Component styles.
+ *
+ * Every value here is a token reference. If you find yourself typing a hex code or a pixel margin,
+ * the token is missing — add it to `tokens.css` rather than working around it, or the next theme
+ * change will leave this rule behind.
+ */
+
+@import './tokens.css';
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* One focus treatment across every control, so keyboard position is never in doubt. */
+.ui-button:focus-visible,
+.ui-field__input:focus-visible,
+.ui-dialog a:focus-visible,
+.ui-table a:focus-visible {
+  outline: var(--ui-focus-width) solid var(--ui-accent);
+  outline-offset: var(--ui-focus-offset);
+}
+
+/* --------------------------------------------------------------------------
+   Button
+   -------------------------------------------------------------------------- */
+
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  font-family: inherit;
+  font-weight: var(--ui-weight-semibold);
+  line-height: var(--ui-leading-tight);
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--ui-duration-fast) var(--ui-ease),
+    border-color var(--ui-duration-fast) var(--ui-ease);
+  /* 44px is the WCAG 2.5.5 target size — comfortable for touch, not just for a mouse. */
+  min-height: 44px;
+}
+
+.ui-button--sm {
+  min-height: 36px;
+  padding: var(--ui-space-2) var(--ui-space-3);
+  font-size: var(--ui-text-sm);
+}
+
+.ui-button--md {
+  padding: var(--ui-space-3) var(--ui-space-4);
+  font-size: var(--ui-text-base);
+}
+
+.ui-button--full {
+  width: 100%;
+}
+
+.ui-button--primary {
+  background: var(--ui-accent);
+  color: var(--ui-accent-text);
+}
+
+.ui-button--primary:hover:not(:disabled) {
+  background: var(--ui-accent-hover);
+}
+
+.ui-button--secondary {
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  border-color: var(--ui-border-strong);
+}
+
+.ui-button--secondary:hover:not(:disabled) {
+  background: var(--ui-surface);
+}
+
+.ui-button--danger {
+  background: var(--ui-danger);
+  color: var(--ui-bg);
+}
+
+.ui-button--ghost {
+  background: transparent;
+  color: var(--ui-accent);
+}
+
+.ui-button--ghost:hover:not(:disabled) {
+  background: var(--ui-surface);
+}
+
+/* Dimmed, but the label still clears 4.5:1 — a disabled control must remain readable. */
+.ui-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ui-button[aria-busy='true'] {
+  cursor: progress;
+}
+
+.ui-button__spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: var(--ui-radius-full);
+  animation: ui-spin 0.6s linear infinite;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button__spinner {
+    animation-duration: 1.5s;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Field
+   -------------------------------------------------------------------------- */
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+}
+
+.ui-field__label {
+  font-size: var(--ui-text-sm);
+  font-weight: var(--ui-weight-semibold);
+  color: var(--ui-text);
+}
+
+.ui-field__required {
+  color: var(--ui-danger);
+}
+
+.ui-field__input {
+  font: inherit;
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  /* border-strong, not border: an input's boundary is a UI component under WCAG 1.4.11. */
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius);
+  padding: var(--ui-space-3);
+  min-height: 44px;
+  width: 100%;
+}
+
+.ui-field__input[aria-invalid='true'] {
+  border-color: var(--ui-danger);
+}
+
+.ui-field__input:disabled {
+  background: var(--ui-surface);
+  cursor: not-allowed;
+}
+
+.ui-field__hint {
+  font-size: var(--ui-text-sm);
+  color: var(--ui-text-muted);
+}
+
+.ui-field__error {
+  font-size: var(--ui-text-sm);
+  color: var(--ui-danger);
+  font-weight: var(--ui-weight-medium);
+}
+
+/* --------------------------------------------------------------------------
+   Table
+   -------------------------------------------------------------------------- */
+
+.ui-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+}
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ui-text-sm);
+}
+
+.ui-table__caption {
+  text-align: start;
+  padding: var(--ui-space-3) var(--ui-space-4);
+  font-weight: var(--ui-weight-semibold);
+  color: var(--ui-text);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.ui-table th,
+.ui-table td {
+  padding: var(--ui-space-3) var(--ui-space-4);
+  text-align: start;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.ui-table th {
+  background: var(--ui-surface);
+  font-weight: var(--ui-weight-semibold);
+  color: var(--ui-text);
+  white-space: nowrap;
+}
+
+.ui-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ui-table__empty {
+  color: var(--ui-text-muted);
+  text-align: center;
+  padding: var(--ui-space-6) var(--ui-space-4);
+}
+
+/* --------------------------------------------------------------------------
+   Dialog
+   -------------------------------------------------------------------------- */
+
+.ui-dialog {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: min(32rem, calc(100vw - 2 * var(--ui-space-4)));
+  width: 100%;
+}
+
+.ui-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.ui-dialog__panel {
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow-lg);
+  padding: var(--ui-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-4);
+}
+
+.ui-dialog__title {
+  margin: 0;
+  font-size: var(--ui-text-xl);
+  line-height: var(--ui-leading-tight);
+}
+
+.ui-dialog__description {
+  margin: 0;
+  color: var(--ui-text-muted);
+}
+
+.ui-dialog__footer {
+  display: flex;
+  gap: var(--ui-space-3);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------------------
+   Badge & Alert
+   -------------------------------------------------------------------------- */
+
+.ui-badge {
+  display: inline-block;
+  padding: var(--ui-space-1) var(--ui-space-2);
+  border-radius: var(--ui-radius-full);
+  font-size: var(--ui-text-xs);
+  font-weight: var(--ui-weight-semibold);
+  border: 1px solid currentcolor;
+}
+
+.ui-badge--neutral {
+  color: var(--ui-text-muted);
+}
+.ui-badge--info {
+  color: var(--ui-accent);
+}
+.ui-badge--success {
+  color: var(--ui-success);
+}
+.ui-badge--warning {
+  color: var(--ui-warning);
+}
+.ui-badge--danger {
+  color: var(--ui-danger);
+}
+
+.ui-alert {
+  border: 1px solid;
+  border-radius: var(--ui-radius);
+  padding: var(--ui-space-3) var(--ui-space-4);
+}
+
+.ui-alert__title {
+  margin: 0 0 var(--ui-space-1);
+  font-weight: var(--ui-weight-semibold);
+  font-size: var(--ui-text-sm);
+}
+
+.ui-alert__body {
+  font-size: var(--ui-text-sm);
+}
+
+.ui-alert--info {
+  color: var(--ui-accent);
+  border-color: var(--ui-accent);
+  background: var(--ui-surface);
+}
+
+.ui-alert--success {
+  color: var(--ui-success);
+  border-color: var(--ui-success);
+  background: var(--ui-success-surface);
+}
+
+.ui-alert--warning {
+  color: var(--ui-warning);
+  border-color: var(--ui-warning);
+  background: var(--ui-warning-surface);
+}
+
+.ui-alert--danger {
+  color: var(--ui-danger);
+  border-color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+}
+
+/* --------------------------------------------------------------------------
+   Layout
+   -------------------------------------------------------------------------- */
+
+.ui-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: var(--ui-space-5);
+}
+
+.ui-stack {
+  display: flex;
+}
+
+.ui-stack[data-direction='column'] {
+  flex-direction: column;
+}
+
+.ui-stack[data-direction='row'] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ui-stack[data-align='center'] {
+  align-items: center;
+}
+.ui-stack[data-align='end'] {
+  align-items: flex-end;
+}
+.ui-stack[data-align='between'] {
+  justify-content: space-between;
+}
+
+.ui-page-header {
+  display: flex;
+  gap: var(--ui-space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: var(--ui-space-5);
+}
+
+.ui-page-header__title {
+  margin: 0;
+  font-size: var(--ui-text-2xl);
+  line-height: var(--ui-leading-tight);
+}
+
+.ui-page-header__description {
+  margin: var(--ui-space-1) 0 0;
+  color: var(--ui-text-muted);
+}
+
+.ui-page-header__actions {
+  display: flex;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
+}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { AuthForm, Field } from '@/components/auth-form';
+import { AuthForm, FormField } from '@/components/auth-form';
 
 import type { Metadata } from 'next';
 
@@ -22,16 +22,16 @@ export default function RegisterPage() {
           pendingLabel="Creating account…"
           redirectTo="/home"
         >
-          <Field name="fullName" label="Full name" autoComplete="name" required />
-          <Field
+          <FormField name="fullName" label="Full name" autoComplete="name" required />
+          <FormField
             name="handle"
             label="Handle"
             autoComplete="username"
             required
             hint="Lowercase letters, numbers, dots, and underscores."
           />
-          <Field name="email" label="Email" type="email" autoComplete="email" required />
-          <Field
+          <FormField name="email" label="Email" type="email" autoComplete="email" required />
+          <FormField
             name="password"
             label="Password"
             type="password"
