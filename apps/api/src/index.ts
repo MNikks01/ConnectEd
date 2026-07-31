@@ -27,7 +27,7 @@ const db = createDb({
 const readiness = new ReadinessRegistry();
 registerDbReadiness(readiness, db);
 
-const app = createApp({ config, logger, readiness });
+const app = createApp({ config, logger, readiness, db });
 
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');

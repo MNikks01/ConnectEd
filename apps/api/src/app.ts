@@ -1,17 +1,22 @@
 /**
- * Composition root: the one place that knows which concrete config, logger, registry, and metrics
- * the app runs with. Everything else receives what it needs, which is what keeps the modules
- * testable and lets S0-6/S0-7 add dependencies without editing the pieces they plug into.
+ * Composition root: the one place that knows which concrete config, logger, registry, metrics, and
+ * database the app runs with. Everything else receives what it needs, which is what keeps the
+ * modules testable and lets later modules add dependencies without editing the pieces they plug
+ * into.
  *
  * Separate from `index.ts` on purpose: tests build an app without binding a port or starting the
  * tracing SDK. Middleware order matters and is documented inline.
  */
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 
+import { createAuthModule } from './modules/auth/index.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { createPasswordHasher } from './shared/auth/password.js';
+import { createTokenService } from './shared/auth/tokens.js';
 import { loadConfig, type Config } from './shared/config/index.js';
 import { ReadinessRegistry } from './shared/health/readiness.js';
 import { createLogger, type Logger } from './shared/logger/index.js';
@@ -20,6 +25,7 @@ import { errorHandler } from './shared/middleware/error-handler.js';
 import { notFound } from './shared/middleware/not-found.js';
 import { createMetrics, type Metrics } from './shared/observability/metrics.js';
 
+import type { Db } from './shared/db/index.js';
 import type { ErrorMapper } from './shared/errors/mapping.js';
 
 export const API_PREFIX = '/api/v1';
@@ -29,6 +35,11 @@ export interface AppDependencies {
   logger: Logger;
   metrics: Metrics;
   readiness: ReadinessRegistry;
+  /**
+   * Optional so a test can build an app for middleware-level assertions without a database.
+   * Routes that need persistence are simply not mounted when it is absent.
+   */
+  db?: Db | undefined;
   /** Mappers for foreign error types; zod and malformed JSON are covered by default. */
   errorMappers?: readonly ErrorMapper[];
 }
@@ -45,12 +56,13 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     logger: overrides.logger ?? createLogger(config),
     metrics: overrides.metrics ?? createMetrics(),
     readiness: overrides.readiness ?? new ReadinessRegistry(),
+    db: overrides.db,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, errorMappers } = createDependencies(overrides);
+  const { config, logger, metrics, readiness, db, errorMappers } = createDependencies(overrides);
 
   const app = express();
 
@@ -84,12 +96,21 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
 
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(cookieParser());
 
   // Operational endpoints are unversioned; product routes live under /api/v1.
   app.use(healthRoutes({ readiness, metrics, metricsEnabled: config.METRICS_ENABLED }));
 
   const api = express.Router();
-  // Module routers mount here as they land: auth, accounts, institution, … (S0-7 onward).
+
+  if (db) {
+    const passwords = createPasswordHasher(config);
+    const tokens = createTokenService(config);
+
+    // Module routers mount here as they land: accounts, institution, verification, … (S1 onward).
+    api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
+  }
+
   app.use(API_PREFIX, api);
 
   // Order is load-bearing: unmatched → 404 error, then the single global error handler.

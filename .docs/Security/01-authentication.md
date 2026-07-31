@@ -1,6 +1,6 @@
 # Security — Authentication
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-07-31`
 
 Implements `ADR-0007`.
 
@@ -23,6 +23,12 @@ Implements `ADR-0007`.
 - **Sensitive operations** (billing, member removal, role change) re-verify authorization against the DB rather
   than trusting stale JWT claims.
 - **Signing keys** from the secrets manager; support key rotation (JWKS with `kid`).
+
+> **Implemented as of S0-7:** access tokens are signed **HS256** with `JWT_ACCESS_SECRET` (minimum 32 chars,
+> enforced at boot), with the algorithm pinned on verification to block `alg: none` and algorithm confusion.
+> Asymmetric signing and JWKS/`kid` rotation described above are **not yet built** — they need key management
+> and a published JWKS endpoint, which is its own task. Refresh tokens are already as described: opaque,
+> 256-bit random, stored as a SHA-256 digest, rotating per family with reuse detection.
 
 ## Flows
 

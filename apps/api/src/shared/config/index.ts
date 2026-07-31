@@ -26,6 +26,30 @@ const envSchema = z.object({
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
+  /**
+   * Access-token signing key. 32 chars minimum so a weak dev secret cannot reach an environment
+   * that matters. See ADR-0007; asymmetric signing + JWKS is the documented target.
+   */
+  JWT_ACCESS_SECRET: z.string().min(32),
+  /** Short by design — the refresh token, not the access token, carries session lifetime. */
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60 * 24 * 30),
+
+  /** argon2id tuning. Defaults follow OWASP guidance; raise memory before iterations. */
+  ARGON_MEMORY_KIB: z.coerce.number().int().positive().default(19456),
+  ARGON_ITERATIONS: z.coerce.number().int().positive().default(2),
+  ARGON_PARALLELISM: z.coerce.number().int().positive().default(1),
+
+  /** Refresh cookies must be Secure outside local development. */
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+
   /** `/metrics` is served only when enabled; network-level restriction is the infra's job. */
   METRICS_ENABLED: z
     .enum(['true', 'false'])
@@ -40,6 +64,8 @@ const envSchema = z.object({
 export type Config = z.infer<typeof envSchema> & {
   isProduction: boolean;
   isTest: boolean;
+  /** Resolved rather than read directly: Secure cookies are mandatory in production. */
+  cookieSecure: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -53,9 +79,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
 
+  const isProduction = parsed.data.NODE_ENV === 'production';
+
   return {
     ...parsed.data,
-    isProduction: parsed.data.NODE_ENV === 'production',
+    isProduction,
     isTest: parsed.data.NODE_ENV === 'test',
+    // Production cannot opt out: an unencrypted refresh cookie is a session-theft vector, and a
+    // misconfigured env var must not be able to turn that off.
+    cookieSecure: isProduction ? true : (parsed.data.COOKIE_SECURE ?? false),
   };
 }
