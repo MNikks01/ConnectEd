@@ -13,7 +13,16 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["app", "lib", "components", "middleware.ts", "next-env.d.ts", ".next/types/**/*.ts"],
+  "include": [
+    "app",
+    "lib",
+    "components",
+    "e2e",
+    "middleware.ts",
+    "playwright.config.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
   "exclude": ["node_modules", ".next"],
   "references": [{ "path": "../../packages/types" }]
 }
