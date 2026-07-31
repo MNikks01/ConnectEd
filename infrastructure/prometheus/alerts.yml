@@ -1,0 +1,93 @@
+# Alert rules derived from `.docs/Monitoring/01-slos-and-alerts.md`.
+#
+# Every alert carries a `runbook` annotation — the doc's rule is "no alert without an owner and a
+# runbook". Thresholds here match the SLO table; the `for:` durations keep a brief blip from
+# paging anyone.
+#
+# These are the rules that can be written today, against metrics the API actually exports. Queue
+# lag, notification delivery, and business alerts arrive with the modules that emit them.
+
+groups:
+  - name: availability
+    rules:
+      - alert: ApiDown
+        expr: up{job="connected-api"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: 'The API is not responding to scrapes.'
+          description: 'Prometheus cannot reach {{ $labels.instance }}.'
+          runbook: '.docs/Runbooks/'
+
+      - alert: HighErrorRate
+        # 5xx share of all requests. Matches the doc's "error rate > 5% for 5m" paging rule.
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m]))
+            /
+          sum(rate(http_request_duration_seconds_count[5m]))
+            > 0.05
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: 'More than 5% of requests are failing.'
+          runbook: '.docs/Runbooks/'
+
+      - alert: AvailabilitySloFastBurn
+        # 2% of a 99.9%/30d budget burned in 1h — the doc's fast burn-rate page.
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status=~"5.."}[1h]))
+            /
+          sum(rate(http_request_duration_seconds_count[1h]))
+            > 0.0144
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: 'Burning the availability error budget fast.'
+          description: 'At this rate the 30-day budget is exhausted well before the window ends.'
+          runbook: '.docs/Runbooks/'
+
+  - name: latency
+    rules:
+      - alert: ReadLatencyP95High
+        # SLO: read p95 < 300ms.
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{method="GET"}[5m]))
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'Read latency p95 is above the 300ms SLO.'
+          runbook: '.docs/Runbooks/'
+
+      - alert: WriteLatencyP95High
+        # SLO: write p95 < 600ms.
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{method=~"POST|PATCH|PUT|DELETE"}[5m]))
+          ) > 0.6
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'Write latency p95 is above the 600ms SLO.'
+          runbook: '.docs/Runbooks/'
+
+  - name: security
+    rules:
+      - alert: LoginFailureSpike
+        # "login failure spike (possible attack)" from the business alerts.
+        expr: |
+          sum(rate(http_request_duration_seconds_count{route="/auth/login", status="401"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'Elevated login failures — possible credential stuffing.'
+          runbook: '.docs/Runbooks/'

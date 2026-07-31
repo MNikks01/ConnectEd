@@ -1,0 +1,26 @@
+# Prometheus scrape configuration (local development).
+#
+# The API runs on the host via `pnpm dev`, not inside compose, so it is reached through
+# `host.docker.internal`. Staging and production scrape the API's Kubernetes service instead and
+# use their own copy of this file — see `.docs/Monitoring/00-observability.md`.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: connected-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['host.docker.internal:4000']
+        labels:
+          service: connected-api

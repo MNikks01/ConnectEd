@@ -1,0 +1,17 @@
+# Dashboards are code (`infrastructure/CLAUDE.md`), loaded from disk rather than edited in the UI.
+# Edits made in Grafana are lost on restart — that is deliberate, so what is running is what is
+# reviewed.
+
+apiVersion: 1
+
+providers:
+  - name: connected
+    orgId: 1
+    folder: ConnectEd
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
