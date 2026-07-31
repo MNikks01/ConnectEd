@@ -46,6 +46,12 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Catches a migration that does not apply to a clean database — the failure mode that
+      # otherwise surfaces during a release. `migrate deploy` is the non-dev command (never
+      # `migrate dev`), per .docs/Database/02-migrations.md.
+      - name: Apply migrations
+        run: pnpm --filter @connected/api db:deploy
+
       - name: Format check
         run: pnpm format:check
 

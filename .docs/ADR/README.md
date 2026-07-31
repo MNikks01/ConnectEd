@@ -34,3 +34,4 @@ Date: YYYY-MM-DD
 | [0010](./0010-cicd-changesets-coderabbit.md) | GitHub Actions + Changesets + CodeRabbit        | Accepted |
 | [0011](./0011-observability-stack.md)        | Prometheus/Grafana/Loki/Tempo observability     | Accepted |
 | [0012](./0012-modular-monolith.md)           | Modular monolith over microservices (initially) | Accepted |
+| [0013](./0013-prisma-7-driver-adapter.md)    | Prisma 7 with the `pg` driver adapter           | Accepted |

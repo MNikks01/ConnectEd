@@ -1,6 +1,6 @@
 # Database — RBAC Data Model
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-07-31`
 
 How the [permission matrix](../PRD/09-permissions-matrix.md) is represented in data and evaluated. Authorization
 logic lives in services (`Security/02-authorization.md`); this doc is the **data** those checks read.
@@ -49,7 +49,10 @@ LIMIT 1;   -- teacher leave instead checks principal role of the school
 ## Integrity guards that back RBAC
 
 - `class_teacher.class_id UNIQUE` → at most one class teacher per class.
-- `membership` UNIQUE(`account_id,school_id,role,class_id,child_id`) → no duplicate/ambiguous scopes.
+- `membership` UNIQUE(`account_id,school_id,role,scope_key`) → no duplicate/ambiguous scopes. `scope_key` is a
+  non-null derivation of (`class_id`, `child_id`); putting those nullable columns in the constraint directly
+  would **not** work, because Postgres treats NULLs as distinct and school-wide roles (principal, teacher) leave
+  both NULL. See `Database/01-schema.md`.
 - `subject_allocation` UNIQUE(`teacher_id,subject_id`) → clean allocation.
 - FKs ensure a leave/academic item always ties to a real class/school.
 
