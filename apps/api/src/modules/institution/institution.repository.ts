@@ -57,6 +57,24 @@ export interface InstitutionRepository {
   setClassActive: (classId: string, active: boolean) => Promise<ClassRow>;
   createSubject: (classId: string, name: string) => Promise<SubjectRow>;
   listSubjects: (classId: string) => Promise<SubjectRow[]>;
+  /** Resolves the teacher profile only when that account is a VERIFIED teacher of the school. */
+  findVerifiedTeacher: (
+    accountId: string,
+    schoolId: string,
+  ) => Promise<{ id: string; fullName: string | null } | null>;
+  allocateClassTeacher: (input: {
+    classId: string;
+    teacherId: string;
+    actorAccountId: string;
+  }) => Promise<{ allocatedAt: Date }>;
+  findClassTeacher: (classId: string) => Promise<ClassTeacherRow | null>;
+}
+
+export interface ClassTeacherRow {
+  classId: string;
+  teacherAccountId: string;
+  teacherName: string | null;
+  allocatedAt: Date;
 }
 
 const CLASS_SELECT = {
@@ -141,5 +159,76 @@ export function createInstitutionRepository(db: Db): InstitutionRepository {
         select: { id: true, classId: true, name: true },
         orderBy: { name: 'asc' },
       }),
+
+    findVerifiedTeacher: async (accountId, schoolId) => {
+      // Membership is the authority on "is this a teacher here", not the profile role. A profile
+      // role is self-declared; the membership is what the school approved.
+      const membership = await db.membership.findFirst({
+        where: { accountId, schoolId, role: 'TEACHER', status: 'VERIFIED' },
+        select: { id: true },
+      });
+
+      if (!membership) return null;
+
+      const profile = await db.teacherProfile.findUnique({
+        where: { accountId_schoolId: { accountId, schoolId } },
+        select: { id: true, account: { select: { userProfile: { select: { fullName: true } } } } },
+      });
+
+      if (!profile) return null;
+
+      return { id: profile.id, fullName: profile.account.userProfile?.fullName ?? null };
+    },
+
+    /**
+     * `class_teacher.class_id` is the primary key, so the upsert *is* the "exactly one class
+     * teacher per class" guarantee (FR-INST-004) — reallocating replaces rather than adding.
+     */
+    allocateClassTeacher: async ({ classId, teacherId, actorAccountId }) => {
+      const [allocation] = await db.$transaction([
+        db.classTeacher.upsert({
+          where: { classId },
+          update: { teacherId, allocatedAt: new Date() },
+          create: { classId, teacherId },
+          select: { allocatedAt: true },
+        }),
+        db.auditLog.create({
+          data: {
+            actorAccountId,
+            action: 'class_teacher.allocated',
+            entity: 'class',
+            entityId: classId,
+            metadata: { teacherId },
+          },
+        }),
+      ]);
+
+      return allocation;
+    },
+
+    findClassTeacher: async (classId) => {
+      const row = await db.classTeacher.findUnique({
+        where: { classId },
+        select: {
+          classId: true,
+          allocatedAt: true,
+          teacher: {
+            select: {
+              accountId: true,
+              account: { select: { userProfile: { select: { fullName: true } } } },
+            },
+          },
+        },
+      });
+
+      if (!row) return null;
+
+      return {
+        classId: row.classId,
+        teacherAccountId: row.teacher.accountId,
+        teacherName: row.teacher.account.userProfile?.fullName ?? null,
+        allocatedAt: row.allocatedAt,
+      };
+    },
   };
 }

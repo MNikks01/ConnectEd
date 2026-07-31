@@ -47,10 +47,23 @@ export const createSubjectSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
+/** FR-INST-004 — the allocatee must already be a verified teacher of the school. */
+export const allocateClassTeacherSchema = z.object({
+  teacherAccountId: z.uuid(),
+});
+
 export type UpdateSchoolProfileInput = z.infer<typeof updateSchoolProfileSchema>;
 export type CreateClassInput = z.infer<typeof createClassSchema>;
 export type UpdateClassInput = z.infer<typeof updateClassSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
+export type AllocateClassTeacherInput = z.infer<typeof allocateClassTeacherSchema>;
+
+export interface ClassTeacherResponse {
+  classId: string;
+  teacherAccountId: string;
+  teacherName: string | null;
+  allocatedAt: string;
+}
 
 // ---------------------------------------------------------------------------
 // Response DTOs

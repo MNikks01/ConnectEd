@@ -434,3 +434,76 @@ describe('GET /classes/:id/subjects', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('POST /classes/:id/class-teacher (FR-INST-004)', () => {
+  it('allocates a verified teacher of the school', async () => {
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classBId}/class-teacher`)
+      .set('Authorization', await asSchool())
+      .send({ teacherAccountId: fixture.otherTeacherAccountId });
+
+    expect(response.status).toBe(200);
+    const allocation = await db.classTeacher.findUnique({ where: { classId: fixture.classBId } });
+    expect(allocation?.teacherId).toBe(fixture.otherTeacherProfileId);
+  });
+
+  it('refuses an account that is not a verified teacher here', async () => {
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classBId}/class-teacher`)
+      .set('Authorization', await asSchool())
+      // A student, not a teacher — the profile role alone must not be enough either.
+      .send({ teacherAccountId: fixture.studentAccountId });
+
+    expect(response.status).toBe(409);
+    expect(await db.classTeacher.findUnique({ where: { classId: fixture.classBId } })).toBeNull();
+  });
+
+  it('refuses a teacher whose membership has been revoked', async () => {
+    await db.membership.updateMany({
+      where: { accountId: fixture.otherTeacherAccountId },
+      data: { status: 'REVOKED' },
+    });
+
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classBId}/class-teacher`)
+      .set('Authorization', await asSchool())
+      .send({ teacherAccountId: fixture.otherTeacherAccountId });
+
+    expect(response.status).toBe(409);
+  });
+
+  it('keeps exactly one class teacher per class when reallocating', async () => {
+    const schoolAuth = await asSchool();
+
+    await request(app)
+      .post(`/api/v1/classes/${fixture.classAId}/class-teacher`)
+      .set('Authorization', schoolAuth)
+      .send({ teacherAccountId: fixture.otherTeacherAccountId });
+
+    const allocations = await db.classTeacher.findMany({ where: { classId: fixture.classAId } });
+
+    expect(allocations).toHaveLength(1);
+    expect(allocations[0]?.teacherId).toBe(fixture.otherTeacherProfileId);
+  });
+
+  it('writes an audit entry for the allocation', async () => {
+    await request(app)
+      .post(`/api/v1/classes/${fixture.classBId}/class-teacher`)
+      .set('Authorization', await asSchool())
+      .send({ teacherAccountId: fixture.otherTeacherAccountId });
+
+    const entry = await db.auditLog.findFirst({ where: { action: 'class_teacher.allocated' } });
+    expect(entry?.entityId).toBe(fixture.classBId);
+  });
+
+  it('404s for a class at another school', async () => {
+    const rival = await otherSchool();
+
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classAId}/class-teacher`)
+      .set('Authorization', rival.authorization)
+      .send({ teacherAccountId: fixture.otherTeacherAccountId });
+
+    expect(response.status).toBe(404);
+  });
+});
