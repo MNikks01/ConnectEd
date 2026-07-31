@@ -15,6 +15,7 @@ import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
+import { createVerificationModule } from './modules/verification/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
@@ -112,8 +113,12 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
 
     // Everything past auth requires a valid token; each module still authorizes per resource.
-    api.use(authenticate(tokens), createInstitutionModule(db).routes);
-    // Module routers mount here as they land: verification, academics, … (S1 onward).
+    api.use(
+      authenticate(tokens),
+      createInstitutionModule(db).routes,
+      createVerificationModule(db, logger).routes,
+    );
+    // Module routers mount here as they land: academics, workflows, social, …
   }
 
   app.use(API_PREFIX, api);

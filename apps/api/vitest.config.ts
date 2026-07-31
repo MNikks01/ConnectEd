@@ -8,6 +8,15 @@ export default defineConfig({
     // Integration tests TRUNCATE the shared test database between cases, so files must not run
     // concurrently — one file's reset would wipe another's fixtures mid-assertion.
     fileParallelism: false,
+    /**
+     * Vitest's 5s default is tuned for unit tests. These talk to a real Postgres — a case that
+     * resets the database, builds a fixture, and makes several HTTP round trips sits comfortably
+     * under a second locally but has been observed at 5.1s under load. CI runners are slower than
+     * a laptop, so the default would turn into intermittent red builds that say nothing about the
+     * code.
+     */
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
