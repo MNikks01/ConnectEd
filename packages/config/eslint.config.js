@@ -18,7 +18,13 @@ export default tseslint.config(
       // No `any` at boundaries without justification (TRD NFR-013 / ADR-0003).
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // `ignoreRestSiblings` allows the standard omit idiom — `const { label, ...rest } = props`
+      // to drop a prop before spreading the remainder onto a DOM element. Without it the only way
+      // to omit a key is to list every other one, which silently drops props when the type grows.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'always'],
     },

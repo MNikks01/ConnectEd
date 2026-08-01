@@ -7,7 +7,7 @@
  * Owned by the ui-designer charter (`packages/CLAUDE.md`).
  */
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './components/button';
-export { Field, type FieldProps } from './components/field';
+export { Field, type FieldOption, type FieldProps } from './components/field';
 export { Table, type TableColumn, type TableProps } from './components/table';
 export { Dialog, type DialogProps } from './components/dialog';
 export {

@@ -71,6 +71,18 @@ export interface SchoolMemberResponse {
   since: string;
 }
 
+/** One of the caller's own verified memberships — how a member finds their class. */
+export interface MyMembershipResponse {
+  schoolId: string;
+  schoolName: string | null;
+  role: UserRole;
+  classId: string | null;
+  className: string | null;
+  childId: string | null;
+  childName: string | null;
+  since: string;
+}
+
 export interface VerificationRequestResponse {
   id: string;
   schoolId: string;

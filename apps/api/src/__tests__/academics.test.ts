@@ -12,6 +12,7 @@ import { createApp } from '../app.js';
 import { createNotificationsModule } from '../modules/notifications/index.js';
 import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
+import { membershipScopeKey } from '../shared/db/membership-scope.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
 import { recordingPublisher } from '../shared/events/index.js';
@@ -437,5 +438,102 @@ describe('notifications on publish (FR-ACAD-004)', () => {
     // Every row shares one event id — this only works because the constraint is per recipient.
     expect(await db.notification.count()).toBe(afterFirst);
     expect(afterFirst).toBeGreaterThan(1);
+  });
+});
+
+describe('the role a real account actually carries', () => {
+  /**
+   * The regression this file was missing. Every other case here signs a token with `role:
+   * 'TEACHER'`, but `POST /auth/register` creates individuals as `USER` (FR-AUTH-001) and nothing
+   * promotes them — so an account built the way a person's is could not publish, while the suite
+   * stayed green. The membership row is the authority, exactly as the permission matrix says.
+   */
+  it('lets an approved teacher whose profile role is still USER publish', async () => {
+    const account = await db.account.create({
+      data: {
+        email: `real-teacher-${Date.now()}@fixture.test`,
+        type: 'INDIVIDUAL',
+        userProfile: {
+          create: {
+            fullName: 'Newly approved teacher',
+            handle: `realteacher${Date.now()}`,
+            // What registration gives everyone.
+            role: 'USER',
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    const teacherProfile = await db.teacherProfile.create({
+      data: { accountId: account.id, schoolId: fixture.schoolAccountId },
+      select: { id: true },
+    });
+    await db.subjectAllocation.create({
+      data: { teacherId: teacherProfile.id, subjectId: fixture.mathsSubjectId },
+    });
+    await db.membership.create({
+      data: {
+        accountId: account.id,
+        schoolId: fixture.schoolAccountId,
+        role: 'TEACHER',
+        scopeKey: membershipScopeKey(null, null),
+        status: 'VERIFIED',
+      },
+    });
+
+    // Signed with the claim the auth module would actually issue for this account.
+    const token = await tokens.signAccessToken({
+      sub: account.id,
+      accountType: 'INDIVIDUAL',
+      role: 'USER',
+    });
+
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classAId}/academics`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        type: 'HOMEWORK',
+        subjectId: fixture.mathsSubjectId,
+        title: 'Published without a TEACHER claim',
+        body: 'The membership is what grants this.',
+      });
+
+    expect(response.status).toBe(201);
+  });
+
+  it('still refuses an account with a TEACHER claim but no membership', async () => {
+    const impostor = await db.account.create({
+      data: {
+        email: `impostor-${Date.now()}@fixture.test`,
+        type: 'INDIVIDUAL',
+        userProfile: {
+          create: {
+            fullName: 'Claims to teach',
+            handle: `impostor${Date.now()}`,
+            role: 'TEACHER',
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    const token = await tokens.signAccessToken({
+      sub: impostor.id,
+      accountType: 'INDIVIDUAL',
+      role: 'TEACHER',
+    });
+
+    const response = await request(app)
+      .post(`/api/v1/classes/${fixture.classAId}/academics`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        type: 'HOMEWORK',
+        subjectId: fixture.mathsSubjectId,
+        title: 'Should not appear',
+        body: 'No allocation, no membership.',
+      });
+
+    expect(response.status).toBe(403);
   });
 });

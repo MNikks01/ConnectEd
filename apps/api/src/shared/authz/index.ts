@@ -106,8 +106,11 @@ export async function assertTeacherAllocatedToSubject(
     return;
   }
 
-  requireRole(actor, ['TEACHER']);
-
+  // Deliberately *not* `requireRole(actor, ['TEACHER'])`. The role claim in the access token is
+  // the profile role, and registration creates every individual as `USER` (FR-AUTH-001) — a real
+  // teacher never carries a TEACHER claim, so that guard rejected exactly the people it was meant
+  // to admit. The permission matrix is explicit that "the verified `membership` row is what every
+  // academic check reads", and the two DB-backed checks below are strictly stronger than the claim.
   const allocation = await db.subjectAllocation.findFirst({
     where: {
       subjectId,
@@ -143,7 +146,7 @@ export async function assertPrincipalOfSchool(
   actor: Actor,
   schoolId: string,
 ): Promise<void> {
-  requireRole(actor, ['PRINCIPAL']);
+  // Membership, not the token's role claim — see the note in `assertTeacherAllocatedToSubject`.
   await assertVerifiedMembership(db, actor, schoolId, 'PRINCIPAL');
 }
 

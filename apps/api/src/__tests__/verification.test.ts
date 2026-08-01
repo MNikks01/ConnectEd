@@ -17,7 +17,7 @@ import { bodyAs, type ErrorBody } from './support/body.js';
 
 import type { SchoolFixture } from './support/db.js';
 import type { Db } from '../shared/db/index.js';
-import type { VerificationRequestResponse } from '@connected/types';
+import type { MyMembershipResponse, VerificationRequestResponse } from '@connected/types';
 import type { Express } from 'express';
 
 let db: Db;
@@ -270,6 +270,103 @@ describe('GET /me/verifications', () => {
 
     expect(bodyAs<ListBody>(mine).data).toHaveLength(1);
     expect(bodyAs<ListBody>(someoneElse).data).toHaveLength(0);
+  });
+});
+
+describe('GET /me/memberships — finding your own classes', () => {
+  interface MembershipBody {
+    data: MyMembershipResponse[];
+  }
+
+  it('returns the caller’s verified memberships, with the class named', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    expect(response.status).toBe(200);
+
+    const { data } = bodyAs<MembershipBody>(response);
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({
+      role: 'STUDENT',
+      classId: fixture.classAId,
+      schoolId: fixture.schoolAccountId,
+      schoolName: 'Fixture School',
+    });
+    // The display name, not raw enums — this is what the portal puts on screen.
+    expect(data[0]?.className).toContain('8');
+  });
+
+  it('scopes to the caller — one member never sees another’s memberships', async () => {
+    const student = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    const outsider = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', await auth(fixture.outsiderAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    const mine = bodyAs<MembershipBody>(student).data;
+    const theirs = bodyAs<MembershipBody>(outsider).data;
+
+    expect(mine).toHaveLength(1);
+    // The outsider is in no class, and crucially does not receive the student's row.
+    expect(theirs).toHaveLength(0);
+  });
+
+  it('names the child for a parent, so two children are distinguishable', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', await auth(fixture.parentAccountId, 'INDIVIDUAL', 'PARENT'));
+
+    const { data } = bodyAs<MembershipBody>(response);
+    expect(data).toHaveLength(1);
+    expect(data[0]?.role).toBe('PARENT');
+    expect(data[0]?.childId).toBe(fixture.childId);
+    expect(data[0]?.childName).toBeTruthy();
+  });
+
+  it('omits a membership that is still pending, and includes it once approved', async () => {
+    const { student, body } = await submitStudentRequest();
+
+    const before = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', student.authorization);
+    expect(bodyAs<MembershipBody>(before).data).toHaveLength(0);
+
+    await request(app)
+      .post(`/api/v1/verifications/${body.id}/decision`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'))
+      .send({ decision: 'APPROVE' });
+
+    const after = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', student.authorization);
+    expect(bodyAs<MembershipBody>(after).data).toHaveLength(1);
+  });
+
+  it('drops a membership the school revoked', async () => {
+    const { student, body } = await submitStudentRequest();
+
+    await request(app)
+      .post(`/api/v1/verifications/${body.id}/decision`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'))
+      .send({ decision: 'APPROVE' });
+
+    await request(app)
+      .delete(`/api/v1/schools/${fixture.schoolAccountId}/members/${student.id}`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'));
+
+    const after = await request(app)
+      .get('/api/v1/me/memberships')
+      .set('Authorization', student.authorization);
+
+    expect(bodyAs<MembershipBody>(after).data).toHaveLength(0);
+  });
+
+  it('requires a session', async () => {
+    const response = await request(app).get('/api/v1/me/memberships');
+    expect(response.status).toBe(401);
   });
 });
 

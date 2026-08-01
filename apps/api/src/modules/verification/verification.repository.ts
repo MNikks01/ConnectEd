@@ -99,6 +99,7 @@ export interface VerificationRepository {
     role: UserRole;
   }) => Promise<boolean>;
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+  listMembershipsForAccount: (accountId: string) => Promise<MemberRow[]>;
 }
 
 export interface MemberRow {
@@ -112,6 +113,8 @@ export interface MemberRow {
   childId: string | null;
   childName: string | null;
   since: Date;
+  schoolId?: string;
+  schoolName?: string | null;
 }
 
 const REQUEST_SELECT = {
@@ -411,6 +414,42 @@ export function createVerificationRepository(db: Db): VerificationRepository {
       });
 
       return [...new Set(rows.map((row) => row.accountId))];
+    },
+
+    /** The caller's own memberships — how a member discovers which class they are in. */
+    listMembershipsForAccount: async (accountId) => {
+      const rows = await db.membership.findMany({
+        where: { accountId, status: 'VERIFIED' },
+        select: {
+          accountId: true,
+          role: true,
+          status: true,
+          classId: true,
+          childId: true,
+          createdAt: true,
+          account: { select: { userProfile: { select: { fullName: true, handle: true } } } },
+          class: { select: { medium: true, level: true, section: true } },
+          child: { select: { fullName: true } },
+          school: { select: { accountId: true, name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: BOUNDED_LIST_CAP,
+      });
+
+      return rows.map((row) => ({
+        accountId: row.accountId,
+        fullName: row.account.userProfile?.fullName ?? null,
+        handle: row.account.userProfile?.handle ?? null,
+        role: row.role,
+        status: row.status,
+        classId: row.classId,
+        className: row.class,
+        childId: row.childId,
+        childName: row.child?.fullName ?? null,
+        since: row.createdAt,
+        schoolId: row.school.accountId,
+        schoolName: row.school.name,
+      }));
     },
 
     hasVerifiedMembership: async ({ accountId, schoolId, role }) =>
