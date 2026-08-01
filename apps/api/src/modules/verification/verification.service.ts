@@ -21,6 +21,7 @@ import type { VerificationRepository, VerificationRequestRow } from './verificat
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
+  SchoolMemberResponse,
   SubmitVerificationInput,
   VerificationDecisionInput,
   VerificationRequestResponse,
@@ -29,6 +30,7 @@ import type {
   ClassLevel,
   Medium,
   Section,
+  UserRole,
   VerificationStatus,
 } from '../../generated/prisma/client.js';
 
@@ -46,6 +48,17 @@ export interface VerificationService {
     input: VerificationDecisionInput,
   ) => Promise<VerificationRequestResponse>;
   revokeMember: (actor: Actor, schoolId: string, accountId: string) => Promise<void>;
+  listMembers: (actor: Actor, schoolId: string) => Promise<SchoolMemberResponse[]>;
+  /**
+   * Cross-module query, so it takes no actor: the caller has already authorized the operation this
+   * answers a question for. Exposed on the public service because `membership` belongs to this
+   * module — other modules must not read it directly (`.docs/Architecture/01-modules.md` rule 1).
+   */
+  isVerifiedMember: (input: {
+    accountId: string;
+    schoolId: string;
+    role: UserRole;
+  }) => Promise<boolean>;
 }
 
 export interface VerificationServiceDeps {
@@ -194,6 +207,34 @@ export function createVerificationService({
 
       logger.info({ schoolId, accountId, revoked }, 'Membership revoked');
     },
+
+    /** The roster (FR-INST-005) — the school's own list of who it has verified. */
+    listMembers: async (actor, schoolId) => {
+      assertIsSchool(actor, schoolId);
+
+      const rows = await repository.listMembers(schoolId);
+
+      return rows.map((row) => ({
+        accountId: row.accountId,
+        fullName: row.fullName,
+        handle: row.handle,
+        role: row.role,
+        status: row.status,
+        classId: row.classId,
+        className: row.className
+          ? classDisplayName({
+              medium: row.className.medium as Medium,
+              level: row.className.level as ClassLevel,
+              section: row.className.section as Section,
+            })
+          : null,
+        childId: row.childId,
+        childName: row.childName,
+        since: row.since.toISOString(),
+      }));
+    },
+
+    isVerifiedMember: (input) => repository.hasVerifiedMembership(input),
   };
 }
 

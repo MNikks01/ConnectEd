@@ -83,6 +83,25 @@ export interface VerificationRepository {
   }) => Promise<number>;
   classBelongsToSchool: (classId: string, schoolId: string) => Promise<boolean>;
   subjectsBelongToSchool: (subjectIds: string[], schoolId: string) => Promise<boolean>;
+  listMembers: (schoolId: string) => Promise<MemberRow[]>;
+  hasVerifiedMembership: (input: {
+    accountId: string;
+    schoolId: string;
+    role: UserRole;
+  }) => Promise<boolean>;
+}
+
+export interface MemberRow {
+  accountId: string;
+  fullName: string | null;
+  handle: string | null;
+  role: UserRole;
+  status: VerificationStatus;
+  classId: string | null;
+  className: { medium: string; level: string; section: string } | null;
+  childId: string | null;
+  childName: string | null;
+  since: Date;
 }
 
 const REQUEST_SELECT = {
@@ -322,6 +341,41 @@ export function createVerificationRepository(db: Db): VerificationRepository {
 
     classBelongsToSchool: async (classId, schoolId) =>
       (await db.class.count({ where: { id: classId, schoolId, active: true } })) > 0,
+
+    listMembers: async (schoolId) => {
+      const rows = await db.membership.findMany({
+        // Revoked and rejected scopes are history, not membership.
+        where: { schoolId, status: 'VERIFIED' },
+        select: {
+          accountId: true,
+          role: true,
+          status: true,
+          classId: true,
+          childId: true,
+          createdAt: true,
+          account: { select: { userProfile: { select: { fullName: true, handle: true } } } },
+          class: { select: { medium: true, level: true, section: true } },
+          child: { select: { fullName: true } },
+        },
+        orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      return rows.map((row) => ({
+        accountId: row.accountId,
+        fullName: row.account.userProfile?.fullName ?? null,
+        handle: row.account.userProfile?.handle ?? null,
+        role: row.role,
+        status: row.status,
+        classId: row.classId,
+        className: row.class,
+        childId: row.childId,
+        childName: row.child?.fullName ?? null,
+        since: row.createdAt,
+      }));
+    },
+
+    hasVerifiedMembership: async ({ accountId, schoolId, role }) =>
+      (await db.membership.count({ where: { accountId, schoolId, role, status: 'VERIFIED' } })) > 0,
 
     subjectsBelongToSchool: async (subjectIds, schoolId) => {
       if (subjectIds.length === 0) return true;

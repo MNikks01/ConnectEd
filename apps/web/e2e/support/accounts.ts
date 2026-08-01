@@ -119,3 +119,20 @@ export async function submitStudentVerification(
 ): Promise<{ id: string }> {
   return apiPost('/verifications', { role: 'STUDENT', schoolId, classId }, student.accessToken);
 }
+
+export async function createSubject(
+  school: School,
+  classId: string,
+  name: string,
+): Promise<{ id: string }> {
+  return apiPost(`/classes/${classId}/subjects`, { name }, school.accessToken);
+}
+
+/** A teacher request must name at least one subject they teach (FR-VER-003). */
+export async function submitTeacherVerification(
+  teacher: Individual,
+  schoolId: string,
+  subjectIds: string[],
+): Promise<{ id: string }> {
+  return apiPost('/verifications', { role: 'TEACHER', schoolId, subjectIds }, teacher.accessToken);
+}

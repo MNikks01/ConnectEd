@@ -75,6 +75,14 @@ export function verificationRoutes(service: VerificationService): ExpressRouter 
     }),
   );
 
+  router.get(
+    '/schools/:id/members',
+    handler(async (req, res) => {
+      const data = await service.listMembers(requireActor(req), uuidParam(req, 'id'));
+      res.status(200).json({ data });
+    }),
+  );
+
   router.delete(
     '/schools/:id/members/:accountId',
     handler(async (req, res) => {

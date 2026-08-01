@@ -122,6 +122,16 @@ export async function allocateClassTeacherAction(
   );
 }
 
+export async function revokeMemberAction(
+  schoolId: string,
+  accountId: string,
+): Promise<ActionResult> {
+  return run(
+    () => callAsUser(`/schools/${schoolId}/members/${accountId}`, { method: 'DELETE' }),
+    ['/school/members'],
+  );
+}
+
 export async function decideVerificationAction(
   requestId: string,
   decision: 'APPROVE' | 'REJECT',

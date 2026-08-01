@@ -57,6 +57,20 @@ export const verificationDecisionSchema = z.object({
 export type SubmitVerificationInput = z.infer<typeof submitVerificationSchema>;
 export type VerificationDecisionInput = z.infer<typeof verificationDecisionSchema>;
 
+/** A verified member of a school — the roster row (FR-INST-005). */
+export interface SchoolMemberResponse {
+  accountId: string;
+  fullName: string | null;
+  handle: string | null;
+  role: UserRole;
+  status: VerificationStatus;
+  classId: string | null;
+  className: string | null;
+  childId: string | null;
+  childName: string | null;
+  since: string;
+}
+
 export interface VerificationRequestResponse {
   id: string;
   schoolId: string;

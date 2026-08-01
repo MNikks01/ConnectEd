@@ -57,8 +57,11 @@ export interface InstitutionRepository {
   setClassActive: (classId: string, active: boolean) => Promise<ClassRow>;
   createSubject: (classId: string, name: string) => Promise<SubjectRow>;
   listSubjects: (classId: string) => Promise<SubjectRow[]>;
-  /** Resolves the teacher profile only when that account is a VERIFIED teacher of the school. */
-  findVerifiedTeacher: (
+  /**
+   * The teacher's own profile row. Whether that account is a *verified* teacher is verification's
+   * question, not this module's — see the MembershipDirectory port in the service.
+   */
+  findTeacherProfile: (
     accountId: string,
     schoolId: string,
   ) => Promise<{ id: string; fullName: string | null } | null>;
@@ -160,16 +163,7 @@ export function createInstitutionRepository(db: Db): InstitutionRepository {
         orderBy: { name: 'asc' },
       }),
 
-    findVerifiedTeacher: async (accountId, schoolId) => {
-      // Membership is the authority on "is this a teacher here", not the profile role. A profile
-      // role is self-declared; the membership is what the school approved.
-      const membership = await db.membership.findFirst({
-        where: { accountId, schoolId, role: 'TEACHER', status: 'VERIFIED' },
-        select: { id: true },
-      });
-
-      if (!membership) return null;
-
+    findTeacherProfile: async (accountId, schoolId) => {
       const profile = await db.teacherProfile.findUnique({
         where: { accountId_schoolId: { accountId, schoolId } },
         select: { id: true, account: { select: { userProfile: { select: { fullName: true } } } } },

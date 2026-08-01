@@ -54,7 +54,31 @@ export interface InstitutionService {
   getClassTeacher: (actor: Actor, classId: string) => Promise<ClassTeacherResponse>;
 }
 
-export function createInstitutionService(repository: InstitutionRepository): InstitutionService {
+/**
+ * The slice of the verification module this one needs.
+ *
+ * A narrow port rather than the whole `VerificationService`: institution only ever asks one
+ * question of it, and depending on the full interface would let that quietly grow. `membership`
+ * belongs to verification, so this module must not query it directly
+ * (`.docs/Architecture/01-modules.md` rule 1).
+ */
+export interface MembershipDirectory {
+  isVerifiedMember: (input: {
+    accountId: string;
+    schoolId: string;
+    role: 'TEACHER';
+  }) => Promise<boolean>;
+}
+
+export interface InstitutionServiceDeps {
+  repository: InstitutionRepository;
+  membership: MembershipDirectory;
+}
+
+export function createInstitutionService({
+  repository,
+  membership,
+}: InstitutionServiceDeps): InstitutionService {
   /**
    * Loads a class and proves the caller may administer it. Every write below goes through here,
    * so there is one place where "is this your class?" is decided rather than one per handler.
@@ -156,7 +180,17 @@ export function createInstitutionService(repository: InstitutionRepository): Ins
     allocateClassTeacher: async (actor, classId, input) => {
       const klass = await loadClassForSchoolWrite(actor, classId);
 
-      const teacher = await repository.findVerifiedTeacher(input.teacherAccountId, klass.schoolId);
+      // Two separate questions: is this a teacher the school approved (verification's), and does
+      // a teacher profile exist to allocate (this module's).
+      const verified = await membership.isVerifiedMember({
+        accountId: input.teacherAccountId,
+        schoolId: klass.schoolId,
+        role: 'TEACHER',
+      });
+
+      const teacher = verified
+        ? await repository.findTeacherProfile(input.teacherAccountId, klass.schoolId)
+        : null;
 
       if (!teacher) {
         throw new ConflictError('That account is not a verified teacher of this school.');
