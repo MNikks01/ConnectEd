@@ -7,7 +7,7 @@
  * the API against the teacher's subject allocation, and marking a notification read is scoped to
  * the caller by the API's query. A Server Action is reachable by anyone who can reach the app.
  */
-import { publishAcademicItemSchema } from '@connected/types';
+import { publishAcademicItemSchema, upsertSyllabusTopicSchema } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
 import { apiErrorMessage, apiFieldErrors, callAsUser } from '@/lib/server-api';
@@ -68,5 +68,25 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
   return run(
     () => callAsUser('/notifications/read-all', { method: 'POST' }),
     ['/notifications', '/home'],
+  );
+}
+
+export async function recordSyllabusAction(
+  subjectId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = Object.fromEntries(formData);
+
+  // A number input still submits a string, and the API's schema is `z.number().int()` — parsing
+  // here keeps a typo ("50%") an input error rather than a type error from the server.
+  const parsed = upsertSyllabusTopicSchema.safeParse({
+    ...raw,
+    percent: typeof raw.percent === 'string' ? Number(raw.percent) : raw.percent,
+  });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/subjects/${subjectId}/syllabus`, { method: 'POST', body: parsed.data }),
+    [`/subjects/${subjectId}`],
   );
 }

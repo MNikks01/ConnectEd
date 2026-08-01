@@ -76,3 +76,32 @@ export interface TimetableResponse {
   version: number;
   createdAt: string;
 }
+
+/**
+ * Syllabus coverage (FR-ACAD-030). One row per topic, so a teacher can record "Chapter 3 is half
+ * done" rather than a single opaque percentage for the whole subject.
+ */
+export const upsertSyllabusTopicSchema = z.object({
+  topic: z.string().trim().min(1).max(200),
+  percent: z.number().int().min(0).max(100),
+});
+
+export type UpsertSyllabusTopicInput = z.infer<typeof upsertSyllabusTopicSchema>;
+
+export interface SyllabusTopicResponse {
+  id: string;
+  subjectId: string;
+  topic: string;
+  percent: number;
+  updatedByAccountId: string | null;
+  updatedByName: string | null;
+  updatedAt: string;
+}
+
+export interface SyllabusCoverageResponse {
+  subjectId: string;
+  subjectName: string | null;
+  /** Mean of the topic percentages, rounded — 0 when nothing has been recorded. */
+  overallPercent: number;
+  topics: SyllabusTopicResponse[];
+}

@@ -142,3 +142,21 @@ a:focus-visible {
   font-weight: var(--ui-weight-semibold);
   text-align: center;
 }
+
+/* Syllabus coverage. The percentage is always stated in text beside the bar and in its
+   `aria-label`, so the colour is a second channel rather than the only one. */
+.coverage-bar {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border-strong);
+  overflow: hidden;
+}
+
+.coverage-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--ui-accent);
+}

@@ -385,6 +385,29 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Update syllabus coverage',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      // 👁 in the matrix: a principal sees coverage, recording it is the teacher's job.
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Each teacher records against the subject they hold, as in "Publish homework".
+      const subjectId = role === 'teacher' ? fixture.scienceSubjectId : fixture.mathsSubjectId;
+
+      const response = await request(app)
+        .post(`/api/v1/subjects/${subjectId}/syllabus`)
+        .set('Authorization', await authFor(role))
+        .send({ topic: 'Matrix chapter', percent: 25 });
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -446,7 +469,6 @@ describe('permission matrix', () => {
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
 const UNIMPLEMENTED = [
-  'Update syllabus coverage',
   'Submit leave application',
   'Approve student/parent leave',
   'Approve teacher leave',

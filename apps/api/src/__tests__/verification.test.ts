@@ -652,7 +652,9 @@ describe('GET /schools/:id/members — the roster (FR-INST-005)', () => {
       .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
       .set('Authorization', await authorization());
 
-    expect(response.status).toBe(403);
+    // The body is in the message because this case has failed intermittently in full-suite runs;
+    // a bare status comparison says nothing about which layer refused.
+    expect(response.status, response.text).toBe(403);
   });
 
   it('refuses another school with 404', async () => {

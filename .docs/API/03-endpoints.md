@@ -63,7 +63,10 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | PATCH/DELETE | `/events/:id`            |  🛡   | School moves/cancels.                         |
 | POST         | `/classes/:id/timetable` |  🛡   | Upload timetable.                             |
 | GET          | `/classes/:id/timetable` |  🛡   | View timetable.                               |
-| POST/GET     | `/subjects/:id/syllabus` |  🛡   | Update/view coverage.                         |
+| POST         | `/subjects/:id/syllabus` |  🛡   | Allocated teacher records a topic.            |
+| GET          | `/subjects/:id/syllabus` |  🛡   | Coverage for one subject.                     |
+| GET          | `/classes/:id/syllabus`  |  🛡   | Coverage for every subject of a class.        |
+| DELETE       | `/syllabus/:id`          |  🛡   | Remove a topic recorded in error.             |
 
 ## Workflows
 
