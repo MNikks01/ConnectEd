@@ -35,6 +35,10 @@ export class ApiError extends Error {
 
 export interface ApiRequestOptions {
   method?: string;
+  /**
+   * JSON by default. Pass a `FormData` and it is forwarded as multipart instead — `fetch` sets the
+   * boundary itself, which is why the JSON content type has to be *omitted* rather than replaced.
+   */
   body?: unknown;
   accessToken?: string | undefined;
   /** Forwarded so a browser request and its API call share one id in the logs. */
@@ -46,17 +50,19 @@ export interface ApiRequestOptions {
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { method = 'GET', body, accessToken, correlationId, headers = {}, cache } = options;
 
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const response = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(multipart ? {} : { 'Content-Type': 'application/json' }),
       // Identifies this as the web client, which is what the school-web-only rule reads.
       'X-Client-Type': 'web',
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(correlationId ? { 'X-Correlation-Id': correlationId } : {}),
       ...headers,
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     // Authenticated data must never be served from a shared cache.
     cache: cache ?? 'no-store',
   });

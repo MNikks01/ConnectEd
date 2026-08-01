@@ -339,6 +339,52 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Upload timetable',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post(`/api/v1/classes/${fixture.classAId}/timetable`)
+        .set('Authorization', await authFor(role))
+        .send({ imageKey: 'timetables/matrix.png' });
+      return response.status;
+    },
+  },
+  {
+    name: 'View timetable',
+    outcomes: {
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Each role reads the class it belongs to, as in "View homework".
+      const classId = role === 'parent' ? fixture.classBId : fixture.classAId;
+
+      // Seeded through the API, so the row under test is one the product could produce.
+      await request(app)
+        .post(`/api/v1/classes/${classId}/timetable`)
+        .set('Authorization', await authFor('school'))
+        .send({ imageKey: 'timetables/matrix.png' });
+
+      const response = await request(app)
+        .get(`/api/v1/classes/${classId}/timetable`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -400,8 +446,6 @@ describe('permission matrix', () => {
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
 const UNIMPLEMENTED = [
-  'Upload timetable',
-  'View timetable',
   'Update syllabus coverage',
   'Submit leave application',
   'Approve student/parent leave',

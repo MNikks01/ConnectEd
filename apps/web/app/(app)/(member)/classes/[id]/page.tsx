@@ -71,6 +71,7 @@ export default async function ClassFeedPage({
       <PageHeader
         title={membership?.className ?? 'Class'}
         {...(membership?.schoolName ? { description: membership.schoolName } : {})}
+        actions={<Link href={`/classes/${id}/timetable`}>Timetable</Link>}
       />
 
       {subjects.length > 0 ? (
