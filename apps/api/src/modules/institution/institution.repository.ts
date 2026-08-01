@@ -1,3 +1,5 @@
+import { BOUNDED_LIST_CAP } from '../../shared/http/pagination.js';
+
 /**
  * Institution persistence. **The only file in this module that touches Prisma**
  * (`apps/api/CLAUDE.md` rule 1).
@@ -132,6 +134,7 @@ export function createInstitutionRepository(db: Db): InstitutionRepository {
         // Enum order is the taxonomy order (Pre-Nursery → Class 12), so this sorts the way a
         // person reads a class list rather than alphabetically.
         orderBy: [{ level: 'asc' }, { section: 'asc' }, { medium: 'asc' }],
+        take: BOUNDED_LIST_CAP,
       });
       return rows.map(toClassRow);
     },
@@ -161,6 +164,7 @@ export function createInstitutionRepository(db: Db): InstitutionRepository {
         where: { classId },
         select: { id: true, classId: true, name: true },
         orderBy: { name: 'asc' },
+        take: BOUNDED_LIST_CAP,
       }),
 
     findTeacherProfile: async (accountId, schoolId) => {

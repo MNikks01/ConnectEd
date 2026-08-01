@@ -9,6 +9,9 @@
 import type { NotificationsRepository } from './notifications.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { DomainEvent } from '../../shared/events/index.js';
+import { toPage } from '../../shared/http/pagination.js';
+
+import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { NotificationCategory, Prisma } from '../../generated/prisma/client.js';
 
@@ -23,11 +26,8 @@ export interface NotificationView {
 export interface NotificationsService {
   list: (
     actor: Actor,
-    options?: { unreadOnly?: boolean; limit?: number },
-  ) => Promise<{
-    data: NotificationView[];
-    unreadCount: number;
-  }>;
+    options: { unreadOnly: boolean; page: PageRequest },
+  ) => Promise<Page<NotificationView> & { unreadCount: number }>;
   markRead: (actor: Actor, notificationId: string) => Promise<void>;
   markAllRead: (actor: Actor) => Promise<{ updated: number }>;
   /** Queue consumer entry point. */
@@ -38,8 +38,6 @@ export interface NotificationsServiceDeps {
   repository: NotificationsRepository;
   logger: Logger;
 }
-
-const MAX_LIMIT = 100;
 
 export function createNotificationsService({
   repository,
@@ -68,20 +66,22 @@ export function createNotificationsService({
   }
 
   return {
-    list: async (actor, { unreadOnly = false, limit = 50 } = {}) => {
-      const rows = await repository.listForAccount(actor.accountId, {
-        unreadOnly,
-        limit: Math.min(Math.max(limit, 1), MAX_LIMIT),
-      });
+    list: async (actor, { unreadOnly, page }) => {
+      const rows = await repository.listForAccount(actor.accountId, { unreadOnly, page });
+
+      // Paginate over the rows, then map — the cursor is built from the row's own sort key, so
+      // the view type never has to carry a Date it does not otherwise need.
+      const paged = toPage(rows, page.limit);
 
       return {
-        data: rows.map((row) => ({
+        data: paged.data.map((row) => ({
           id: row.id,
           type: row.type,
           payload: row.payload,
           read: row.readAt !== null,
           createdAt: row.createdAt.toISOString(),
         })),
+        nextCursor: paged.nextCursor,
         unreadCount: await repository.countUnread(actor.accountId),
       };
     },

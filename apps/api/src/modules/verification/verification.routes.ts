@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { submitVerificationSchema, verificationDecisionSchema } from '@connected/types';
 
+import { parsePageRequest } from '../../shared/http/pagination.js';
 import { uuidParam } from '../../shared/http/params.js';
 import { requireActor } from '../../shared/middleware/authenticate.js';
 import { validateBody } from '../../shared/middleware/validate.js';
@@ -46,19 +47,23 @@ export function verificationRoutes(service: VerificationService): ExpressRouter 
   router.get(
     '/me/verifications',
     handler(async (req, res) => {
-      res.status(200).json({ data: await service.listMine(requireActor(req)) });
+      res.status(200).json(await service.listMine(requireActor(req), parsePageRequest(req.query)));
     }),
   );
 
   router.get(
     '/schools/:id/verifications',
     handler(async (req, res) => {
-      const data = await service.listForSchool(
-        requireActor(req),
-        uuidParam(req, 'id'),
-        statusFilter(req.query.status),
-      );
-      res.status(200).json({ data });
+      res
+        .status(200)
+        .json(
+          await service.listForSchool(
+            requireActor(req),
+            uuidParam(req, 'id'),
+            statusFilter(req.query.status),
+            parsePageRequest(req.query),
+          ),
+        );
     }),
   );
 

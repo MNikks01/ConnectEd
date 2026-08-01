@@ -7,6 +7,14 @@
  * why — or a request marked approved that grants nothing.
  */
 import { membershipScopeKey } from '../../shared/db/membership-scope.js';
+import {
+  BOUNDED_LIST_CAP,
+  CURSOR_ORDER,
+  cursorFilter,
+  takeFor,
+} from '../../shared/http/pagination.js';
+
+import type { PageRequest } from '../../shared/http/pagination.js';
 
 import type { Db } from '../../shared/db/index.js';
 import type { UserRole, VerificationStatus } from '../../generated/prisma/client.js';
@@ -68,8 +76,9 @@ export interface VerificationRepository {
   listForSchool: (
     schoolId: string,
     status: VerificationStatus | undefined,
+    page: PageRequest,
   ) => Promise<VerificationRequestRow[]>;
-  listForRequester: (accountId: string) => Promise<VerificationRequestRow[]>;
+  listForRequester: (accountId: string, page: PageRequest) => Promise<VerificationRequestRow[]>;
   approve: (input: ApproveInput) => Promise<void>;
   reject: (input: {
     requestId: string;
@@ -203,20 +212,24 @@ export function createVerificationRepository(db: Db): VerificationRepository {
         select: { id: true },
       }),
 
-    listForSchool: async (schoolId, status) => {
+    listForSchool: async (schoolId, status, page) => {
       const rows = await db.verificationRequest.findMany({
-        where: { schoolId, ...(status ? { status } : {}) },
+        where: { schoolId, ...(status ? { status } : {}), ...cursorFilter(page.after) },
         select: REQUEST_SELECT,
-        orderBy: { createdAt: 'asc' },
+        // Newest first, unlike the previous oldest-first order: a queue that grows is read from
+        // the top, and cursor pagination needs one consistent direction.
+        orderBy: [...CURSOR_ORDER],
+        take: takeFor(page.limit),
       });
       return rows.map((row) => toRow(row));
     },
 
-    listForRequester: async (accountId) => {
+    listForRequester: async (accountId, page) => {
       const rows = await db.verificationRequest.findMany({
-        where: { requesterAccountId: accountId },
+        where: { requesterAccountId: accountId, ...cursorFilter(page.after) },
         select: REQUEST_SELECT,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [...CURSOR_ORDER],
+        take: takeFor(page.limit),
       });
       return rows.map((row) => toRow(row));
     },
@@ -358,6 +371,7 @@ export function createVerificationRepository(db: Db): VerificationRepository {
           child: { select: { fullName: true } },
         },
         orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+        take: BOUNDED_LIST_CAP,
       });
 
       return rows.map((row) => ({

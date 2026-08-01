@@ -1,6 +1,9 @@
 /**
  * Notification persistence. **The only file in this module that touches Prisma.**
  */
+import { CURSOR_ORDER, cursorFilter, takeFor } from '../../shared/http/pagination.js';
+
+import type { PageRequest } from '../../shared/http/pagination.js';
 import type { Db } from '../../shared/db/index.js';
 import type { NotificationCategory, Prisma } from '../../generated/prisma/client.js';
 
@@ -25,7 +28,7 @@ export interface NotificationsRepository {
   create: (input: CreateNotificationInput) => Promise<{ created: boolean }>;
   listForAccount: (
     accountId: string,
-    options: { unreadOnly: boolean; limit: number },
+    options: { unreadOnly: boolean; page: PageRequest },
   ) => Promise<NotificationRow[]>;
   countUnread: (accountId: string) => Promise<number>;
   markRead: (accountId: string, notificationId: string) => Promise<boolean>;
@@ -56,12 +59,16 @@ export function createNotificationsRepository(db: Db): NotificationsRepository {
       return { created: result.count > 0 };
     },
 
-    listForAccount: (accountId, { unreadOnly, limit }) =>
+    listForAccount: (accountId, { unreadOnly, page }) =>
       db.notification.findMany({
-        where: { recipientAccountId: accountId, ...(unreadOnly ? { readAt: null } : {}) },
+        where: {
+          recipientAccountId: accountId,
+          ...(unreadOnly ? { readAt: null } : {}),
+          ...cursorFilter(page.after),
+        },
         select: { id: true, type: true, payload: true, readAt: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
+        orderBy: [...CURSOR_ORDER],
+        take: takeFor(page.limit),
       }),
 
     countUnread: (accountId) =>

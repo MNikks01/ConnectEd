@@ -15,6 +15,9 @@
 import { classDisplayName } from '@connected/types';
 
 import { assertIsSchool } from '../../shared/authz/index.js';
+import { toPage } from '../../shared/http/pagination.js';
+
+import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/errors/index.js';
 
 import type { VerificationRepository, VerificationRequestRow } from './verification.repository.js';
@@ -41,8 +44,9 @@ export interface VerificationService {
     actor: Actor,
     schoolId: string,
     status: VerificationStatus | undefined,
-  ) => Promise<VerificationRequestResponse[]>;
-  listMine: (actor: Actor) => Promise<VerificationRequestResponse[]>;
+    page: PageRequest,
+  ) => Promise<Page<VerificationRequestResponse>>;
+  listMine: (actor: Actor, page: PageRequest) => Promise<Page<VerificationRequestResponse>>;
   decide: (
     actor: Actor,
     requestId: string,
@@ -149,17 +153,21 @@ export function createVerificationService({
       return toResponse(created);
     },
 
-    listForSchool: async (actor, schoolId, status) => {
+    listForSchool: async (actor, schoolId, status, page) => {
       // The review queue is the school's alone — it lists who is asking to join.
       assertIsSchool(actor, schoolId);
 
-      const rows = await repository.listForSchool(schoolId, status);
-      return rows.map(toResponse);
+      const rows = await repository.listForSchool(schoolId, status, page);
+      const paged = toPage(rows, page.limit);
+
+      return { data: paged.data.map(toResponse), nextCursor: paged.nextCursor };
     },
 
-    listMine: async (actor) => {
-      const rows = await repository.listForRequester(actor.accountId);
-      return rows.map(toResponse);
+    listMine: async (actor, page) => {
+      const rows = await repository.listForRequester(actor.accountId, page);
+      const paged = toPage(rows, page.limit);
+
+      return { data: paged.data.map(toResponse), nextCursor: paged.nextCursor };
     },
 
     decide: async (actor, requestId, input) => {
