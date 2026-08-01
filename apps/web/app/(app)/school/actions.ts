@@ -14,6 +14,8 @@
 import {
   allocateClassTeacherSchema,
   createClassSchema,
+  createEventSchema,
+  createNoticeSchema,
   createSubjectSchema,
   updateSchoolProfileSchema,
   verificationDecisionSchema,
@@ -143,4 +145,47 @@ export async function decideVerificationAction(
     () => callAsUser(`/verifications/${requestId}/decision`, { method: 'POST', body: parsed.data }),
     ['/school/verifications'],
   );
+}
+
+export async function publishNoticeAction(
+  schoolId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = createNoticeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/schools/${schoolId}/notices`, { method: 'POST', body: parsed.data }),
+    ['/school/notices'],
+  );
+}
+
+export async function deleteNoticeAction(noticeId: string): Promise<ActionResult> {
+  return run(() => callAsUser(`/notices/${noticeId}`, { method: 'DELETE' }), ['/school/notices']);
+}
+
+export async function createEventAction(
+  schoolId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = Object.fromEntries(formData);
+
+  // `datetime-local` gives `2026-08-01T09:00`, which `z.iso.datetime()` rejects for want of
+  // seconds and a zone. Converting here keeps the error the school sees about *their* input.
+  const eventAt =
+    typeof raw.eventAt === 'string' && raw.eventAt.trim() !== ''
+      ? new Date(raw.eventAt).toISOString()
+      : '';
+
+  const parsed = createEventSchema.safeParse({ ...raw, eventAt });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/schools/${schoolId}/events`, { method: 'POST', body: parsed.data }),
+    ['/school/events'],
+  );
+}
+
+export async function deleteEventAction(eventId: string): Promise<ActionResult> {
+  return run(() => callAsUser(`/events/${eventId}`, { method: 'DELETE' }), ['/school/events']);
 }

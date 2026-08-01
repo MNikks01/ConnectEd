@@ -12,10 +12,10 @@ import { createNotificationsService } from './notifications.service.js';
 import type { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
 import type { Logger } from '../../shared/logger/index.js';
-import type { ClassAudience, NotificationsService } from './notifications.service.js';
+import type { MemberAudience, NotificationsService } from './notifications.service.js';
 
 export type {
-  ClassAudience,
+  MemberAudience,
   NotificationsService,
   NotificationView,
 } from './notifications.service.js';
@@ -28,7 +28,7 @@ export interface NotificationsModule {
 export function createNotificationsModule(
   db: Db,
   logger: Logger,
-  audience?: ClassAudience,
+  audience?: MemberAudience,
 ): NotificationsModule {
   const service = createNotificationsService({
     repository: createNotificationsRepository(db),

@@ -67,6 +67,7 @@ export interface VerificationService {
   }) => Promise<boolean>;
   /** Recipients for a class-scoped notification. Cross-module query, so no actor. */
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+  listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
   listMyMemberships: (actor: Actor) => Promise<MyMembershipResponse[]>;
 }
 
@@ -274,6 +275,7 @@ export function createVerificationService({
     isVerifiedMember: (input) => repository.hasVerifiedMembership(input),
 
     listClassMemberAccountIds: (classId) => repository.listClassMemberAccountIds(classId),
+    listSchoolMemberAccountIds: (schoolId) => repository.listSchoolMemberAccountIds(schoolId),
 
     /** Scoped to the caller by construction — there is no path to another account's memberships. */
     listMyMemberships: async (actor) => {

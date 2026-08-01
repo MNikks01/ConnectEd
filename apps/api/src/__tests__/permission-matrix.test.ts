@@ -232,6 +232,113 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Publish homework/assignments/projects',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      // 👁 in the matrix: a principal views academics, publishing is a teacher/school action.
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Each teacher publishes to the subject they hold, which is what the row actually claims;
+      // "not *that* subject" is covered in the academics suite.
+      const subjectId = role === 'teacher' ? fixture.scienceSubjectId : fixture.mathsSubjectId;
+
+      const response = await request(app)
+        .post(`/api/v1/classes/${fixture.classAId}/academics`)
+        .set('Authorization', await authFor(role))
+        .send({ type: 'HOMEWORK', subjectId, title: 'Matrix', body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'View homework',
+    outcomes: {
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Each role reads the class it belongs to: the student is in A, the parent's child is in B,
+      // and the school-wide roles reach either. There is no single class all of them are in, and
+      // pretending otherwise would test one role's scope while calling it the matrix row.
+      const classId = role === 'parent' ? fixture.classBId : fixture.classAId;
+
+      const response = await request(app)
+        .get(`/api/v1/classes/${classId}/academics`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
+    name: 'Publish notices',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post(`/api/v1/schools/${fixture.schoolAccountId}/notices`)
+        .set('Authorization', await authFor(role))
+        .send({ title: 'Matrix notice', body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'View notices',
+    outcomes: {
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/notices`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
+    name: 'Create events',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post(`/api/v1/schools/${fixture.schoolAccountId}/events`)
+        .set('Authorization', await authFor(role))
+        .send({
+          title: 'Matrix event',
+          body: 'Matrix',
+          eventAt: '2027-01-01T09:00:00.000Z',
+        });
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -293,11 +400,6 @@ describe('permission matrix', () => {
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
 const UNIMPLEMENTED = [
-  'Publish homework/assignments/projects',
-  'View homework',
-  'Publish notices',
-  'View notices',
-  'Create events',
   'Upload timetable',
   'View timetable',
   'Update syllabus coverage',
