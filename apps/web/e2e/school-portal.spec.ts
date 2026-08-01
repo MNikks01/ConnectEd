@@ -12,20 +12,12 @@ import {
   createIndividual,
   createSchool,
   createSubject,
-  PASSWORD,
   submitStudentVerification,
   submitTeacherVerification,
   type School,
 } from './support/accounts';
+import { signIn } from './support/auth';
 import { clickUntil } from './support/interactions';
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
 
 async function signInAsSchool(page: Page): Promise<School> {
   const school = await createSchool('portal');

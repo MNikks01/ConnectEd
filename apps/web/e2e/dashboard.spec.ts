@@ -5,24 +5,16 @@
  * composition: a student sees work that is due, a teacher sees what they are allocated to teach,
  * and neither sees the other's section.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import {
   createClass,
   createSchool,
-  PASSWORD,
   verifiedStudentIn,
   verifiedTeacherFor,
   type School,
 } from './support/accounts';
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
+import { signIn } from './support/auth';
 
 async function schoolWithClass(section: string): Promise<{ school: School; classId: string }> {
   const school = await createSchool('dash');

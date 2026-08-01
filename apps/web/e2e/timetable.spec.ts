@@ -5,30 +5,22 @@
  * JSON: file → media endpoint → opaque key → attached to the class. The test that matters is that
  * a member of the class can see the resulting image and a non-member cannot.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import {
   createClass,
   createSchool,
   createIndividual,
-  PASSWORD,
   verifiedStudentIn,
   type School,
 } from './support/accounts';
+import { signIn } from './support/auth';
 
 /** The smallest valid PNG: signature plus a 1x1 pixel. Real bytes, because the API checks them. */
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
 );
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
 
 async function schoolWithClass(section: string): Promise<{ school: School; classId: string }> {
   const school = await createSchool('timetable');

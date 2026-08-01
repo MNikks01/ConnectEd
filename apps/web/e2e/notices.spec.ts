@@ -5,24 +5,11 @@
  * the class feed's: a *verified member* of the school may read every notice and publish none of
  * them, and the portal must not offer them a control the API would refuse.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import {
-  createClass,
-  createSchool,
-  PASSWORD,
-  verifiedStudentIn,
-  type School,
-} from './support/accounts';
+import { createClass, createSchool, verifiedStudentIn, type School } from './support/accounts';
+import { signIn } from './support/auth';
 import { clickUntil } from './support/interactions';
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
 
 async function schoolWithClass(section: string): Promise<{ school: School; classId: string }> {
   const school = await createSchool('notice');

@@ -6,26 +6,18 @@
  * is told about it. The teacher→queue→student path crosses two accounts, the API, Redis, and the
  * worker, and nothing below the browser can assert the whole chain.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import {
   createClass,
   createIndividual,
   createSchool,
-  PASSWORD,
   verifiedStudentIn,
   verifiedTeacherFor,
   type School,
 } from './support/accounts';
+import { signIn } from './support/auth';
 import { clickUntil } from './support/interactions';
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
 
 async function schoolWithClass(section: string): Promise<{ school: School; classId: string }> {
   const school = await createSchool('feed');
