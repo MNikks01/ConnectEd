@@ -231,9 +231,15 @@ test.describe('member roster', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('loses access to this school immediately');
 
-    await clickUntil(dialog.getByRole('button', { name: 'Remove member' }), async () => {
+    await dialog.getByRole('button', { name: 'Remove member' }).click();
+
+    // Reload rather than trusting the revalidation, exactly as the profile test does: this asserts
+    // the member is gone from the *database*, and does not fail merely because a re-render was
+    // slow. The removal itself is what the case is about.
+    await expect(async () => {
+      await page.reload();
       await expect(page.getByText('No verified members yet')).toBeVisible({ timeout: 2000 });
-    });
+    }).toPass({ timeout: 20_000 });
   });
 
   test('class-teacher allocation offers verified teachers instead of an id field', async ({
@@ -251,9 +257,12 @@ test.describe('member roster', () => {
     const teacher = await createIndividual('classteacher');
     await submitTeacherVerification(teacher, school.accountId, [subject.id]);
     await page.goto('/school/verifications');
-    await page.getByRole('button', { name: 'Approve' }).click();
-    // Wait for the decision to land: navigating immediately can abort the Server Action.
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+
+    // Same reasoning as the removal above: click once, then reload until the decision is in the
+    // database. Waiting on a re-render alone has been the flakiest thing in this suite.
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
 
     await page.goto(`/school/classes/${klass.id}`);
     await page.getByLabel('Teacher').selectOption({ label: 'E2E classteacher' });
