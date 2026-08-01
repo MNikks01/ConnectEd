@@ -66,6 +66,13 @@ export default defineConfig({
         // The suite registers far more accounts than a person would; see the config comment.
         RATE_LIMIT_ENABLED: 'false',
         REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+        // Required by config, so the API refuses to boot without them. MinIO runs alongside the
+        // suite; uploads are not exercised end to end yet, but the server must start as it would
+        // in production rather than in a reduced configuration.
+        S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+        S3_BUCKET: process.env.S3_BUCKET ?? 'connected-e2e',
+        S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'minioadmin',
+        S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? 'minioadmin',
       },
     },
     {
