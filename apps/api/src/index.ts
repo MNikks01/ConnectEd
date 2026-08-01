@@ -20,6 +20,7 @@ const { ReadinessRegistry } = await import('./shared/health/readiness.js');
 const { createEventQueue, createEventWorker, createRedisConnection } =
   await import('./shared/queue/index.js');
 const { createNotificationsModule } = await import('./modules/notifications/index.js');
+const { createStorage } = await import('./shared/storage/index.js');
 
 const db = createDb({
   connectionString: config.DATABASE_URL,
@@ -36,7 +37,12 @@ const readiness = new ReadinessRegistry();
 registerDbReadiness(readiness, db);
 readiness.register({ name: 'redis', probe: () => events.ping() });
 
-const app = createApp({ config, logger, readiness, db, events: events.publisher });
+const storage = createStorage(config, logger);
+// Local convenience; deployed buckets come from Terraform with their policies attached.
+await storage.ensureBucket();
+readiness.register({ name: 'object-storage', probe: () => storage.ping() });
+
+const app = createApp({ config, logger, readiness, db, events: events.publisher, storage });
 
 /**
  * The worker consumes what the API publishes. In-process by default; a separate process when
