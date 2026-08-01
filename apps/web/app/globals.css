@@ -126,3 +126,19 @@ a:focus-visible {
 .filter-tabs a {
   font-size: var(--ui-text-sm);
 }
+
+/* Unread count on the notifications link. `aria-hidden` in the markup — the accessible name on
+   the link already says "Notifications, 3 unread", and announcing the number twice is worse than
+   not styling it at all. */
+.badge-count {
+  display: inline-block;
+  margin-left: var(--ui-space-2);
+  min-width: 1.5rem;
+  padding: 0 var(--ui-space-2);
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-accent);
+  color: var(--ui-accent-text);
+  font-size: var(--ui-text-sm);
+  font-weight: var(--ui-weight-semibold);
+  text-align: center;
+}

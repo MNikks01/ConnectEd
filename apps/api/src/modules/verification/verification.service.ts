@@ -25,6 +25,7 @@ import type { Actor } from '../../shared/authz/actor.js';
 import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
+  MyMembershipResponse,
   SchoolMemberResponse,
   SubmitVerificationInput,
   VerificationDecisionInput,
@@ -66,6 +67,7 @@ export interface VerificationService {
   }) => Promise<boolean>;
   /** Recipients for a class-scoped notification. Cross-module query, so no actor. */
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+  listMyMemberships: (actor: Actor) => Promise<MyMembershipResponse[]>;
 }
 
 export interface VerificationServiceDeps {
@@ -272,6 +274,28 @@ export function createVerificationService({
     isVerifiedMember: (input) => repository.hasVerifiedMembership(input),
 
     listClassMemberAccountIds: (classId) => repository.listClassMemberAccountIds(classId),
+
+    /** Scoped to the caller by construction — there is no path to another account's memberships. */
+    listMyMemberships: async (actor) => {
+      const rows = await repository.listMembershipsForAccount(actor.accountId);
+
+      return rows.map((row) => ({
+        schoolId: row.schoolId ?? '',
+        schoolName: row.schoolName ?? null,
+        role: row.role,
+        classId: row.classId,
+        className: row.className
+          ? classDisplayName({
+              medium: row.className.medium as Medium,
+              level: row.className.level as ClassLevel,
+              section: row.className.section as Section,
+            })
+          : null,
+        childId: row.childId,
+        childName: row.childName,
+        since: row.since.toISOString(),
+      }));
+    },
   };
 }
 

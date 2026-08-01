@@ -14,14 +14,10 @@ import { toPage } from '../../shared/http/pagination.js';
 import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { NotificationCategory, Prisma } from '../../generated/prisma/client.js';
+import type { NotificationResponse } from '@connected/types';
 
-export interface NotificationView {
-  id: string;
-  type: string;
-  payload: unknown;
-  read: boolean;
-  createdAt: string;
-}
+/** The wire shape lives in `@connected/types` so the portal cannot drift from it. */
+export type NotificationView = NotificationResponse;
 
 export interface NotificationsService {
   list: (

@@ -17,6 +17,7 @@ import {
   submitTeacherVerification,
   type School,
 } from './support/accounts';
+import { clickUntil } from './support/interactions';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/login');
@@ -113,11 +114,16 @@ test.describe('classes', () => {
     await page.goto('/school/classes');
     await expect(page.getByText('Active')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Deactivate' }).click();
-    await expect(page.getByText('Inactive')).toBeVisible();
+    // `clickUntil`, not `click`: the toggle is a client component, and on a loaded CI runner a
+    // click can land before React has attached the handler. Observed failing twice in one CI run
+    // with no corresponding API request logged, which is what a dropped click looks like.
+    await clickUntil(page.getByRole('button', { name: 'Deactivate' }), async () => {
+      await expect(page.getByText('Inactive')).toBeVisible({ timeout: 2000 });
+    });
 
-    await page.getByRole('button', { name: 'Reactivate' }).click();
-    await expect(page.getByText('Active')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Reactivate' }), async () => {
+      await expect(page.getByText('Active')).toBeVisible({ timeout: 2000 });
+    });
   });
 
   test('subjects can be added to a class', async ({ page }) => {

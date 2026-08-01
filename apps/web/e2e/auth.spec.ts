@@ -21,7 +21,7 @@ test.describe('registration and sign-in', () => {
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page).toHaveURL('/home');
-    await expect(page.getByRole('heading', { name: 'Signed in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hello, New Person' })).toBeVisible();
     await expect(page.getByText(`${slug}@e2e.test`)).toBeVisible();
   });
 

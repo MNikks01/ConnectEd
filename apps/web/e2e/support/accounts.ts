@@ -136,3 +136,42 @@ export async function submitTeacherVerification(
 ): Promise<{ id: string }> {
   return apiPost('/verifications', { role: 'TEACHER', schoolId, subjectIds }, teacher.accessToken);
 }
+
+/** Approves a pending request the way the portal does, so the E2E setup exercises the real path. */
+export async function approveVerification(school: School, requestId: string): Promise<void> {
+  await apiPost(
+    `/verifications/${requestId}/decision`,
+    { decision: 'APPROVE' },
+    school.accessToken,
+  );
+}
+
+/**
+ * A teacher verified for one subject of one class — the only shape that may publish to it.
+ * Returns the class and subject so the caller can assert against them.
+ */
+export async function verifiedTeacherFor(
+  school: School,
+  classId: string,
+  subjectName: string,
+): Promise<{ teacher: Individual; subjectId: string }> {
+  const subject = await createSubject(school, classId, subjectName);
+  const teacher = await createIndividual('teacher');
+
+  const request = await submitTeacherVerification(teacher, school.accountId, [subject.id]);
+  await approveVerification(school, request.id);
+
+  return { teacher, subjectId: subject.id };
+}
+
+/** A student verified into a class — the reader side of the feed. */
+export async function verifiedStudentIn(
+  school: School,
+  classId: string,
+  prefix = 'student',
+): Promise<Individual> {
+  const student = await createIndividual(prefix);
+  const request = await submitStudentVerification(student, school.accountId, classId);
+  await approveVerification(school, request.id);
+  return student;
+}

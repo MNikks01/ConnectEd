@@ -343,6 +343,12 @@ describe('assertPrincipalOfSchool', () => {
     ).resolves.toBeUndefined();
   });
 
+  /**
+   * `VERIFICATION_REQUIRED`, not `FORBIDDEN`: the policy reads the *membership*, not the role
+   * claim in the token. A teacher holds no PRINCIPAL membership, which is the fact that denies
+   * them — and it denies them whatever their token says, including a forged PRINCIPAL claim
+   * (the case below).
+   */
   it('denies a teacher', async () => {
     await expectDenied(
       assertPrincipalOfSchool(
@@ -350,7 +356,18 @@ describe('assertPrincipalOfSchool', () => {
         individual(fixture.teacherAccountId, 'TEACHER'),
         fixture.schoolAccountId,
       ),
-      'FORBIDDEN',
+      'VERIFICATION_REQUIRED',
+    );
+  });
+
+  it('denies a teacher who claims PRINCIPAL in their token', async () => {
+    await expectDenied(
+      assertPrincipalOfSchool(
+        db,
+        individual(fixture.teacherAccountId, 'PRINCIPAL'),
+        fixture.schoolAccountId,
+      ),
+      'VERIFICATION_REQUIRED',
     );
   });
 
