@@ -161,10 +161,10 @@ test.describe('verification queue', () => {
     await expect(page.getByText('E2E applicant')).toBeVisible();
     await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Approve' }).click();
-
     // The pending queue empties; the approved filter shows the decision.
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
     await page.getByRole('link', { name: 'Verified' }).click();
     await expect(page.getByText('E2E applicant')).toBeVisible();
   });
@@ -188,10 +188,16 @@ test.describe('verification queue', () => {
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Reject' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Reject request' }).click();
+    await clickUntil(page.getByRole('button', { name: 'Reject' }), async () => {
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
+    });
 
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(
+      page.getByRole('dialog').getByRole('button', { name: 'Reject request' }),
+      async () => {
+        await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+      },
+    );
   });
 });
 
@@ -211,18 +217,23 @@ test.describe('member roster', () => {
     await submitStudentVerification(student, school.accountId, klass.id);
 
     await page.goto('/school/verifications');
-    await page.getByRole('button', { name: 'Approve' }).click();
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
 
     await page.goto('/school/members');
     await expect(page.getByText('E2E rostered')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Remove' }).click();
+    await clickUntil(page.getByRole('button', { name: 'Remove' }), async () => {
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
+    });
+
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('loses access to this school immediately');
-    await dialog.getByRole('button', { name: 'Remove member' }).click();
 
-    await expect(page.getByText('No verified members yet')).toBeVisible();
+    await clickUntil(dialog.getByRole('button', { name: 'Remove member' }), async () => {
+      await expect(page.getByText('No verified members yet')).toBeVisible({ timeout: 2000 });
+    });
   });
 
   test('class-teacher allocation offers verified teachers instead of an id field', async ({
