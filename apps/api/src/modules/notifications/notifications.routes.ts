@@ -4,6 +4,7 @@
  */
 import { Router } from 'express';
 
+import { parsePageRequest } from '../../shared/http/pagination.js';
 import { uuidParam } from '../../shared/http/params.js';
 import { requireActor } from '../../shared/middleware/authenticate.js';
 
@@ -24,12 +25,10 @@ export function notificationsRoutes(service: NotificationsService): ExpressRoute
   router.get(
     '/notifications',
     handler(async (req, res) => {
-      const limit = Number(req.query.limit);
-
       res.status(200).json(
         await service.list(requireActor(req), {
           unreadOnly: req.query.unreadOnly === 'true',
-          ...(Number.isFinite(limit) ? { limit } : {}),
+          page: parsePageRequest(req.query),
         }),
       );
     }),
