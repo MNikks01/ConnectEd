@@ -86,8 +86,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U connected"
           --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://connected:connected@localhost:5432/connected_e2e?schema=public
+      # Without this the suite runs against an unreachable queue and passes on the degraded path,
+      # which would hide a broken fan-out the moment notification UI exists.
+      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
