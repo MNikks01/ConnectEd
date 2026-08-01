@@ -26,6 +26,8 @@ export default defineConfig({
         'postgresql://connected:connected@localhost:5432/connected_test?schema=public',
       JWT_ACCESS_SECRET: 'test-only-secret-that-is-long-enough-32',
       RATE_LIMIT_ENABLED: 'false',
+      // Config requires it; the unit suite publishes through a fake, never a real connection.
+      REDIS_URL: 'redis://localhost:6379',
     },
     coverage: {
       reporter: ['text', 'lcov'],

@@ -19,6 +19,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/error
 
 import type { VerificationRepository, VerificationRequestRow } from './verification.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
+import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
   SchoolMemberResponse,
@@ -64,11 +65,14 @@ export interface VerificationService {
 export interface VerificationServiceDeps {
   repository: VerificationRepository;
   logger: Logger;
+  /** Side effects travel as domain events, so this module never calls notifications directly. */
+  events: EventPublisher;
 }
 
 export function createVerificationService({
   repository,
   logger,
+  events,
 }: VerificationServiceDeps): VerificationService {
   return {
     submit: async (actor, input) => {
@@ -132,6 +136,16 @@ export function createVerificationService({
         'Verification requested',
       );
 
+      // Published after the write commits: a notification about something that did not happen is
+      // worse than a missing one.
+      await events.publish({
+        type: 'verification.submitted',
+        requestId: created.id,
+        requesterAccountId: actor.accountId,
+        schoolId: input.schoolId,
+        role: input.role,
+      });
+
       return toResponse(created);
     },
 
@@ -188,6 +202,15 @@ export function createVerificationService({
       const updated = await repository.findById(requestId);
       if (!updated) throw new NotFoundError();
 
+      await events.publish({
+        type: 'verification.decided',
+        requestId,
+        requesterAccountId: request.requesterAccountId,
+        schoolId: request.schoolId,
+        role: request.role,
+        status: updated.status,
+      });
+
       return toResponse(updated);
     },
 
@@ -206,6 +229,8 @@ export function createVerificationService({
       }
 
       logger.info({ schoolId, accountId, revoked }, 'Membership revoked');
+
+      await events.publish({ type: 'membership.revoked', accountId, schoolId });
     },
 
     /** The roster (FR-INST-005) — the school's own list of who it has verified. */

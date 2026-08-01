@@ -18,6 +18,17 @@ const envSchema = z.object({
 
   /** Required: the API is useless without its database, so fail at boot rather than at first query. */
   DATABASE_URL: z.string().min(1),
+  /** Required: domain events and the notification fan-out both run through Redis (ADR-0008). */
+  REDIS_URL: z.string().min(1),
+  /**
+   * Runs the queue worker inside the API process. Convenient locally and correct for a small
+   * deployment; a busy one runs `pnpm --filter api worker` separately so a slow fan-out cannot
+   * compete with request handling for the event loop.
+   */
+  RUN_WORKER_IN_PROCESS: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   /** Logs every SQL statement. Local debugging only — query text is PII-adjacent. */
   DB_LOG_QUERIES: z
     .enum(['true', 'false'])

@@ -17,17 +17,40 @@ const logger = createLogger(config);
 const { createApp } = await import('./app.js');
 const { createDb, registerDbReadiness } = await import('./shared/db/index.js');
 const { ReadinessRegistry } = await import('./shared/health/readiness.js');
+const { createEventQueue, createEventWorker, createRedisConnection } =
+  await import('./shared/queue/index.js');
+const { createNotificationsModule } = await import('./modules/notifications/index.js');
 
 const db = createDb({
   connectionString: config.DATABASE_URL,
   logQueries: config.DB_LOG_QUERIES,
 });
 
+// BullMQ needs its own connection: a blocking worker command would otherwise stall every other
+// Redis call sharing the socket.
+const queueConnection = createRedisConnection(config.REDIS_URL);
+const events = createEventQueue(queueConnection, logger);
+
 // Dependencies register their own readiness probes here, at the composition root.
 const readiness = new ReadinessRegistry();
 registerDbReadiness(readiness, db);
+readiness.register({ name: 'redis', probe: () => events.ping() });
 
-const app = createApp({ config, logger, readiness, db });
+const app = createApp({ config, logger, readiness, db, events: events.publisher });
+
+/**
+ * The worker consumes what the API publishes. In-process by default; a separate process when
+ * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
+ */
+const notifications = createNotificationsModule(db, logger);
+const workerConnection = config.RUN_WORKER_IN_PROCESS
+  ? createRedisConnection(config.REDIS_URL)
+  : undefined;
+const worker = workerConnection
+  ? createEventWorker(workerConnection, logger, (event) => notifications.service.handleEvent(event))
+  : undefined;
+
+if (worker) logger.info('Event worker running in-process');
 
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
@@ -56,7 +79,12 @@ function shutdown(signal: string): void {
 
   server.close(() => {
     void (async () => {
-      // Close the pool only after in-flight requests have drained, or their queries would fail.
+      // Close in dependency order: stop consuming, stop publishing, then release the pool —
+      // all only after in-flight requests have drained.
+      await worker?.close();
+      await events.close();
+      await queueConnection.quit();
+      await workerConnection?.quit();
       await db.$disconnect();
       await tracing.stop();
       logger.info('Shutdown complete');

@@ -65,6 +65,7 @@ export default defineConfig({
         METRICS_ENABLED: 'false',
         // The suite registers far more accounts than a person would; see the config comment.
         RATE_LIMIT_ENABLED: 'false',
+        REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
       },
     },
     {

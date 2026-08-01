@@ -16,6 +16,16 @@ import { defineConfig } from 'prisma/config';
 // loudly (and correctly) when it is genuinely missing.
 const databaseUrl = process.env.DATABASE_URL;
 
+/**
+ * Prisma builds a throwaway copy of the schema here to work out what a migration must contain.
+ * Only `migrate dev` and `migrate diff` use it — `migrate deploy`, which is what runs in every
+ * deployed environment, never does. Defaults alongside the main database so a local clone needs no
+ * extra setup beyond creating it once.
+ */
+const shadowDatabaseUrl =
+  process.env.SHADOW_DATABASE_URL ??
+  (databaseUrl ? databaseUrl.replace(/\/([^/?]+)(\?|$)/, '/connected_shadow$2') : undefined);
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
@@ -23,5 +33,12 @@ export default defineConfig({
     seed: 'tsx prisma/seed.ts',
   },
   // Used by the CLI only (migrate, studio, introspect) — never by the running app.
-  ...(databaseUrl ? { datasource: { url: databaseUrl } } : {}),
+  ...(databaseUrl
+    ? {
+        datasource: {
+          url: databaseUrl,
+          ...(shadowDatabaseUrl ? { shadowDatabaseUrl } : {}),
+        },
+      }
+    : {}),
 });
