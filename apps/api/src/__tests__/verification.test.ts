@@ -17,7 +17,11 @@ import { bodyAs, type ErrorBody } from './support/body.js';
 
 import type { SchoolFixture } from './support/db.js';
 import type { Db } from '../shared/db/index.js';
-import type { MyMembershipResponse, VerificationRequestResponse } from '@connected/types';
+import type {
+  MyMembershipResponse,
+  MyTeachingSubjectResponse,
+  VerificationRequestResponse,
+} from '@connected/types';
 import type { Express } from 'express';
 
 let db: Db;
@@ -366,6 +370,75 @@ describe('GET /me/memberships — finding your own classes', () => {
 
   it('requires a session', async () => {
     const response = await request(app).get('/api/v1/me/memberships');
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('GET /me/subjects — finding what you teach', () => {
+  interface SubjectsBody {
+    data: MyTeachingSubjectResponse[];
+  }
+
+  it('returns the caller’s allocations, with the class named', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/subjects')
+      .set('Authorization', await auth(fixture.teacherAccountId, 'INDIVIDUAL', 'TEACHER'));
+
+    expect(response.status).toBe(200);
+
+    const { data } = bodyAs<SubjectsBody>(response);
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({
+      subjectId: fixture.mathsSubjectId,
+      subjectName: 'Mathematics',
+      classId: fixture.classAId,
+      schoolId: fixture.schoolAccountId,
+      schoolName: 'Fixture School',
+    });
+    expect(data[0]?.className).toContain('8');
+  });
+
+  it('scopes to the caller — one teacher never sees another’s subjects', async () => {
+    const other = await request(app)
+      .get('/api/v1/me/subjects')
+      .set('Authorization', await auth(fixture.otherTeacherAccountId, 'INDIVIDUAL', 'TEACHER'));
+
+    const subjects = bodyAs<SubjectsBody>(other).data;
+    expect(subjects).toHaveLength(1);
+    // The other teacher holds Science, not Mathematics.
+    expect(subjects[0]?.subjectId).toBe(fixture.scienceSubjectId);
+  });
+
+  it('is empty for someone who teaches nothing', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/subjects')
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    expect(bodyAs<SubjectsBody>(response).data).toHaveLength(0);
+  });
+
+  /**
+   * The allocation row survives revocation so re-approval can restore it, which means the
+   * membership — not the allocation — has to be what this reads.
+   */
+  it('drops the subject when the school revokes the teacher', async () => {
+    await request(app)
+      .delete(`/api/v1/schools/${fixture.schoolAccountId}/members/${fixture.teacherAccountId}`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'));
+
+    const response = await request(app)
+      .get('/api/v1/me/subjects')
+      .set('Authorization', await auth(fixture.teacherAccountId, 'INDIVIDUAL', 'TEACHER'));
+
+    expect(bodyAs<SubjectsBody>(response).data).toHaveLength(0);
+    // The allocation itself is still there, waiting for a re-approval.
+    expect(await db.subjectAllocation.count({ where: { subjectId: fixture.mathsSubjectId } })).toBe(
+      1,
+    );
+  });
+
+  it('requires a session', async () => {
+    const response = await request(app).get('/api/v1/me/subjects');
     expect(response.status).toBe(401);
   });
 });

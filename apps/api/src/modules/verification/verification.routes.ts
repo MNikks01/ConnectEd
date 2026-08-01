@@ -59,6 +59,13 @@ export function verificationRoutes(service: VerificationService): ExpressRouter 
   );
 
   router.get(
+    '/me/subjects',
+    handler(async (req, res) => {
+      res.status(200).json({ data: await service.listMyTeachingSubjects(requireActor(req)) });
+    }),
+  );
+
+  router.get(
     '/schools/:id/verifications',
     handler(async (req, res) => {
       res

@@ -1,6 +1,6 @@
 # Architecture — Frontend (Next.js)
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-01`
 
 ## Framework & rendering
 
@@ -19,7 +19,7 @@ app/
   (auth)/                 # login, register, reset
   (app)/                  # authenticated shell
     school/               # school portal (web-only account)
-    student/ parent/ teacher/ principal/   # role dashboards
+    student/ parent/ teacher/ principal/   # role dashboards — see the S2-11 note below
     social/               # feed, profile, messages
   api/                    # route handlers (BFF proxy where needed)
 lib/
@@ -63,3 +63,15 @@ components/               # app-specific components (shared ones in packages/ui)
 
 Request/response DTOs live in `packages/types`, generated/derived from the API's zod schemas so the client and
 server cannot drift. The typed `api-client` consumes them.
+
+> **Deviation (2026-08-01, from implementing S2-11).** The four role dashboards are **one composed route**
+> (`/home`) rather than `student/`, `parent/`, `teacher/`, `principal/` directories.
+>
+> Roles are not exclusive. One account can be a parent at one school and a teacher at another, and the
+> permission matrix already treats role as a property of a _membership_ rather than of a person. Four routes
+> would force such a person to choose a dashboard that is only half theirs, and would need a role switcher plus
+> a guard on each route — more surface for the same information.
+>
+> `/home` therefore renders sections conditioned on the memberships the API returns: what you teach, what is due,
+> what you have not read, and what your school has posted. A person with one role sees exactly one role's
+> dashboard; a person with two sees both, without switching.

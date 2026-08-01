@@ -83,6 +83,20 @@ export interface MyMembershipResponse {
   since: string;
 }
 
+/**
+ * A subject the caller teaches. Membership alone cannot answer this: a teacher's membership is
+ * school-wide and carries no class, so without allocations a teacher has no way to find the
+ * classes they teach.
+ */
+export interface MyTeachingSubjectResponse {
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  className: string;
+  schoolId: string;
+  schoolName: string | null;
+}
+
 export interface VerificationRequestResponse {
   id: string;
   schoolId: string;

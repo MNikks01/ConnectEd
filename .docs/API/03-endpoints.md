@@ -23,16 +23,19 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Institution & classes
 
-| Method | Path                              | Auth | Purpose                          |
-| ------ | --------------------------------- | :--: | -------------------------------- |
-| GET    | `/schools/:id`                    |  🔑  | School public/member profile.    |
-| PATCH  | `/schools/:id`                    |  🛡   | Update own school (school acct). |
-| POST   | `/schools/:id/classes`            |  🛡   | Create class.                    |
-| GET    | `/schools/:id/classes`            |  🛡   | List classes.                    |
-| POST   | `/classes/:id/subjects`           |  🛡   | Add subject.                     |
-| POST   | `/classes/:id/class-teacher`      |  🛡   | Allocate class teacher.          |
-| GET    | `/schools/:id/members`            |  🛡   | Roster.                          |
-| DELETE | `/schools/:id/members/:accountId` |  🛡   | Remove/revoke member.            |
+| Method | Path                              | Auth | Purpose                                           |
+| ------ | --------------------------------- | :--: | ------------------------------------------------- |
+| GET    | `/schools/:id`                    |  🔑  | School public/member profile.                     |
+| PATCH  | `/schools/:id`                    |  🛡   | Update own school (school acct).                  |
+| POST   | `/schools/:id/classes`            |  🛡   | Create class.                                     |
+| GET    | `/schools/:id/classes`            |  🛡   | List classes.                                     |
+| POST   | `/classes/:id/subjects`           |  🛡   | Add subject.                                      |
+| GET    | `/classes/:id/subjects`           |  🔑  | Subjects of a class (needed before verification). |
+| PATCH  | `/classes/:id`                    |  🛡   | Rename, activate, or deactivate a class.          |
+| GET    | `/classes/:id/class-teacher`      |  🛡   | Who the class teacher is; 404 when unallocated.   |
+| POST   | `/classes/:id/class-teacher`      |  🛡   | Allocate class teacher.                           |
+| GET    | `/schools/:id/members`            |  🛡   | Roster.                                           |
+| DELETE | `/schools/:id/members/:accountId` |  🛡   | Remove/revoke member.                             |
 
 ## Verification
 
@@ -43,30 +46,38 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                           |
 | GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                   |
 | GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class. |
+| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                         |
 | DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                              |
 | GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                      |
 
 ## Academics
 
-| Method       | Path                     | Auth | Purpose                                       |
-| ------------ | ------------------------ | :--: | --------------------------------------------- |
-| POST         | `/classes/:id/academics` |  🛡   | Teacher publishes item (type in body).        |
-| GET          | `/classes/:id/academics` |  🛡   | Verified member feed.                         |
-| GET          | `/academics/:id`         |  🛡   | Read item (marks read).                       |
-| PATCH/DELETE | `/academics/:id`         |  🛡   | Author edits/deletes.                         |
-| POST         | `/schools/:id/notices`   |  🛡   | School or principal publishes a notice.       |
-| GET          | `/schools/:id/notices`   |  🛡   | List notices (any verified member).           |
-| GET          | `/notices/:id`           |  🛡   | Read notice (marks read).                     |
-| PATCH/DELETE | `/notices/:id`           |  🛡   | Author or school edits/deletes.               |
-| POST         | `/schools/:id/events`    |  🛡   | School creates an event.                      |
-| GET          | `/schools/:id/events`    |  🛡   | Upcoming events; `?includePast=true` for all. |
-| PATCH/DELETE | `/events/:id`            |  🛡   | School moves/cancels.                         |
-| POST         | `/classes/:id/timetable` |  🛡   | Upload timetable.                             |
-| GET          | `/classes/:id/timetable` |  🛡   | View timetable.                               |
-| POST         | `/subjects/:id/syllabus` |  🛡   | Allocated teacher records a topic.            |
-| GET          | `/subjects/:id/syllabus` |  🛡   | Coverage for one subject.                     |
-| GET          | `/classes/:id/syllabus`  |  🛡   | Coverage for every subject of a class.        |
-| DELETE       | `/syllabus/:id`          |  🛡   | Remove a topic recorded in error.             |
+| Method       | Path                              | Auth | Purpose                                             |
+| ------------ | --------------------------------- | :--: | --------------------------------------------------- |
+| POST         | `/classes/:id/academics`          |  🛡   | Teacher publishes item (type in body).              |
+| GET          | `/classes/:id/academics`          |  🛡   | Verified member feed.                               |
+| GET          | `/academics/:id`                  |  🛡   | Read item (marks read).                             |
+| PATCH/DELETE | `/academics/:id`                  |  🛡   | Author edits/deletes.                               |
+| POST         | `/schools/:id/notices`            |  🛡   | School or principal publishes a notice.             |
+| GET          | `/schools/:id/notices`            |  🛡   | List notices (any verified member).                 |
+| GET          | `/notices/:id`                    |  🛡   | Read notice (marks read).                           |
+| PATCH/DELETE | `/notices/:id`                    |  🛡   | Author or school edits/deletes.                     |
+| POST         | `/schools/:id/events`             |  🛡   | School creates an event.                            |
+| GET          | `/schools/:id/events`             |  🛡   | Upcoming events; `?includePast=true` for all.       |
+| PATCH/DELETE | `/events/:id`                     |  🛡   | School moves/cancels.                               |
+| POST         | `/classes/:id/timetable`          |  🛡   | School uploads a timetable (creates a new version). |
+| GET          | `/classes/:id/timetable`          |  🛡   | Current timetable; 404 until one exists.            |
+| GET          | `/classes/:id/timetable/versions` |  🛡   | Earlier versions, newest first.                     |
+| POST         | `/subjects/:id/syllabus`          |  🛡   | Allocated teacher records a topic.                  |
+| GET          | `/subjects/:id/syllabus`          |  🛡   | Coverage for one subject.                           |
+| GET          | `/classes/:id/syllabus`           |  🛡   | Coverage for every subject of a class.              |
+| DELETE       | `/syllabus/:id`                   |  🛡   | Remove a topic recorded in error.                   |
+
+## Media
+
+| Method | Path             | Auth | Purpose                                                                                                                                                             |
+| ------ | ---------------- | :--: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/media/:prefix` |  🔑  | Upload an image (`academic-items`, `timetables`, `avatars`, `posts`). Returns an opaque key; the owning module decides who may later be issued a signed URL for it. |
 
 ## Workflows
 

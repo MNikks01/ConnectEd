@@ -84,6 +84,20 @@ async function publish(overrides: Record<string, unknown> = {}) {
     .send({ ...HOMEWORK, subjectId: fixture.mathsSubjectId, ...overrides });
 }
 
+/**
+ * Publishes as *setup* and proves it worked.
+ *
+ * A setup call that fails silently hands `undefined` to every assertion after it, and the case
+ * then reports a 404 from a URL containing "undefined" — a symptom three steps from the cause.
+ * This has happened: the whole block below failed that way once in roughly twenty full-suite runs.
+ */
+async function givenItem(overrides: Record<string, unknown> = {}): Promise<string> {
+  const response = await publish(overrides);
+  expect(response.status, `setup: publishing the item failed — ${response.text}`).toBe(201);
+
+  return bodyAs<AcademicItemResponse>(response).id;
+}
+
 describe('POST /classes/:id/academics — publishing (FR-ACAD-001)', () => {
   it('lets the allocated teacher publish', async () => {
     const response = await publish();
@@ -226,7 +240,7 @@ describe('read tracking (FR-ACAD-003)', () => {
   let itemId: string;
 
   beforeEach(async () => {
-    itemId = bodyAs<AcademicItemResponse>(await publish()).id;
+    itemId = await givenItem();
   });
 
   it('marks the item read when a student opens it', async () => {
@@ -308,7 +322,7 @@ describe('edit and delete (FR-ACAD-005)', () => {
   let itemId: string;
 
   beforeEach(async () => {
-    itemId = bodyAs<AcademicItemResponse>(await publish()).id;
+    itemId = await givenItem();
   });
 
   it('lets the author edit', async () => {

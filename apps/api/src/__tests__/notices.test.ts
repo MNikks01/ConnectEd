@@ -70,6 +70,20 @@ async function publishNotice(authorization: string, title = 'Sports day moved') 
     .send({ title, body: 'It is now on the 14th.' });
 }
 
+/**
+ * Publishes as *setup* and proves it worked.
+ *
+ * Without this, a setup call that unexpectedly fails hands `undefined` to the next request and the
+ * case reports a puzzling status from a URL containing "undefined" — which is exactly how two
+ * cases here failed once in a full-suite run, describing a symptom three steps from the cause.
+ */
+async function givenNotice(authorization: string, title = 'Sports day moved') {
+  const response = await publishNotice(authorization, title);
+  expect(response.status, `setup: publishing the notice failed — ${response.text}`).toBe(201);
+
+  return bodyAs<NoticeResponse>(response);
+}
+
 async function createEvent(eventAt: string, title = 'Annual day') {
   return request(app)
     .post(`/api/v1/schools/${fixture.schoolAccountId}/events`)
@@ -186,7 +200,7 @@ describe('GET /schools/:id/notices — reading (FR-ACAD-010)', () => {
   });
 
   it('drops a deleted notice from the list', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asSchool()));
+    const created = await givenNotice(await asSchool());
 
     await request(app)
       .delete(`/api/v1/notices/${created.id}`)
@@ -204,7 +218,7 @@ describe('GET /schools/:id/notices — reading (FR-ACAD-010)', () => {
 
 describe('GET /notices/:id — read tracking (FR-ACAD-010)', () => {
   it('marks the notice read for the caller, once', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asSchool()));
+    const created = await givenNotice(await asSchool());
 
     const first = await request(app)
       .get(`/api/v1/notices/${created.id}`)
@@ -222,7 +236,7 @@ describe('GET /notices/:id — read tracking (FR-ACAD-010)', () => {
   });
 
   it('does not count the author reading their own notice', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asPrincipal()));
+    const created = await givenNotice(await asPrincipal());
 
     const response = await request(app)
       .get(`/api/v1/notices/${created.id}`)
@@ -232,7 +246,7 @@ describe('GET /notices/:id — read tracking (FR-ACAD-010)', () => {
   });
 
   it('refuses a non-member, without revealing whether the notice exists', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asSchool()));
+    const created = await givenNotice(await asSchool());
 
     const response = await request(app)
       .get(`/api/v1/notices/${created.id}`)
@@ -244,7 +258,7 @@ describe('GET /notices/:id — read tracking (FR-ACAD-010)', () => {
 
 describe('PATCH/DELETE /notices/:id — editing', () => {
   it('lets the author edit', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asPrincipal()));
+    const created = await givenNotice(await asPrincipal());
 
     const response = await request(app)
       .patch(`/api/v1/notices/${created.id}`)
@@ -256,7 +270,7 @@ describe('PATCH/DELETE /notices/:id — editing', () => {
   });
 
   it('lets the school edit a notice its principal wrote', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asPrincipal()));
+    const created = await givenNotice(await asPrincipal());
 
     const response = await request(app)
       .patch(`/api/v1/notices/${created.id}`)
@@ -267,7 +281,7 @@ describe('PATCH/DELETE /notices/:id — editing', () => {
   });
 
   it('refuses a teacher editing someone else’s notice', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asSchool()));
+    const created = await givenNotice(await asSchool());
 
     const response = await request(app)
       .patch(`/api/v1/notices/${created.id}`)
@@ -278,7 +292,7 @@ describe('PATCH/DELETE /notices/:id — editing', () => {
   });
 
   it('refuses a student deleting a notice', async () => {
-    const created = bodyAs<NoticeResponse>(await publishNotice(await asSchool()));
+    const created = await givenNotice(await asSchool());
 
     const response = await request(app)
       .delete(`/api/v1/notices/${created.id}`)

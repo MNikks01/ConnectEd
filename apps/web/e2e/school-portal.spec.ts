@@ -12,20 +12,12 @@ import {
   createIndividual,
   createSchool,
   createSubject,
-  PASSWORD,
   submitStudentVerification,
   submitTeacherVerification,
   type School,
 } from './support/accounts';
+import { signIn } from './support/auth';
 import { clickUntil } from './support/interactions';
-
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/home');
-}
 
 async function signInAsSchool(page: Page): Promise<School> {
   const school = await createSchool('portal');
@@ -169,10 +161,10 @@ test.describe('verification queue', () => {
     await expect(page.getByText('E2E applicant')).toBeVisible();
     await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Approve' }).click();
-
     // The pending queue empties; the approved filter shows the decision.
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
     await page.getByRole('link', { name: 'Verified' }).click();
     await expect(page.getByText('E2E applicant')).toBeVisible();
   });
@@ -196,10 +188,16 @@ test.describe('verification queue', () => {
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Reject' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Reject request' }).click();
+    await clickUntil(page.getByRole('button', { name: 'Reject' }), async () => {
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
+    });
 
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(
+      page.getByRole('dialog').getByRole('button', { name: 'Reject request' }),
+      async () => {
+        await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+      },
+    );
   });
 });
 
@@ -219,18 +217,29 @@ test.describe('member roster', () => {
     await submitStudentVerification(student, school.accountId, klass.id);
 
     await page.goto('/school/verifications');
-    await page.getByRole('button', { name: 'Approve' }).click();
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
 
     await page.goto('/school/members');
     await expect(page.getByText('E2E rostered')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Remove' }).click();
+    await clickUntil(page.getByRole('button', { name: 'Remove' }), async () => {
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
+    });
+
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('loses access to this school immediately');
+
     await dialog.getByRole('button', { name: 'Remove member' }).click();
 
-    await expect(page.getByText('No verified members yet')).toBeVisible();
+    // Reload rather than trusting the revalidation, exactly as the profile test does: this asserts
+    // the member is gone from the *database*, and does not fail merely because a re-render was
+    // slow. The removal itself is what the case is about.
+    await expect(async () => {
+      await page.reload();
+      await expect(page.getByText('No verified members yet')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
   });
 
   test('class-teacher allocation offers verified teachers instead of an id field', async ({
@@ -248,9 +257,12 @@ test.describe('member roster', () => {
     const teacher = await createIndividual('classteacher');
     await submitTeacherVerification(teacher, school.accountId, [subject.id]);
     await page.goto('/school/verifications');
-    await page.getByRole('button', { name: 'Approve' }).click();
-    // Wait for the decision to land: navigating immediately can abort the Server Action.
-    await expect(page.getByText('Nothing waiting')).toBeVisible();
+
+    // Same reasoning as the removal above: click once, then reload until the decision is in the
+    // database. Waiting on a re-render alone has been the flakiest thing in this suite.
+    await clickUntil(page.getByRole('button', { name: 'Approve' }), async () => {
+      await expect(page.getByText('Nothing waiting')).toBeVisible({ timeout: 2000 });
+    });
 
     await page.goto(`/school/classes/${klass.id}`);
     await page.getByLabel('Teacher').selectOption({ label: 'E2E classteacher' });
