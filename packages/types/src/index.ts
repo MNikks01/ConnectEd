@@ -19,5 +19,6 @@ export * from './auth.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './institution.js';
+export * from './notices.js';
 export * from './notifications.js';
 export * from './verification.js';

@@ -162,6 +162,11 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
   await db.subjectAllocation.create({
     data: { teacherId: teacherProfile.id, subjectId: maths.id },
   });
+  // One subject each, so "a teacher may publish" and "a teacher may not publish to someone else's
+  // subject" are both expressible: the other teacher owns Science and is still refused Mathematics.
+  await db.subjectAllocation.create({
+    data: { teacherId: otherTeacherProfile.id, subjectId: science.id },
+  });
   await db.classTeacher.create({
     data: { classId: classA.id, teacherId: teacherProfile.id },
   });

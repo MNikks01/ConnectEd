@@ -34,15 +34,17 @@ export interface NotificationsService {
  * The slice of verification this module needs. Membership belongs to that module, so recipients
  * are asked for rather than queried (`.docs/Architecture/01-modules.md` rule 1).
  */
-export interface ClassAudience {
+export interface MemberAudience {
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+  /** Everyone verified at the school — the audience a notice or an event addresses. */
+  listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
 }
 
 export interface NotificationsServiceDeps {
   repository: NotificationsRepository;
   logger: Logger;
   /** Absent when the app is built without the verification module; class fan-out is then skipped. */
-  audience?: ClassAudience | undefined;
+  audience?: MemberAudience | undefined;
 }
 
 export function createNotificationsService({
@@ -70,6 +72,34 @@ export function createNotificationsService({
       { type: input.type, recipientAccountId: input.recipientAccountId, created },
       created ? 'Notification created' : 'Notification already existed for this event',
     );
+  }
+
+  /**
+   * One event, many recipients. The reason the notification uniqueness constraint had to be
+   * `(event_id, recipient_id)`: every row here shares one event id, so a globally unique one
+   * would have delivered to exactly one person.
+   */
+  async function fanOut(input: {
+    recipients: string[];
+    exclude?: string;
+    type: string;
+    category: NotificationCategory;
+    payload: Prisma.InputJsonValue;
+    eventId: string;
+  }): Promise<number> {
+    const others = input.recipients.filter((id) => id !== input.exclude);
+
+    for (const recipientAccountId of others) {
+      await deliver({
+        recipientAccountId,
+        type: input.type,
+        category: input.category,
+        payload: input.payload,
+        eventId: input.eventId,
+      });
+    }
+
+    return others.length;
   }
 
   return {
@@ -145,33 +175,61 @@ export function createNotificationsService({
         case 'academic.published': {
           if (!audience) return;
 
-          const recipients = await audience.listClassMemberAccountIds(event.classId);
-
-          // The author does not need telling about their own homework.
-          const others = recipients.filter((id) => id !== event.authorAccountId);
-
-          // The first fan-out to more than one person, and the reason the notification
-          // uniqueness constraint had to be (event_id, recipient_id): every row here shares one
-          // event id, so a globally unique one would have delivered to exactly one student.
-          for (const recipientAccountId of others) {
-            await deliver({
-              recipientAccountId,
-              type: 'academic.published',
-              category: 'ACADEMIC',
-              payload: {
-                itemId: event.itemId,
-                classId: event.classId,
-                itemType: event.itemType,
-                title: event.title,
-              },
-              eventId: event.eventId,
-            });
-          }
+          const delivered = await fanOut({
+            recipients: await audience.listClassMemberAccountIds(event.classId),
+            // The author does not need telling about their own homework.
+            exclude: event.authorAccountId,
+            type: 'academic.published',
+            category: 'ACADEMIC',
+            payload: {
+              itemId: event.itemId,
+              classId: event.classId,
+              itemType: event.itemType,
+              title: event.title,
+            },
+            eventId: event.eventId,
+          });
 
           logger.info(
-            { itemId: event.itemId, classId: event.classId, recipients: others.length },
+            { itemId: event.itemId, classId: event.classId, recipients: delivered },
             'Academic notification fanned out',
           );
+          return;
+        }
+
+        case 'notice.published': {
+          if (!audience) return;
+
+          await fanOut({
+            recipients: await audience.listSchoolMemberAccountIds(event.schoolId),
+            exclude: event.authorAccountId,
+            type: 'notice.published',
+            category: 'NOTICE',
+            payload: { noticeId: event.noticeId, schoolId: event.schoolId, title: event.title },
+            eventId: event.eventId,
+          });
+
+          return;
+        }
+
+        case 'event.published': {
+          if (!audience) return;
+
+          // No author to exclude: an event belongs to the school account, and the school is not
+          // in its own membership table.
+          await fanOut({
+            recipients: await audience.listSchoolMemberAccountIds(event.schoolId),
+            type: 'event.published',
+            category: 'EVENT',
+            payload: {
+              eventId: event.eventEntityId,
+              schoolId: event.schoolId,
+              title: event.title,
+              eventAt: event.eventAt,
+            },
+            eventId: event.eventId,
+          });
+
           return;
         }
 

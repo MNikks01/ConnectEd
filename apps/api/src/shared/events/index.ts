@@ -55,11 +55,30 @@ export interface AcademicPublishedEvent extends DomainEventBase {
   authorAccountId: string;
 }
 
+export interface NoticePublishedEvent extends DomainEventBase {
+  type: 'notice.published';
+  noticeId: string;
+  schoolId: string;
+  title: string;
+  authorAccountId: string;
+}
+
+export interface EventPublishedEvent extends DomainEventBase {
+  type: 'event.published';
+  /** Not `eventId` — that name is taken by the envelope's idempotency key. */
+  eventEntityId: string;
+  schoolId: string;
+  title: string;
+  eventAt: string;
+}
+
 export type DomainEvent =
   | VerificationSubmittedEvent
   | VerificationDecidedEvent
   | MembershipRevokedEvent
-  | AcademicPublishedEvent;
+  | AcademicPublishedEvent
+  | NoticePublishedEvent
+  | EventPublishedEvent;
 
 /**
  * What a module publishes: any event minus the envelope fields, which are filled in here.

@@ -48,18 +48,22 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Academics
 
-| Method       | Path                     | Auth | Purpose                                |
-| ------------ | ------------------------ | :--: | -------------------------------------- |
-| POST         | `/classes/:id/academics` |  🛡   | Teacher publishes item (type in body). |
-| GET          | `/classes/:id/academics` |  🛡   | Verified member feed.                  |
-| GET          | `/academics/:id`         |  🛡   | Read item (marks read).                |
-| PATCH/DELETE | `/academics/:id`         |  🛡   | Author edits/deletes.                  |
-| POST         | `/schools/:id/notices`   |  🛡   | Publish notice.                        |
-| GET          | `/schools/:id/notices`   |  🛡   | List notices.                          |
-| POST         | `/schools/:id/events`    |  🛡   | Create event.                          |
-| POST         | `/classes/:id/timetable` |  🛡   | Upload timetable.                      |
-| GET          | `/classes/:id/timetable` |  🛡   | View timetable.                        |
-| POST/GET     | `/subjects/:id/syllabus` |  🛡   | Update/view coverage.                  |
+| Method       | Path                     | Auth | Purpose                                       |
+| ------------ | ------------------------ | :--: | --------------------------------------------- |
+| POST         | `/classes/:id/academics` |  🛡   | Teacher publishes item (type in body).        |
+| GET          | `/classes/:id/academics` |  🛡   | Verified member feed.                         |
+| GET          | `/academics/:id`         |  🛡   | Read item (marks read).                       |
+| PATCH/DELETE | `/academics/:id`         |  🛡   | Author edits/deletes.                         |
+| POST         | `/schools/:id/notices`   |  🛡   | School or principal publishes a notice.       |
+| GET          | `/schools/:id/notices`   |  🛡   | List notices (any verified member).           |
+| GET          | `/notices/:id`           |  🛡   | Read notice (marks read).                     |
+| PATCH/DELETE | `/notices/:id`           |  🛡   | Author or school edits/deletes.               |
+| POST         | `/schools/:id/events`    |  🛡   | School creates an event.                      |
+| GET          | `/schools/:id/events`    |  🛡   | Upcoming events; `?includePast=true` for all. |
+| PATCH/DELETE | `/events/:id`            |  🛡   | School moves/cancels.                         |
+| POST         | `/classes/:id/timetable` |  🛡   | Upload timetable.                             |
+| GET          | `/classes/:id/timetable` |  🛡   | View timetable.                               |
+| POST/GET     | `/subjects/:id/syllabus` |  🛡   | Update/view coverage.                         |
 
 ## Workflows
 

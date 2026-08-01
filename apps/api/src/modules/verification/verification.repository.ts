@@ -99,6 +99,7 @@ export interface VerificationRepository {
     role: UserRole;
   }) => Promise<boolean>;
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+  listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
   listMembershipsForAccount: (accountId: string) => Promise<MemberRow[]>;
 }
 
@@ -410,6 +411,21 @@ export function createVerificationRepository(db: Db): VerificationRepository {
           status: 'VERIFIED',
           OR: [{ classId }, { classId: null }],
         },
+        select: { accountId: true },
+      });
+
+      return [...new Set(rows.map((row) => row.accountId))];
+    },
+
+    /**
+     * Everyone a school-wide notification should reach: every verified membership, whatever its
+     * role or class. One person can hold several (a parent of two children), so the ids are
+     * deduplicated — otherwise the notification's idempotency key would absorb the duplicates
+     * silently and the count logged would be a lie.
+     */
+    listSchoolMemberAccountIds: async (schoolId) => {
+      const rows = await db.membership.findMany({
+        where: { schoolId, status: 'VERIFIED' },
         select: { accountId: true },
       });
 
