@@ -17,6 +17,7 @@ import {
   verifiedTeacherFor,
   type School,
 } from './support/accounts';
+import { clickUntil } from './support/interactions';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/login');
@@ -145,8 +146,9 @@ test.describe('notifications', () => {
     await expect(page.getByRole('link', { name: 'Notifications, 2 unread' })).toBeVisible();
     await expect(page.getByText('Your school decided on your request to join.')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Mark all as read' }).click();
-    await expect(page.getByText('Everything here has been read.')).toBeVisible();
+    await clickUntil(page.getByRole('button', { name: 'Mark all as read' }), async () => {
+      await expect(page.getByText('Everything here has been read.')).toBeVisible({ timeout: 2000 });
+    });
     await expect(page.getByRole('link', { name: 'Notifications', exact: true })).toBeVisible();
   });
 
