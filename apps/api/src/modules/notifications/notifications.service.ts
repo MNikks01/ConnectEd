@@ -34,14 +34,25 @@ export interface NotificationsService {
   handleEvent: (event: DomainEvent) => Promise<void>;
 }
 
+/**
+ * The slice of verification this module needs. Membership belongs to that module, so recipients
+ * are asked for rather than queried (`.docs/Architecture/01-modules.md` rule 1).
+ */
+export interface ClassAudience {
+  listClassMemberAccountIds: (classId: string) => Promise<string[]>;
+}
+
 export interface NotificationsServiceDeps {
   repository: NotificationsRepository;
   logger: Logger;
+  /** Absent when the app is built without the verification module; class fan-out is then skipped. */
+  audience?: ClassAudience | undefined;
 }
 
 export function createNotificationsService({
   repository,
   logger,
+  audience,
 }: NotificationsServiceDeps): NotificationsService {
   /** Writes one notification, respecting the recipient's category preference. */
   async function deliver(input: {
@@ -134,6 +145,39 @@ export function createNotificationsService({
             eventId: event.eventId,
           });
           return;
+
+        case 'academic.published': {
+          if (!audience) return;
+
+          const recipients = await audience.listClassMemberAccountIds(event.classId);
+
+          // The author does not need telling about their own homework.
+          const others = recipients.filter((id) => id !== event.authorAccountId);
+
+          // The first fan-out to more than one person, and the reason the notification
+          // uniqueness constraint had to be (event_id, recipient_id): every row here shares one
+          // event id, so a globally unique one would have delivered to exactly one student.
+          for (const recipientAccountId of others) {
+            await deliver({
+              recipientAccountId,
+              type: 'academic.published',
+              category: 'ACADEMIC',
+              payload: {
+                itemId: event.itemId,
+                classId: event.classId,
+                itemType: event.itemType,
+                title: event.title,
+              },
+              eventId: event.eventId,
+            });
+          }
+
+          logger.info(
+            { itemId: event.itemId, classId: event.classId, recipients: others.length },
+            'Academic notification fanned out',
+          );
+          return;
+        }
 
         case 'membership.revoked':
           await deliver({

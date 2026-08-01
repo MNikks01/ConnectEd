@@ -15,6 +15,7 @@ import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
+import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
@@ -132,7 +133,14 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     // verified teacher — so it is constructed first and its service passed in as a narrow port.
     const verification = createVerificationModule(db, logger, events ?? noopPublisher);
     const institution = createInstitutionModule(db, verification.service);
-    const notifications = createNotificationsModule(db, logger);
+    // Notifications resolves class recipients through verification, which owns membership.
+    const notifications = createNotificationsModule(db, logger, verification.service);
+    const academics = createAcademicsModule({
+      db,
+      storage,
+      events: events ?? noopPublisher,
+      logger,
+    });
 
     // Media only exists when storage was supplied; without it the routes are simply absent
     // rather than present and failing.
@@ -143,6 +151,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       institution.routes,
       verification.routes,
       notifications.routes,
+      academics.routes,
       ...(media ? [media.routes] : []),
     );
     // Module routers mount here as they land: academics, workflows, social, …

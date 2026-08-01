@@ -98,6 +98,7 @@ export interface VerificationRepository {
     schoolId: string;
     role: UserRole;
   }) => Promise<boolean>;
+  listClassMemberAccountIds: (classId: string) => Promise<string[]>;
 }
 
 export interface MemberRow {
@@ -386,6 +387,30 @@ export function createVerificationRepository(db: Db): VerificationRepository {
         childName: row.child?.fullName ?? null,
         since: row.createdAt,
       }));
+    },
+
+    /**
+     * Everyone a class notification should reach: members scoped to the class (students, parents
+     * of a child in it) and the school-wide roles whose membership carries no class (teachers,
+     * principal). The school account itself is excluded — it publishes, it does not need telling.
+     */
+    listClassMemberAccountIds: async (classId) => {
+      const klass = await db.class.findUnique({
+        where: { id: classId },
+        select: { schoolId: true },
+      });
+      if (!klass) return [];
+
+      const rows = await db.membership.findMany({
+        where: {
+          schoolId: klass.schoolId,
+          status: 'VERIFIED',
+          OR: [{ classId }, { classId: null }],
+        },
+        select: { accountId: true },
+      });
+
+      return [...new Set(rows.map((row) => row.accountId))];
     },
 
     hasVerifiedMembership: async ({ accountId, schoolId, role }) =>
