@@ -1,6 +1,6 @@
 # API — Endpoint Catalogue
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-01`
 
 Grouped by module. All under `/api/v1`. **Auth** column: 🔓 public · 🔑 authenticated · 🛡 authorized (role/
 verification/ownership checked). This is the contract; the OpenAPI spec (generated) is authoritative for shapes.
@@ -36,21 +36,24 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Verification
 
-| Method | Path                                        | Auth | Purpose                                            |
-| ------ | ------------------------------------------- | :--: | -------------------------------------------------- |
-| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal). |
-| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                              |
-| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                    |
-| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                            |
+| Method | Path                                        | Auth | Purpose                                                   |
+| ------ | ------------------------------------------- | :--: | --------------------------------------------------------- |
+| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).        |
+| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                     |
+| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                           |
+| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                   |
+| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class. |
+| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                              |
+| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                      |
 
 ## Academics
 
 | Method       | Path                     | Auth | Purpose                                |
 | ------------ | ------------------------ | :--: | -------------------------------------- |
-| POST         | `/classes/:id/homework`  |  🛡   | Teacher publishes item (type in body). |
+| POST         | `/classes/:id/academics` |  🛡   | Teacher publishes item (type in body). |
 | GET          | `/classes/:id/academics` |  🛡   | Verified member feed.                  |
-| GET          | `/homework/:id`          |  🛡   | Read item (marks read).                |
-| PATCH/DELETE | `/homework/:id`          |  🛡   | Author edits/deletes.                  |
+| GET          | `/academics/:id`         |  🛡   | Read item (marks read).                |
+| PATCH/DELETE | `/academics/:id`         |  🛡   | Author edits/deletes.                  |
 | POST         | `/schools/:id/notices`   |  🛡   | Publish notice.                        |
 | GET          | `/schools/:id/notices`   |  🛡   | List notices.                          |
 | POST         | `/schools/:id/events`    |  🛡   | Create event.                          |
@@ -86,15 +89,16 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Notifications & billing
 
-| Method | Path                        | Auth | Purpose                                |
-| ------ | --------------------------- | :--: | -------------------------------------- |
-| GET    | `/notifications?cursor=`    |  🔑  | List (unread count in headers).        |
-| POST   | `/notifications/:id/read`   |  🔑  | Mark read.                             |
-| PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                           |
-| POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).              |
-| GET    | `/plans`                    |  🔑  | Available plans.                       |
-| POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.             |
-| POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified). |
+| Method | Path                        | Auth | Purpose                                          |
+| ------ | --------------------------- | :--: | ------------------------------------------------ |
+| GET    | `/notifications?after=`     |  🔑  | List (`unreadCount` in the body, beside `data`). |
+| POST   | `/notifications/:id/read`   |  🔑  | Mark read.                                       |
+| POST   | `/notifications/read-all`   |  🔑  | Mark every unread one read.                      |
+| PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                                     |
+| POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).                        |
+| GET    | `/plans`                    |  🔑  | Available plans.                                 |
+| POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
+| POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
 
 ## Ops
 
