@@ -56,3 +56,23 @@ export interface AcademicItemResponse {
    */
   readCount?: number;
 }
+
+export const uploadTimetableSchema = z.object({
+  /** A key from `POST /media/timetables`; the signed URL is issued on read. */
+  imageKey: z.string().trim().min(1).max(300),
+});
+
+export type UploadTimetableInput = z.infer<typeof uploadTimetableSchema>;
+
+export interface TimetableResponse {
+  id: string;
+  classId: string;
+  /** Short-lived signed URL, issued only after the caller has been authorized. */
+  imageUrl: string | null;
+  /**
+   * Increments on every upload. Shown so a parent can tell "this is the third timetable this
+   * term" from "nothing has changed since September".
+   */
+  version: number;
+  createdAt: string;
+}

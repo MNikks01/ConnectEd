@@ -7,6 +7,9 @@ import { createAcademicsService } from './academics.service.js';
 import { createNoticesRepository } from './notices.repository.js';
 import { noticesRoutes } from './notices.routes.js';
 import { createNoticesService } from './notices.service.js';
+import { createTimetableRepository } from './timetable.repository.js';
+import { timetableRoutes } from './timetable.routes.js';
+import { createTimetableService } from './timetable.service.js';
 
 import { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
@@ -15,14 +18,17 @@ import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
 import type { AcademicsService } from './academics.service.js';
 import type { NoticesService } from './notices.service.js';
+import type { TimetableService } from './timetable.service.js';
 
 export type { AcademicsService } from './academics.service.js';
 export type { NoticesService } from './notices.service.js';
+export type { TimetableService } from './timetable.service.js';
 
 export interface AcademicsModule {
   routes: Router;
   service: AcademicsService;
   notices: NoticesService;
+  timetable: TimetableService;
 }
 
 export function createAcademicsModule(deps: {
@@ -46,9 +52,17 @@ export function createAcademicsModule(deps: {
     logger: deps.logger,
   });
 
+  const timetable = createTimetableService({
+    repository: createTimetableRepository(deps.db),
+    db: deps.db,
+    storage: deps.storage,
+    logger: deps.logger,
+  });
+
   const routes = Router();
   routes.use(academicsRoutes(service));
   routes.use(noticesRoutes(notices));
+  routes.use(timetableRoutes(timetable));
 
-  return { service, notices, routes };
+  return { service, notices, timetable, routes };
 }

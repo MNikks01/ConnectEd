@@ -189,3 +189,40 @@ export async function createEventAction(
 export async function deleteEventAction(eventId: string): Promise<ActionResult> {
   return run(() => callAsUser(`/events/${eventId}`, { method: 'DELETE' }), ['/school/events']);
 }
+
+/**
+ * Uploading a class timetable (FR-ACAD-020).
+ *
+ * Two calls, in order: the file goes to the media endpoint, which validates the bytes and returns
+ * an opaque key, and only then is the key attached to the class. Doing it the other way round
+ * would leave a timetable row pointing at an object that failed validation.
+ *
+ * The orphan case is the reverse and is accepted for now: an upload that succeeds followed by an
+ * attach that fails leaves an unreferenced object in the bucket. Collecting those is a known gap
+ * carried from S2-0a rather than something this action can fix alone.
+ */
+export async function uploadTimetableAction(
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const file = formData.get('file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: 'Choose an image to upload.', fieldErrors: { file: 'Required.' } };
+  }
+
+  return run(async () => {
+    const media = new FormData();
+    media.set('file', file);
+
+    const stored = await callAsUser<{ key: string }>('/media/timetables', {
+      method: 'POST',
+      body: media,
+    });
+
+    await callAsUser(`/classes/${classId}/timetable`, {
+      method: 'POST',
+      body: { imageKey: stored.key },
+    });
+  }, [`/school/classes/${classId}`, `/classes/${classId}`]);
+}

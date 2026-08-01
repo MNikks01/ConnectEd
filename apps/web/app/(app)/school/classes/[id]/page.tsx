@@ -7,6 +7,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { ClassTeacherForm } from '@/components/class-teacher-form';
 import { SubjectPanel } from '@/components/subject-panel';
+import { TimetablePanel } from '@/components/timetable-panel';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
@@ -16,6 +17,7 @@ import type {
   CurrentAccountResponse,
   SchoolMemberResponse,
   SubjectResponse,
+  TimetableResponse,
 } from '@connected/types';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +29,7 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
   let subjects: SubjectResponse[];
   let classTeacher: ClassTeacherResponse | undefined;
   let teachers: SchoolMemberResponse[] = [];
+  let timetable: TimetableResponse | undefined;
 
   try {
     const account = await readAsUser<CurrentAccountResponse>('/me');
@@ -50,6 +53,13 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
       classTeacher = await readAsUser<ClassTeacherResponse>(`/classes/${id}/class-teacher`);
     } catch (error) {
       // A class with no class teacher yet is the normal starting state, not an error.
+      if (!(error instanceof ApiError && error.status === 404)) throw error;
+    }
+
+    try {
+      timetable = await readAsUser<TimetableResponse>(`/classes/${id}/timetable`);
+    } catch (error) {
+      // Likewise: no timetable uploaded yet is the starting state.
       if (!(error instanceof ApiError && error.status === 404)) throw error;
     }
   } catch (error) {
@@ -79,6 +89,11 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
         <Card as="section">
           <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Class teacher</h2>
           <ClassTeacherForm classId={id} current={classTeacher} teachers={teachers} />
+        </Card>
+
+        <Card as="section">
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Timetable</h2>
+          <TimetablePanel classId={id} timetable={timetable} />
         </Card>
       </div>
     </>
