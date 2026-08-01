@@ -101,6 +101,18 @@ export interface VerificationRepository {
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
   listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
   listMembershipsForAccount: (accountId: string) => Promise<MemberRow[]>;
+  listAllocationsForAccount: (accountId: string) => Promise<AllocationRow[]>;
+}
+
+export interface AllocationRow {
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  medium: string;
+  level: string;
+  section: string;
+  schoolId: string;
+  schoolName: string | null;
 }
 
 export interface MemberRow {
@@ -430,6 +442,60 @@ export function createVerificationRepository(db: Db): VerificationRepository {
       });
 
       return [...new Set(rows.map((row) => row.accountId))];
+    },
+
+    /**
+     * The caller's own subject allocations — how a *teacher* discovers which classes they teach.
+     *
+     * This module writes these rows when a school approves a teacher, so it answers questions
+     * about them too. Only allocations at a school where the membership is still verified count:
+     * revoking a teacher must take their classes away, and the allocation row survives revocation
+     * so that re-approval restores it.
+     */
+    listAllocationsForAccount: async (accountId) => {
+      const rows = await db.subjectAllocation.findMany({
+        where: {
+          teacher: { accountId },
+          subject: {
+            class: {
+              school: {
+                memberships: {
+                  some: { accountId, role: 'TEACHER', status: 'VERIFIED' },
+                },
+              },
+            },
+          },
+        },
+        select: {
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              class: {
+                select: {
+                  id: true,
+                  medium: true,
+                  level: true,
+                  section: true,
+                  school: { select: { accountId: true, name: true } },
+                },
+              },
+            },
+          },
+        },
+        take: BOUNDED_LIST_CAP,
+      });
+
+      return rows.map((row) => ({
+        subjectId: row.subject.id,
+        subjectName: row.subject.name,
+        classId: row.subject.class.id,
+        medium: row.subject.class.medium,
+        level: row.subject.class.level,
+        section: row.subject.class.section,
+        schoolId: row.subject.class.school.accountId,
+        schoolName: row.subject.class.school.name,
+      }));
     },
 
     /** The caller's own memberships — how a member discovers which class they are in. */

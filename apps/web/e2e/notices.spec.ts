@@ -51,7 +51,7 @@ test.describe('notices', () => {
     await page.getByRole('button', { name: 'Sign out' }).click();
     await signIn(page, student.email);
 
-    await page.getByRole('link', { name: 'Notices' }).click();
+    await page.getByRole('link', { name: 'Notices', exact: true }).click();
     await expect(page.getByText('Unread')).toBeVisible();
 
     await page.getByRole('link', { name: 'Sports day moved' }).click();

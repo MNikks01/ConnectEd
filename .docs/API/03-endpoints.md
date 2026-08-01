@@ -43,6 +43,7 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                           |
 | GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                   |
 | GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class. |
+| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                         |
 | DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                              |
 | GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                      |
 

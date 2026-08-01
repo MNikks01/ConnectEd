@@ -9,9 +9,22 @@ import { Badge, Card, PageHeader } from '@connected/ui';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import {
+  DueSoon,
+  RecentNotices,
+  TeachingSubjects,
+  UnreadWork,
+} from '@/components/dashboard-sections';
+import { dueSoon, loadDashboard, MAX_CLASSES, unread } from '@/lib/dashboard';
+
+import type { DashboardData } from '@/lib/dashboard';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
-import type { CurrentAccountResponse, MyMembershipResponse } from '@connected/types';
+import type {
+  CurrentAccountResponse,
+  MyMembershipResponse,
+  MyTeachingSubjectResponse,
+} from '@connected/types';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Home · GetConnected' };
@@ -30,10 +43,22 @@ function membershipLabel(membership: MyMembershipResponse): string {
 export default async function AppHomePage() {
   let account: CurrentAccountResponse;
   let memberships: MyMembershipResponse[] = [];
+  let teaching: MyTeachingSubjectResponse[] = [];
+  let dashboard: DashboardData = { items: [], notices: [], truncated: false };
 
   try {
     account = await readAsUser<CurrentAccountResponse>('/me');
     memberships = (await readAsUser<{ data: MyMembershipResponse[] }>('/me/memberships')).data;
+
+    // A school's dashboard is the portal; there is nothing to assemble here for one.
+    if (account.accountType !== 'SCHOOL') {
+      [teaching, dashboard] = await Promise.all([
+        readAsUser<{ data: MyTeachingSubjectResponse[] }>('/me/subjects').then(
+          (response) => response.data,
+        ),
+        loadDashboard(memberships),
+      ]);
+    }
   } catch (error) {
     if (error instanceof SessionExpiredError) redirect('/api/auth/refresh?next=/home');
     throw error;
@@ -42,6 +67,14 @@ export default async function AppHomePage() {
   // A school has no memberships of its own; it reaches its classes through the portal.
   const isSchool = account.accountType === 'SCHOOL';
   const classes = memberships.filter((membership) => membership.classId !== null);
+
+  // Roles are not exclusive: one person can be a parent at one school and a teacher at another,
+  // so the dashboard composes sections rather than choosing one of four layouts.
+  const teaches = teaching.length > 0 || memberships.some((m) => m.role === 'TEACHER');
+  const learns = memberships.some((m) => m.role === 'STUDENT' || m.role === 'PARENT');
+
+  const deadlines = dueSoon(dashboard.items);
+  const unreadItems = unread(dashboard.items);
 
   return (
     <main>
@@ -55,6 +88,15 @@ export default async function AppHomePage() {
               : 'You are signed in. Ask your school to verify you to see your classes.'
         }
       />
+
+      {isSchool ? null : (
+        <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
+          {teaches ? <TeachingSubjects subjects={teaching} /> : null}
+          {learns ? <DueSoon items={deadlines} /> : null}
+          <UnreadWork items={unreadItems} />
+          <RecentNotices notices={dashboard.notices} />
+        </div>
+      )}
 
       {isSchool ? (
         <Card>
@@ -97,6 +139,12 @@ export default async function AppHomePage() {
               ))}
             </ul>
           )}
+
+          {dashboard.truncated ? (
+            <p className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
+              Work and notices above are drawn from your first {MAX_CLASSES} classes.
+            </p>
+          ) : null}
         </section>
       )}
 

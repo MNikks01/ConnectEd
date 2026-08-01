@@ -26,6 +26,7 @@ import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
   MyMembershipResponse,
+  MyTeachingSubjectResponse,
   SchoolMemberResponse,
   SubmitVerificationInput,
   VerificationDecisionInput,
@@ -69,6 +70,7 @@ export interface VerificationService {
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
   listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
   listMyMemberships: (actor: Actor) => Promise<MyMembershipResponse[]>;
+  listMyTeachingSubjects: (actor: Actor) => Promise<MyTeachingSubjectResponse[]>;
 }
 
 export interface VerificationServiceDeps {
@@ -276,6 +278,24 @@ export function createVerificationService({
 
     listClassMemberAccountIds: (classId) => repository.listClassMemberAccountIds(classId),
     listSchoolMemberAccountIds: (schoolId) => repository.listSchoolMemberAccountIds(schoolId),
+
+    /** Also scoped to the caller by construction, for the same reason. */
+    listMyTeachingSubjects: async (actor) => {
+      const rows = await repository.listAllocationsForAccount(actor.accountId);
+
+      return rows.map((row) => ({
+        subjectId: row.subjectId,
+        subjectName: row.subjectName,
+        classId: row.classId,
+        className: classDisplayName({
+          medium: row.medium as Medium,
+          level: row.level as ClassLevel,
+          section: row.section as Section,
+        }),
+        schoolId: row.schoolId,
+        schoolName: row.schoolName,
+      }));
+    },
 
     /** Scoped to the caller by construction — there is no path to another account's memberships. */
     listMyMemberships: async (actor) => {
