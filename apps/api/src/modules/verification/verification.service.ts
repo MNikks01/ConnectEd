@@ -64,6 +64,8 @@ export interface VerificationService {
     schoolId: string;
     role: UserRole;
   }) => Promise<boolean>;
+  /** Recipients for a class-scoped notification. Cross-module query, so no actor. */
+  listClassMemberAccountIds: (classId: string) => Promise<string[]>;
 }
 
 export interface VerificationServiceDeps {
@@ -268,6 +270,8 @@ export function createVerificationService({
     },
 
     isVerifiedMember: (input) => repository.hasVerifiedMembership(input),
+
+    listClassMemberAccountIds: (classId) => repository.listClassMemberAccountIds(classId),
   };
 }
 

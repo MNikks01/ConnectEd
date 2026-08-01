@@ -14,6 +14,7 @@ export interface Paginated<T> {
   nextCursor: string | null;
 }
 
+export * from './academics.js';
 export * from './auth.js';
 export * from './enums.js';
 export * from './errors.js';

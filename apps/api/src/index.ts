@@ -48,7 +48,9 @@ const app = createApp({ config, logger, readiness, db, events: events.publisher,
  * The worker consumes what the API publishes. In-process by default; a separate process when
  * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
  */
-const notifications = createNotificationsModule(db, logger);
+const { createVerificationModule } = await import('./modules/verification/index.js');
+const verificationForWorker = createVerificationModule(db, logger, events.publisher);
+const notifications = createNotificationsModule(db, logger, verificationForWorker.service);
 const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)
   : undefined;

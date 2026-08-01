@@ -46,8 +46,20 @@ export interface MembershipRevokedEvent extends DomainEventBase {
   schoolId: string;
 }
 
+export interface AcademicPublishedEvent extends DomainEventBase {
+  type: 'academic.published';
+  itemId: string;
+  classId: string;
+  itemType: string;
+  title: string;
+  authorAccountId: string;
+}
+
 export type DomainEvent =
-  VerificationSubmittedEvent | VerificationDecidedEvent | MembershipRevokedEvent;
+  | VerificationSubmittedEvent
+  | VerificationDecidedEvent
+  | MembershipRevokedEvent
+  | AcademicPublishedEvent;
 
 /**
  * What a module publishes: any event minus the envelope fields, which are filled in here.
