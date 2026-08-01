@@ -37,6 +37,15 @@ export async function closeTestDb(): Promise<void> {
 /**
  * Empties every table between tests. TRUNCATE ... CASCADE in one statement is both faster than
  * per-table deletes and immune to FK ordering.
+ *
+ * **The lock timeout is the important part.** TRUNCATE needs ACCESS EXCLUSIVE on every table, so a
+ * single connection left idle inside a transaction blocks it — silently, until the twenty-second
+ * test timeout fires. That has been the shape of a rare full-suite failure: a case times out here,
+ * or worse, the reset lands late and the *next* test finds its fixture missing and reports a
+ * puzzling 404 from a URL built out of an id that was never created.
+ *
+ * Five seconds is far longer than the truncate needs and far shorter than the test timeout, so the
+ * suite now fails with a sentence naming the blocker instead of a symptom several steps away.
  */
 export async function resetDb(): Promise<void> {
   const db = testDb();
@@ -51,7 +60,38 @@ export async function resetDb(): Promise<void> {
   }
 
   const list = tables.map((row) => `"public"."${row.tablename}"`).join(', ');
-  await db.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+
+  try {
+    // One transaction so `SET LOCAL` and the TRUNCATE are guaranteed the same connection; with a
+    // pool, two separate statements need not be.
+    await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '5s'`);
+      await tx.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+    });
+  } catch (error) {
+    throw new Error(`resetDb could not truncate: ${await describeBlockers(error)}`);
+  }
+}
+
+/** Names whatever is holding the locks, so the failure explains itself. */
+async function describeBlockers(error: unknown): Promise<string> {
+  const original = error instanceof Error ? error.message.split('\n')[0] : String(error);
+
+  try {
+    const blockers = await testDb().$queryRaw<{ state: string; query: string }[]>`
+      SELECT state, query FROM pg_stat_activity
+      WHERE datname = current_database()
+        AND pid <> pg_backend_pid()
+        AND state <> 'idle'
+    `;
+
+    if (blockers.length === 0) return `${original} (no other active connection found)`;
+
+    const held = blockers.map((row) => `${row.state}: ${row.query.slice(0, 120)}`).join(' | ');
+    return `${original} — held by ${held}`;
+  } catch {
+    return original ?? 'unknown error';
+  }
 }
 
 /** Verifies the database is reachable, so a connection problem reads as one. */
@@ -161,6 +201,11 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
 
   await db.subjectAllocation.create({
     data: { teacherId: teacherProfile.id, subjectId: maths.id },
+  });
+  // One subject each, so "a teacher may publish" and "a teacher may not publish to someone else's
+  // subject" are both expressible: the other teacher owns Science and is still refused Mathematics.
+  await db.subjectAllocation.create({
+    data: { teacherId: otherTeacherProfile.id, subjectId: science.id },
   });
   await db.classTeacher.create({
     data: { classId: classA.id, teacherId: teacherProfile.id },

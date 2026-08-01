@@ -36,8 +36,9 @@ export function authRoutes({ service, config, tokens }: AuthRoutesDeps): Router 
     limit: 10,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    // Tests would otherwise trip the limiter and fail for reasons unrelated to what they assert.
-    skip: () => config.isTest,
+    // Explicitly configurable: automated suites drive far more auth traffic than a person, and
+    // would otherwise fail for reasons unrelated to what they assert.
+    skip: () => !config.RATE_LIMIT_ENABLED,
     message: {
       error: {
         code: 'RATE_LIMITED',

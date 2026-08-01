@@ -13,6 +13,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default. CI only ever checks out and runs tests; a token that can also write to the
+# repository is a token a compromised dependency can write to the repository with. Jobs that need
+# more say so themselves — none here do.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -69,6 +75,81 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # Separate job: it needs a browser and boots both servers, so it is slower than `verify` and
+  # should not delay that feedback. Runs against built output, not the dev server, because the dev
+  # server papers over build-time failures.
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: connected
+          POSTGRES_PASSWORD: connected
+          POSTGRES_DB: connected_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U connected"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://connected:connected@localhost:5432/connected_e2e?schema=public
+      # Without this the suite runs against an unreachable queue and passes on the degraded path,
+      # which would hide a broken fan-out the moment notification UI exists.
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: connected-e2e
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm --filter @connected/api db:deploy
+
+      - name: Build
+        run: pnpm build
+
+      # A service container cannot express MinIO's `server /data` command, so it runs as a step.
+      # Without it the API refuses to boot: S3 configuration is required, not optional.
+      - name: Start object storage
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && break
+            sleep 2
+          done
+
+      # Chromium only — the suite asserts behaviour, not rendering differences between engines.
+      - name: Install Playwright browser
+        run: pnpm --filter @connected/web exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm --filter @connected/web test:e2e
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
 
   changeset-check:
     runs-on: ubuntu-latest

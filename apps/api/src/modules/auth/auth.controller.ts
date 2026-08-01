@@ -36,9 +36,15 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
     return {
       httpOnly: true,
       secure: config.cookieSecure,
-      // 'lax' still sends the cookie on top-level navigation but not on cross-site subrequests,
-      // which is the CSRF-relevant case for a refresh endpoint.
-      sameSite: 'lax',
+      /**
+       * 'strict', not 'lax'. Lax already withholds the cookie from cross-site subrequests, which
+       * covers the POST that refresh actually uses — but it still sends it on a top-level GET
+       * navigation from another site. Nothing reads this cookie from a GET today; 'strict' means
+       * nothing can start to. The web app is unaffected either way: it talks to the API through
+       * its own server, which sends the refresh token in the body, so the browser never presents
+       * this cookie to the API at all.
+       */
+      sameSite: 'strict',
       path: REFRESH_COOKIE_PATH,
       expires,
     };

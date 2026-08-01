@@ -18,6 +18,38 @@ const envSchema = z.object({
 
   /** Required: the API is useless without its database, so fail at boot rather than at first query. */
   DATABASE_URL: z.string().min(1),
+  /** Required: domain events and the notification fan-out both run through Redis (ADR-0008). */
+  REDIS_URL: z.string().min(1),
+
+  /** Object storage (ADR-0009). MinIO locally, S3-compatible anywhere else. */
+  S3_ENDPOINT: z.url(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(1),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  /** MinIO addresses buckets by path; real S3 uses a subdomain. */
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  /**
+   * Upload ceiling in bytes. Enforced before anything is read into memory, because the cheapest
+   * request to reject is the one you never buffer.
+   */
+  MAX_UPLOAD_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024 * 1024),
+  /**
+   * Runs the queue worker inside the API process. Convenient locally and correct for a small
+   * deployment; a busy one runs `pnpm --filter api worker` separately so a slow fan-out cannot
+   * compete with request handling for the event loop.
+   */
+  RUN_WORKER_IN_PROCESS: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   /** Logs every SQL statement. Local debugging only — query text is PII-adjacent. */
   DB_LOG_QUERIES: z
     .enum(['true', 'false'])
@@ -43,6 +75,19 @@ const envSchema = z.object({
   ARGON_MEMORY_KIB: z.coerce.number().int().positive().default(19456),
   ARGON_ITERATIONS: z.coerce.number().int().positive().default(2),
   ARGON_PARALLELISM: z.coerce.number().int().positive().default(1),
+
+  /**
+   * Rate limiting on credential endpoints (FR-AUTH-011). On by default and expected to stay on
+   * everywhere real.
+   *
+   * It is a separate switch rather than being inferred from NODE_ENV because automated suites need
+   * it off while otherwise running a production-shaped server: the end-to-end suite registers far
+   * more than ten accounts, and keying this to "am I a unit test" made that impossible to express.
+   */
+  RATE_LIMIT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 
   /** Refresh cookies must be Secure outside local development. */
   COOKIE_SECURE: z

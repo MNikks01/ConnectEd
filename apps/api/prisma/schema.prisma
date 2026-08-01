@@ -769,13 +769,18 @@ model Notification {
   type               String
   payload            Json?
   readAt             DateTime? @map("read_at")
-  /// Idempotency key for the async fan-out: a redelivered event must not duplicate the row.
-  eventId            String?   @unique @map("event_id")
+  /// Idempotency key for the async fan-out, unique **per recipient** (see the constraint below).
+  /// One event fans out to many people, so a globally unique event id would let the first
+  /// recipient's row block everyone else's — which is how a class of thirty gets one notification.
+  eventId            String?   @map("event_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   recipient Account @relation(fields: [recipientAccountId], references: [id], onDelete: Cascade)
 
+  /// `.docs/PRD/07-notifications.md`: "idempotent by (event_id, recipient_id)". A redelivered
+  /// event is therefore a no-op per person rather than a duplicate in their list.
+  @@unique([eventId, recipientAccountId])
   @@index([recipientAccountId, readAt])
   @@map("notification")
 }

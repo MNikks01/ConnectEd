@@ -106,8 +106,11 @@ export async function assertTeacherAllocatedToSubject(
     return;
   }
 
-  requireRole(actor, ['TEACHER']);
-
+  // Deliberately *not* `requireRole(actor, ['TEACHER'])`. The role claim in the access token is
+  // the profile role, and registration creates every individual as `USER` (FR-AUTH-001) — a real
+  // teacher never carries a TEACHER claim, so that guard rejected exactly the people it was meant
+  // to admit. The permission matrix is explicit that "the verified `membership` row is what every
+  // academic check reads", and the two DB-backed checks below are strictly stronger than the claim.
   const allocation = await db.subjectAllocation.findFirst({
     where: {
       subjectId,
@@ -143,7 +146,7 @@ export async function assertPrincipalOfSchool(
   actor: Actor,
   schoolId: string,
 ): Promise<void> {
-  requireRole(actor, ['PRINCIPAL']);
+  // Membership, not the token's role claim — see the note in `assertTeacherAllocatedToSubject`.
   await assertVerifiedMembership(db, actor, schoolId, 'PRINCIPAL');
 }
 
@@ -184,6 +187,51 @@ export async function assertParentOfVerifiedChild(
   if (membership?.status !== 'VERIFIED') {
     throw new VerificationRequiredError('Your link to this child is not verified yet.');
   }
+}
+
+/**
+ * School-wide reads: notices, events, and anything else addressed to the whole community.
+ *
+ * Any verified membership passes, whatever its role or class scope — a notice is for everyone at
+ * the school. The school itself passes for its own record.
+ */
+export async function assertVerifiedMemberOfSchool(
+  db: Db,
+  actor: Actor,
+  schoolId: string,
+): Promise<void> {
+  if (actor.accountType === 'SCHOOL') {
+    // A school reading another school's notices is out of scope, not merely forbidden.
+    if (actor.accountId !== schoolId) throw new NotFoundError();
+    return;
+  }
+
+  const membership = await db.membership.findFirst({
+    where: { accountId: actor.accountId, schoolId, status: 'VERIFIED' },
+    select: { id: true },
+  });
+
+  if (!membership) {
+    throw new VerificationRequiredError('You must be a verified member of this school.');
+  }
+}
+
+/**
+ * Publishing a notice: the school itself, or its verified principal (permission matrix, "Publish
+ * notices"). A teacher may not — a notice speaks for the institution.
+ */
+export async function assertMayPublishNotice(
+  db: Db,
+  actor: Actor,
+  schoolId: string,
+): Promise<void> {
+  if (actor.accountType === 'SCHOOL') {
+    if (actor.accountId !== schoolId) throw new NotFoundError();
+    return;
+  }
+
+  // Membership, not the token's role claim — see the note in `assertTeacherAllocatedToSubject`.
+  await assertVerifiedMembership(db, actor, schoolId, 'PRINCIPAL');
 }
 
 /** Author-only edit/delete. */

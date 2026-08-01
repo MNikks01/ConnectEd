@@ -1,6 +1,6 @@
 # Security — Authorization
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-01`
 
 Implements `ADR-0006`. This is the enforcement contract for the
 [permission matrix](../PRD/09-permissions-matrix.md).
@@ -35,6 +35,19 @@ assertParentOfVerifiedChild(actor, childId);
 
 Each throws a typed `ForbiddenError`/`VerificationRequiredError` (→ 403) or `NotFoundError` (→ 404 for
 out-of-scope reads, to avoid existence leaks).
+
+> **Clarification (2026-08-01, from implementing S2-7).** `requireRole` reads the **role claim in the access
+> token**, which is the account's _profile_ role. `FR-AUTH-001` creates every individual as `USER` and nothing
+> promotes them — a school approving a teacher writes a `membership` row, not a new profile role. So a level-2
+> `requireRole(actor, ['TEACHER'])` in front of a level-3 policy rejected precisely the verified teachers it was
+> meant to admit; browser-driven tests caught it because the integration suite hand-signed tokens carrying the
+> role the flow never issues.
+>
+> **Rule:** an academic policy is authorized by the **verified membership**, never by the token's role claim
+> (the permission matrix says the same: "the verified `membership` row is what every academic check reads").
+> `requireRole` remains available as a cheap route guard for capabilities that are _not_ membership-scoped, and
+> `assertTeacherAllocatedToSubject` / `assertPrincipalOfSchool` no longer call it. This is a tightening, not a
+> loosening: a forged `PRINCIPAL` claim never passed, and now it also cannot be _required_ to pass.
 
 ## Testing the matrix
 
