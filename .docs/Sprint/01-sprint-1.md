@@ -1,9 +1,9 @@
 # Sprint 1 — Institution & verification
 
-`Status: Planned` · `Last updated: 2026-07-31` · Duration: 2 weeks
+`Status: Done` · `Last updated: 2026-08-01` · Duration: 2 weeks
 
 Goal: a school can set itself up, and members can be verified into it. Maps to the first half of roadmap
-**Phase 1**. This is a **proposal for planning** — adjust the split before committing.
+**Phase 1**.
 
 ## Sprint goal
 
@@ -64,8 +64,53 @@ Social — Phase 4. Billing — Phase 5.
 
 ## Review notes
 
-_Filled at sprint review._
+**Everything shipped** — the committed backlog _and_ all three stretch items.
+
+| Item                                        | PR  |
+| ------------------------------------------- | --- |
+| S1-0 CI on every PR                         | #9  |
+| S1-1..S1-3 institution module               | #10 |
+| S1-4/S1-5 verification workflow             | #11 |
+| S1-6 class teacher · S1-7 permission matrix | #12 |
+| S1-9 design system                          | #13 |
+| S1-8 school portal                          | #14 |
+| S1-12 Playwright E2E                        | #15 |
+| S1-10 member roster                         | #16 |
+| S1-11 notifications + queue                 | #17 |
+
+Tests grew from 98 to **268 API + 57 UI + 24 E2E**. CI runs `verify`, `e2e`, `changeset-check`, and CodeQL,
+all on every pull request.
+
+**Defects found in our own accepted docs and schema, and fixed:**
+
+- `notification.event_id` was globally unique, but `PRD/07-notifications.md` requires idempotency by
+  `(event_id, recipient_id)`. One event fanning out to a class of thirty would have created **one**
+  notification and rejected twenty-nine — the opposite of FR-NOTIF-002.
+- The permissions matrix marks General User as unable to declare an academic role, but every individual
+  registers as `USER`. Read literally, nobody could ever become a student. Clarified in the doc.
+- A newly registered school could not save its profile at all: an untouched optional field arrives as `''`,
+  which `z.coerce.number()` turns into `0`, failing `min(1800)`. Found by the E2E suite on its first run.
+
+**Bugs found by testing failure paths by hand, not by tests:**
+
+- Publishing a domain event **hung** rather than failing when Redis was unreachable — ioredis queues commands
+  while disconnected — so a committed verification decision appeared to fail. Now bounded and best-effort.
+- The credential rate limiter was disabled by `config.isTest`, keying a security control to an unrelated flag.
+  Now an explicit `RATE_LIMIT_ENABLED`.
+
+**Architecture correction:** `institution` was querying `membership`, which `verification` owns, breaching
+`Architecture/01-modules.md` rule 1. Membership reads now go through verification's public service behind a
+narrow port.
+
+**Process finding — the release to `main` was squashed, not merged.** `CI-CD/00-git-flow.md` line 24 specifies a
+merge commit for the `development → main` release PR; PR #8 was squashed. The two branches' common ancestor is
+therefore still the initial docs commit, so `git log main` does not show what shipped and every future release
+PR re-lists work already released. Fix before the next release: allow merge commits on the repository and use
+one for release PRs.
+
+**Still open for the team:** branch protection does not _require_ the CI checks — they run, but nothing blocks a
+merge on failure.
 
 ## Retro
 
-_Filled at retro._
+_To be completed by the team at the retro — went well / didn't / actions with owners and due dates._
