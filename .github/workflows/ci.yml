@@ -13,6 +13,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default. CI only ever checks out and runs tests; a token that can also write to the
+# repository is a token a compromised dependency can write to the repository with. Jobs that need
+# more say so themselves — none here do.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest

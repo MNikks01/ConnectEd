@@ -155,7 +155,9 @@ describe('POST /auth/login', () => {
 
     expect(cookie).toContain(REFRESH_COOKIE);
     expect(cookie).toContain('HttpOnly');
-    expect(cookie).toContain('SameSite=Lax');
+    // Strict, not Lax: no cross-site request of any kind should present this cookie, including a
+    // top-level navigation. See the note on `cookieOptions`.
+    expect(cookie).toContain('SameSite=Strict');
     expect(bodyAs<SessionBody>(response).refreshToken).toBeUndefined();
   });
 

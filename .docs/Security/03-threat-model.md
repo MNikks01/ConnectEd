@@ -1,6 +1,6 @@
 # Security — Threat Model
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-01`
 
 STRIDE-based, focused on the assets that matter: student/parent PII, academic data, credentials, and the
 verification boundary.
@@ -36,6 +36,25 @@ providers (external).
 - **Parent accessing a non-child** → `assertParentOfVerifiedChild`.
 - **Teacher publishing outside allocation** → `assertTeacherAllocatedToSubject`.
 - **Minor safety** → social features moderated (report/block); content soft-deleted for review.
+
+## Cross-site request forgery
+
+**CodeQL reports `js/missing-token-validation` (high) against `apps/api/src/app.ts` — the API uses
+`cookie-parser` with no CSRF middleware. The finding is accurate about the code and does not describe a
+reachable attack here.** Recorded rather than dismissed silently, so the reasoning can be re-checked when any
+of its premises change.
+
+Why the usual attack does not apply:
+
+| Premise CSRF needs                              | Reality here                                                                                                                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The server authenticates from an ambient cookie | Every scoped endpoint reads `Authorization: Bearer`. A cross-site page cannot set that header, so no academic, institution, or verification route is reachable.                                                           |
+| A cookie the browser attaches automatically     | The only cookie the API reads is the refresh token, on `POST /auth/refresh` and `POST /auth/logout`. It is `httpOnly`, `secure` in production, and now `SameSite=Strict` — no cross-site request of any kind presents it. |
+| A browser that sends the request                | The web app never calls the API from the browser. It goes through its own server, which sends the refresh token in the body, so this cookie is not part of any client flow we ship.                                       |
+
+**This stops being true if** an endpoint starts authenticating from a cookie, a cookie-read route is exposed
+over `GET`, or the browser is ever pointed at the API directly. Any of those needs a real CSRF defence —
+double-submit token, or an `Origin`/`Sec-Fetch-Site` check on cookie-authenticated routes — before it ships.
 
 ## Practices
 
