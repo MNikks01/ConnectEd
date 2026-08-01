@@ -20,6 +20,27 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   /** Required: domain events and the notification fan-out both run through Redis (ADR-0008). */
   REDIS_URL: z.string().min(1),
+
+  /** Object storage (ADR-0009). MinIO locally, S3-compatible anywhere else. */
+  S3_ENDPOINT: z.url(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(1),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  /** MinIO addresses buckets by path; real S3 uses a subdomain. */
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  /**
+   * Upload ceiling in bytes. Enforced before anything is read into memory, because the cheapest
+   * request to reject is the one you never buffer.
+   */
+  MAX_UPLOAD_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024 * 1024),
   /**
    * Runs the queue worker inside the API process. Convenient locally and correct for a small
    * deployment; a busy one runs `pnpm --filter api worker` separately so a slow fan-out cannot

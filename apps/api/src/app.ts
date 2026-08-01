@@ -15,6 +15,7 @@ import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
+import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { healthRoutes } from './routes/health.routes.js';
@@ -32,6 +33,7 @@ import { createMetrics, type Metrics } from './shared/observability/metrics.js';
 import { noopPublisher, type EventPublisher } from './shared/events/index.js';
 
 import type { Db } from './shared/db/index.js';
+import type { Storage } from './shared/storage/index.js';
 import type { ErrorMapper } from './shared/errors/mapping.js';
 
 export const API_PREFIX = '/api/v1';
@@ -51,6 +53,8 @@ export interface AppDependencies {
    * the health-only configuration both rely on that.
    */
   events?: EventPublisher;
+  /** Object storage. Optional so an app can be built without MinIO; media routes are then absent. */
+  storage?: Storage | undefined;
   /** Mappers for foreign error types; zod and malformed JSON are covered by default. */
   errorMappers?: readonly ErrorMapper[];
 }
@@ -69,12 +73,13 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     readiness: overrides.readiness ?? new ReadinessRegistry(),
     db: overrides.db,
     events: overrides.events ?? noopPublisher,
+    storage: overrides.storage,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, db, events, errorMappers } =
+  const { config, logger, metrics, readiness, db, events, storage, errorMappers } =
     createDependencies(overrides);
 
   const app = express();
@@ -129,7 +134,17 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     const institution = createInstitutionModule(db, verification.service);
     const notifications = createNotificationsModule(db, logger);
 
-    api.use(authenticate(tokens), institution.routes, verification.routes, notifications.routes);
+    // Media only exists when storage was supplied; without it the routes are simply absent
+    // rather than present and failing.
+    const media = storage ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES) : undefined;
+
+    api.use(
+      authenticate(tokens),
+      institution.routes,
+      verification.routes,
+      notifications.routes,
+      ...(media ? [media.routes] : []),
+    );
     // Module routers mount here as they land: academics, workflows, social, …
   }
 

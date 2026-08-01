@@ -28,6 +28,11 @@ export default defineConfig({
       RATE_LIMIT_ENABLED: 'false',
       // Config requires it; the unit suite publishes through a fake, never a real connection.
       REDIS_URL: 'redis://localhost:6379',
+      // Config requires these; the media suite injects a fake Storage and never reaches MinIO.
+      S3_ENDPOINT: 'http://localhost:9000',
+      S3_BUCKET: 'connected-test',
+      S3_ACCESS_KEY: 'test',
+      S3_SECRET_KEY: 'test',
     },
     coverage: {
       reporter: ['text', 'lcov'],
