@@ -9,27 +9,44 @@ import { z } from 'zod';
 
 import { ClassLevel, Medium, Section } from './enums.js';
 
+/**
+ * An HTML form submits every field it renders, and an untouched one arrives as `''`. Without this,
+ * a blank optional field is not "absent" — it is an empty string, which `z.coerce.number()` turns
+ * into `0`.
+ *
+ * That is not hypothetical: a freshly registered school has no establishment year, so saving the
+ * profile failed `min(1800)` on a field the user had never touched, and the whole form was
+ * rejected. Caught by the end-to-end suite; every unit test had passed a well-formed object.
+ */
+const blankToNull = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => (value === '' ? null : value), schema);
+
+/** Optional free text. Clearing a field stores null rather than an empty string. */
+const optionalText = (max: number) => blankToNull(z.string().trim().max(max).nullish());
+
 export const updateSchoolProfileSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
-  adminName: z.string().trim().max(120).nullish(),
-  phone: z.string().trim().max(20).nullish(),
-  addressLine1: z.string().trim().max(200).nullish(),
-  addressLine2: z.string().trim().max(200).nullish(),
-  city: z.string().trim().max(120).nullish(),
-  state: z.string().trim().max(120).nullish(),
-  postalCode: z.string().trim().max(20).nullish(),
-  country: z.string().trim().max(120).nullish(),
-  about: z.string().trim().max(4000).nullish(),
-  mission: z.string().trim().max(4000).nullish(),
-  vision: z.string().trim().max(4000).nullish(),
-  facilities: z.string().trim().max(4000).nullish(),
-  establishmentYear: z.coerce
-    .number()
-    .int()
-    .min(1800)
-    .max(new Date().getFullYear() + 1)
-    .nullish(),
-  affiliation: z.string().trim().max(120).nullish(),
+  adminName: optionalText(120),
+  phone: optionalText(20),
+  addressLine1: optionalText(200),
+  addressLine2: optionalText(200),
+  city: optionalText(120),
+  state: optionalText(120),
+  postalCode: optionalText(20),
+  country: optionalText(120),
+  about: optionalText(4000),
+  mission: optionalText(4000),
+  vision: optionalText(4000),
+  facilities: optionalText(4000),
+  establishmentYear: blankToNull(
+    z.coerce
+      .number()
+      .int()
+      .min(1800)
+      .max(new Date().getFullYear() + 1)
+      .nullish(),
+  ),
+  affiliation: optionalText(120),
 });
 
 export const createClassSchema = z.object({

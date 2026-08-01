@@ -44,6 +44,19 @@ const envSchema = z.object({
   ARGON_ITERATIONS: z.coerce.number().int().positive().default(2),
   ARGON_PARALLELISM: z.coerce.number().int().positive().default(1),
 
+  /**
+   * Rate limiting on credential endpoints (FR-AUTH-011). On by default and expected to stay on
+   * everywhere real.
+   *
+   * It is a separate switch rather than being inferred from NODE_ENV because automated suites need
+   * it off while otherwise running a production-shaped server: the end-to-end suite registers far
+   * more than ten accounts, and keying this to "am I a unit test" made that impossible to express.
+   */
+  RATE_LIMIT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+
   /** Refresh cookies must be Secure outside local development. */
   COOKIE_SECURE: z
     .enum(['true', 'false'])

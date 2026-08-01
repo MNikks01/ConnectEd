@@ -25,6 +25,7 @@ export default defineConfig({
         process.env.DATABASE_URL ??
         'postgresql://connected:connected@localhost:5432/connected_test?schema=public',
       JWT_ACCESS_SECRET: 'test-only-secret-that-is-long-enough-32',
+      RATE_LIMIT_ENABLED: 'false',
     },
     coverage: {
       reporter: ['text', 'lcov'],
