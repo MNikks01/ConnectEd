@@ -113,11 +113,12 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
 
     // Everything past auth requires a valid token; each module still authorizes per resource.
-    api.use(
-      authenticate(tokens),
-      createInstitutionModule(db).routes,
-      createVerificationModule(db, logger).routes,
-    );
+    // Verification owns membership, and institution needs to ask it whether an account is a
+    // verified teacher — so it is constructed first and its service passed in as a narrow port.
+    const verification = createVerificationModule(db, logger);
+    const institution = createInstitutionModule(db, verification.service);
+
+    api.use(authenticate(tokens), institution.routes, verification.routes);
     // Module routers mount here as they land: academics, workflows, social, …
   }
 

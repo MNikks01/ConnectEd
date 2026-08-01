@@ -14,6 +14,7 @@ import type {
   ClassResponse,
   ClassTeacherResponse,
   CurrentAccountResponse,
+  SchoolMemberResponse,
   SubjectResponse,
 } from '@connected/types';
 
@@ -25,6 +26,7 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
   let klass: ClassResponse | undefined;
   let subjects: SubjectResponse[];
   let classTeacher: ClassTeacherResponse | undefined;
+  let teachers: SchoolMemberResponse[] = [];
 
   try {
     const account = await readAsUser<CurrentAccountResponse>('/me');
@@ -37,6 +39,12 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
     if (!klass) notFound();
 
     subjects = (await readAsUser<{ data: SubjectResponse[] }>(`/classes/${id}/subjects`)).data;
+
+    // The roster is what turns allocation into a picker rather than a UUID field.
+    const members = await readAsUser<{ data: SchoolMemberResponse[] }>(
+      `/schools/${account.id}/members`,
+    );
+    teachers = members.data.filter((member) => member.role === 'TEACHER');
 
     try {
       classTeacher = await readAsUser<ClassTeacherResponse>(`/classes/${id}/class-teacher`);
@@ -70,7 +78,7 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
 
         <Card as="section">
           <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Class teacher</h2>
-          <ClassTeacherForm classId={id} current={classTeacher} />
+          <ClassTeacherForm classId={id} current={classTeacher} teachers={teachers} />
         </Card>
       </div>
     </>

@@ -10,17 +10,23 @@ import { createInstitutionService } from './institution.service.js';
 
 import type { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
-import type { InstitutionService } from './institution.service.js';
+import type { InstitutionService, MembershipDirectory } from './institution.service.js';
 
-export type { InstitutionService } from './institution.service.js';
+export type { InstitutionService, MembershipDirectory } from './institution.service.js';
 
 export interface InstitutionModule {
   routes: Router;
   service: InstitutionService;
 }
 
-export function createInstitutionModule(db: Db): InstitutionModule {
-  const service = createInstitutionService(createInstitutionRepository(db));
+export function createInstitutionModule(
+  db: Db,
+  membership: MembershipDirectory,
+): InstitutionModule {
+  const service = createInstitutionService({
+    repository: createInstitutionRepository(db),
+    membership,
+  });
 
   return { service, routes: institutionRoutes(service) };
 }

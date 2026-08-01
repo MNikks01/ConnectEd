@@ -14,6 +14,7 @@ import { LogoutButton } from './logout-button';
 const LINKS = [
   { href: '/school', label: 'Profile' },
   { href: '/school/classes', label: 'Classes' },
+  { href: '/school/members', label: 'Members' },
   { href: '/school/verifications', label: 'Verifications' },
 ];
 

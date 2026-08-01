@@ -492,3 +492,86 @@ describe('DELETE /schools/:id/members/:accountId — revoke (FR-VER-008)', () =>
     expect(response.status).toBe(404);
   });
 });
+
+describe('GET /schools/:id/members — the roster (FR-INST-005)', () => {
+  it('lists the school’s verified members with their scope', async () => {
+    const response = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'));
+
+    expect(response.status).toBe(200);
+
+    const members = bodyAs<{
+      data: { accountId: string; role: string; className: string | null }[];
+    }>(response).data;
+
+    // The fixture verifies a teacher, another teacher, a principal, a student, and a parent.
+    expect(members).toHaveLength(5);
+    expect(members.map((member) => member.role).sort()).toEqual([
+      'PARENT',
+      'PRINCIPAL',
+      'STUDENT',
+      'TEACHER',
+      'TEACHER',
+    ]);
+
+    const student = members.find((member) => member.accountId === fixture.studentAccountId);
+    expect(student?.className).toBe('Class 8-A (English)');
+  });
+
+  it('names the child for a parent membership', async () => {
+    const response = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
+      .set('Authorization', await auth(fixture.schoolAccountId, 'SCHOOL'));
+
+    const parent = bodyAs<{ data: { accountId: string; childName: string | null }[] }>(
+      response,
+    ).data.find((member) => member.accountId === fixture.parentAccountId);
+
+    expect(parent?.childName).toBe('Fixture Child');
+  });
+
+  it('drops a member from the roster once revoked', async () => {
+    const schoolAuth = await auth(fixture.schoolAccountId, 'SCHOOL');
+
+    await request(app)
+      .delete(`/api/v1/schools/${fixture.schoolAccountId}/members/${fixture.studentAccountId}`)
+      .set('Authorization', schoolAuth);
+
+    const response = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
+      .set('Authorization', schoolAuth);
+
+    const ids = bodyAs<{ data: { accountId: string }[] }>(response).data.map((m) => m.accountId);
+    expect(ids).not.toContain(fixture.studentAccountId);
+  });
+
+  it.each([
+    ['a principal', () => auth(fixture.principalAccountId, 'INDIVIDUAL', 'PRINCIPAL')],
+    ['a teacher', () => auth(fixture.teacherAccountId, 'INDIVIDUAL', 'TEACHER')],
+    ['a student', () => auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT')],
+  ])('refuses %s — the roster is the school’s alone', async (_label, authorization) => {
+    const response = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
+      .set('Authorization', await authorization());
+
+    expect(response.status).toBe(403);
+  });
+
+  it('refuses another school with 404', async () => {
+    const rival = await db.account.create({
+      data: {
+        email: `rival-roster-${Date.now()}@fixture.test`,
+        type: 'SCHOOL',
+        schoolProfile: { create: { name: 'Rival roster' } },
+      },
+      select: { id: true },
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/members`)
+      .set('Authorization', await auth(rival.id, 'SCHOOL'));
+
+    expect(response.status).toBe(404);
+  });
+});

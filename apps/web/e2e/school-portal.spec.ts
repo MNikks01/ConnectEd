@@ -11,8 +11,10 @@ import {
   createClass,
   createIndividual,
   createSchool,
+  createSubject,
   PASSWORD,
   submitStudentVerification,
+  submitTeacherVerification,
   type School,
 } from './support/accounts';
 
@@ -192,5 +194,64 @@ test.describe('verification queue', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Reject request' }).click();
 
     await expect(page.getByText('Nothing waiting')).toBeVisible();
+  });
+});
+
+test.describe('member roster', () => {
+  test('the empty state shows before anyone is verified', async ({ page }) => {
+    await signInAsSchool(page);
+
+    await page.goto('/school/members');
+
+    await expect(page.getByText('No verified members yet')).toBeVisible();
+  });
+
+  test('an approved member appears on the roster and can be removed', async ({ page }) => {
+    const school = await signInAsSchool(page);
+    const klass = await createClass(school, { medium: 'ENGLISH', level: 'CLASS_12', section: 'A' });
+    const student = await createIndividual('rostered');
+    await submitStudentVerification(student, school.accountId, klass.id);
+
+    await page.goto('/school/verifications');
+    await page.getByRole('button', { name: 'Approve' }).click();
+    await expect(page.getByText('Nothing waiting')).toBeVisible();
+
+    await page.goto('/school/members');
+    await expect(page.getByText('E2E rostered')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Remove' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('loses access to this school immediately');
+    await dialog.getByRole('button', { name: 'Remove member' }).click();
+
+    await expect(page.getByText('No verified members yet')).toBeVisible();
+  });
+
+  test('class-teacher allocation offers verified teachers instead of an id field', async ({
+    page,
+  }) => {
+    const school = await signInAsSchool(page);
+    const klass = await createClass(school, { medium: 'ENGLISH', level: 'CLASS_3', section: 'A' });
+
+    // No teachers yet: the form says so rather than showing an empty picker.
+    await page.goto(`/school/classes/${klass.id}`);
+    await expect(page.getByText('No teachers to allocate')).toBeVisible();
+
+    // A teacher request must name a subject, so the class needs one first.
+    const subject = await createSubject(school, klass.id, 'Mathematics');
+    const teacher = await createIndividual('classteacher');
+    await submitTeacherVerification(teacher, school.accountId, [subject.id]);
+    await page.goto('/school/verifications');
+    await page.getByRole('button', { name: 'Approve' }).click();
+    // Wait for the decision to land: navigating immediately can abort the Server Action.
+    await expect(page.getByText('Nothing waiting')).toBeVisible();
+
+    await page.goto(`/school/classes/${klass.id}`);
+    await page.getByLabel('Teacher').selectOption({ label: 'E2E classteacher' });
+    await page.getByRole('button', { name: 'Allocate class teacher' }).click();
+
+    await expect(page.getByText('Class teacher allocated.')).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Current class teacher')).toBeVisible();
   });
 });
