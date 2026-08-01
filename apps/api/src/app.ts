@@ -15,6 +15,7 @@ import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
+import { createNotificationsModule } from './modules/notifications/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
@@ -27,6 +28,8 @@ import { correlationId } from './shared/middleware/correlation-id.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { notFound } from './shared/middleware/not-found.js';
 import { createMetrics, type Metrics } from './shared/observability/metrics.js';
+
+import { noopPublisher, type EventPublisher } from './shared/events/index.js';
 
 import type { Db } from './shared/db/index.js';
 import type { ErrorMapper } from './shared/errors/mapping.js';
@@ -43,6 +46,11 @@ export interface AppDependencies {
    * Routes that need persistence are simply not mounted when it is absent.
    */
   db?: Db | undefined;
+  /**
+   * Where domain events go. Defaults to a no-op so an app can be built without Redis — tests and
+   * the health-only configuration both rely on that.
+   */
+  events?: EventPublisher;
   /** Mappers for foreign error types; zod and malformed JSON are covered by default. */
   errorMappers?: readonly ErrorMapper[];
 }
@@ -60,12 +68,14 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     metrics: overrides.metrics ?? createMetrics(),
     readiness: overrides.readiness ?? new ReadinessRegistry(),
     db: overrides.db,
+    events: overrides.events ?? noopPublisher,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, db, errorMappers } = createDependencies(overrides);
+  const { config, logger, metrics, readiness, db, events, errorMappers } =
+    createDependencies(overrides);
 
   const app = express();
 
@@ -115,10 +125,11 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     // Everything past auth requires a valid token; each module still authorizes per resource.
     // Verification owns membership, and institution needs to ask it whether an account is a
     // verified teacher — so it is constructed first and its service passed in as a narrow port.
-    const verification = createVerificationModule(db, logger);
+    const verification = createVerificationModule(db, logger, events ?? noopPublisher);
     const institution = createInstitutionModule(db, verification.service);
+    const notifications = createNotificationsModule(db, logger);
 
-    api.use(authenticate(tokens), institution.routes, verification.routes);
+    api.use(authenticate(tokens), institution.routes, verification.routes, notifications.routes);
     // Module routers mount here as they land: academics, workflows, social, …
   }
 
