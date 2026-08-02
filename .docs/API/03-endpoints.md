@@ -105,26 +105,28 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Social
 
-| Method       | Path                                 | Auth | Purpose                                                                                 |
-| ------------ | ------------------------------------ | :--: | --------------------------------------------------------------------------------------- |
-| POST         | `/posts`                             |  🔑  | Publish a post (rate limited, per account).                                             |
-| GET          | `/posts/:id`                         |  🔑  | Read one; 404 when blocked, deleted, or missing.                                        |
-| PATCH/DELETE | `/posts/:id`                         |  🔑  | Author only; delete is soft.                                                            |
-| GET          | `/accounts/:id/posts`                |  🔑  | An account's timeline, cursor-paginated.                                                |
-| GET          | `/feed`                              |  🔑  | Own posts plus follows and connections, reverse-chronological, cursor-paginated.        |
-| POST         | `/posts/:id/like`                    |  🔑  | Toggle a like; 200 either way, and the same request twice leaves you where you started. |
-| POST         | `/posts/:id/comments`                |  🔑  | Comment on a post.                                                                      |
-| GET          | `/posts/:id/comments`                |  🔑  | Comments, oldest first, blocked authors hidden.                                         |
-| DELETE       | `/comments/:id`                      |  🔑  | The comment's author only; delete is soft.                                              |
-| POST         | `/accounts/:id/follow`               |  🔑  | Follow; idempotent.                                                                     |
-| DELETE       | `/accounts/:id/follow`               |  🔑  | Unfollow; works even after a block.                                                     |
-| GET          | `/accounts/:id/follow`               |  🔑  | Follow state and counts.                                                                |
-| POST         | `/connections`                       |  🔑  | Request a connection; one row per pair.                                                 |
-| GET          | `/me/connections`                    |  🔑  | Mine, `?status=` filters.                                                               |
-| POST         | `/connections/:id/accept`            |  🔑  | The other party accepts.                                                                |
-| DELETE       | `/connections/:id`                   |  🔑  | Reject, cancel, or disconnect — the same row, removed.                                  |
-| GET          | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                                                                              |
-| POST         | `/threads/:id/messages`              |  🔑  | Send message.                                                                           |
+| Method       | Path                      | Auth | Purpose                                                                                 |
+| ------------ | ------------------------- | :--: | --------------------------------------------------------------------------------------- |
+| POST         | `/posts`                  |  🔑  | Publish a post (rate limited, per account).                                             |
+| GET          | `/posts/:id`              |  🔑  | Read one; 404 when blocked, deleted, or missing.                                        |
+| PATCH/DELETE | `/posts/:id`              |  🔑  | Author only; delete is soft.                                                            |
+| GET          | `/accounts/:id/posts`     |  🔑  | An account's timeline, cursor-paginated.                                                |
+| GET          | `/feed`                   |  🔑  | Own posts plus follows and connections, reverse-chronological, cursor-paginated.        |
+| POST         | `/posts/:id/like`         |  🔑  | Toggle a like; 200 either way, and the same request twice leaves you where you started. |
+| POST         | `/posts/:id/comments`     |  🔑  | Comment on a post.                                                                      |
+| GET          | `/posts/:id/comments`     |  🔑  | Comments, oldest first, blocked authors hidden.                                         |
+| DELETE       | `/comments/:id`           |  🔑  | The comment's author only; delete is soft.                                              |
+| POST         | `/accounts/:id/follow`    |  🔑  | Follow; idempotent.                                                                     |
+| DELETE       | `/accounts/:id/follow`    |  🔑  | Unfollow; works even after a block.                                                     |
+| GET          | `/accounts/:id/follow`    |  🔑  | Follow state and counts.                                                                |
+| POST         | `/connections`            |  🔑  | Request a connection; one row per pair.                                                 |
+| GET          | `/me/connections`         |  🔑  | Mine, `?status=` filters.                                                               |
+| POST         | `/connections/:id/accept` |  🔑  | The other party accepts.                                                                |
+| DELETE       | `/connections/:id`        |  🔑  | Reject, cancel, or disconnect — the same row, removed.                                  |
+| POST         | `/threads`                |  🔑  | Find or start a thread with an account; 200 either way.                                 |
+| GET          | `/threads`                |  🔑  | Inbox: threads, last message, unread counts and total.                                  |
+| GET          | `/threads/:id/messages`   |  🔑  | Messages, newest first, cursor-paginated. Reading marks them read.                      |
+| POST         | `/threads/:id/messages`   |  🔑  | Send (rate limited, per account).                                                       |
 
 ## Notifications & billing
 

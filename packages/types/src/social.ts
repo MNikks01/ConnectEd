@@ -133,3 +133,41 @@ export interface ConnectionResponse {
   requestedByMe: boolean;
   createdAt: string;
 }
+
+export const startThreadSchema = z.object({
+  accountId: z.uuid(),
+});
+
+export const sendMessageSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+
+export type StartThreadInput = z.infer<typeof startThreadSchema>;
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+
+export interface MessageResponse {
+  id: string;
+  threadId: string;
+  senderAccountId: string;
+  body: string;
+  mine: boolean;
+  /** When the recipient read it. Null while unread; only ever set on the recipient's copy. */
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface ThreadResponse {
+  id: string;
+  other: ProfileCardResponse;
+  /** The most recent message, for the inbox line. Null on a thread with nothing said yet. */
+  lastMessage: { body: string; mine: boolean; createdAt: string } | null;
+  /** Messages from the other party that this caller has not read. */
+  unreadCount: number;
+  updatedAt: string;
+}
+
+export interface InboxResponse {
+  data: ThreadResponse[];
+  /** Across every thread — what the badge shows (FR-SOC-021). */
+  unreadTotal: number;
+}
