@@ -16,6 +16,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  FeedbackStatus,
   LeaveKind,
   LeaveStatus,
   UserRole,
@@ -87,6 +88,14 @@ export interface LeaveDecidedEvent extends DomainEventBase {
   status: LeaveStatus;
 }
 
+export interface FeedbackReviewedEvent extends DomainEventBase {
+  type: 'feedback.reviewed';
+  feedbackId: string;
+  authorAccountId: string;
+  schoolId: string;
+  status: FeedbackStatus;
+}
+
 export type DomainEvent =
   | VerificationSubmittedEvent
   | VerificationDecidedEvent
@@ -94,7 +103,8 @@ export type DomainEvent =
   | AcademicPublishedEvent
   | NoticePublishedEvent
   | EventPublishedEvent
-  | LeaveDecidedEvent;
+  | LeaveDecidedEvent
+  | FeedbackReviewedEvent;
 
 /**
  * What a module publishes: any event minus the envelope fields, which are filled in here.

@@ -517,6 +517,46 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Submit complaints/suggestions',
+    outcomes: {
+      // Hidden from students, carried from legacy.
+      student: 'deny',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      // A school complaining to itself is not a thing the product does.
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post(`/api/v1/schools/${fixture.schoolAccountId}/feedback`)
+        .set('Authorization', await authFor(role))
+        .send({ kind: 'COMPLAINT', body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'Review complaints',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      // 👁 in the matrix — a teacher reads the queue, which is what this attempt does.
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/feedback`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -578,8 +618,6 @@ describe('permission matrix', () => {
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
 const UNIMPLEMENTED = [
-  'Submit complaints/suggestions',
-  'Review complaints',
   'Manage subscription/billing',
   'Social: post/like/comment/follow/message',
   'View feed / profiles',
