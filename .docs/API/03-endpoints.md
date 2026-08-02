@@ -105,20 +105,22 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Social
 
-| Method       | Path                                 | Auth | Purpose                                          |
-| ------------ | ------------------------------------ | :--: | ------------------------------------------------ |
-| POST         | `/posts`                             |  🔑  | Publish a post (rate limited, per account).      |
-| GET          | `/posts/:id`                         |  🔑  | Read one; 404 when blocked, deleted, or missing. |
-| PATCH/DELETE | `/posts/:id`                         |  🔑  | Author only; delete is soft.                     |
-| GET          | `/accounts/:id/posts`                |  🔑  | An account's timeline, cursor-paginated.         |
-| GET          | `/feed`                              |  🔑  | Aggregated feed (cursor).                        |
-| POST         | `/posts/:id/like` / `DELETE`         |  🔑  | Like/unlike.                                     |
-| POST         | `/posts/:id/comments`                |  🔑  | Comment.                                         |
-| POST         | `/accounts/:id/follow` / `DELETE`    |  🔑  | Follow/unfollow.                                 |
-| POST         | `/connections`                       |  🔑  | Request connection.                              |
-| POST         | `/connections/:id/accept`            |  🔑  | Accept.                                          |
-| GET          | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                                       |
-| POST         | `/threads/:id/messages`              |  🔑  | Send message.                                    |
+| Method       | Path                                 | Auth | Purpose                                                                                 |
+| ------------ | ------------------------------------ | :--: | --------------------------------------------------------------------------------------- |
+| POST         | `/posts`                             |  🔑  | Publish a post (rate limited, per account).                                             |
+| GET          | `/posts/:id`                         |  🔑  | Read one; 404 when blocked, deleted, or missing.                                        |
+| PATCH/DELETE | `/posts/:id`                         |  🔑  | Author only; delete is soft.                                                            |
+| GET          | `/accounts/:id/posts`                |  🔑  | An account's timeline, cursor-paginated.                                                |
+| GET          | `/feed`                              |  🔑  | Aggregated feed (cursor).                                                               |
+| POST         | `/posts/:id/like`                    |  🔑  | Toggle a like; 200 either way, and the same request twice leaves you where you started. |
+| POST         | `/posts/:id/comments`                |  🔑  | Comment on a post.                                                                      |
+| GET          | `/posts/:id/comments`                |  🔑  | Comments, oldest first, blocked authors hidden.                                         |
+| DELETE       | `/comments/:id`                      |  🔑  | The comment's author only; delete is soft.                                              |
+| POST         | `/accounts/:id/follow` / `DELETE`    |  🔑  | Follow/unfollow.                                                                        |
+| POST         | `/connections`                       |  🔑  | Request connection.                                                                     |
+| POST         | `/connections/:id/accept`            |  🔑  | Accept.                                                                                 |
+| GET          | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                                                                              |
+| POST         | `/threads/:id/messages`              |  🔑  | Send message.                                                                           |
 
 ## Notifications & billing
 
