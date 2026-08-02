@@ -7,6 +7,9 @@ import { createGraphRepository } from './graph.repository.js';
 import { graphRoutes } from './graph.routes.js';
 import { createGraphService } from './graph.service.js';
 import { createInteractionRepository } from './interaction.repository.js';
+import { createMessageRepository } from './message.repository.js';
+import { messageRoutes } from './message.routes.js';
+import { createMessageService } from './message.service.js';
 import { interactionRoutes } from './interaction.routes.js';
 import { createInteractionService } from './interaction.service.js';
 import { createPostRepository } from './post.repository.js';
@@ -22,11 +25,13 @@ import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
 import type { GraphService } from './graph.service.js';
 import type { InteractionService } from './interaction.service.js';
+import type { MessageService } from './message.service.js';
 import type { PostService } from './post.service.js';
 import type { ProfileService } from './profile.service.js';
 
 export type { GraphService } from './graph.service.js';
 export type { InteractionService } from './interaction.service.js';
+export type { MessageService } from './message.service.js';
 export type { PostService } from './post.service.js';
 export type { ProfileService } from './profile.service.js';
 
@@ -36,6 +41,7 @@ export interface SocialModule {
   posts: PostService;
   interactions: InteractionService;
   graph: GraphService;
+  messages: MessageService;
 }
 
 export function createSocialModule(deps: {
@@ -68,8 +74,17 @@ export function createSocialModule(deps: {
     logger: deps.logger,
   });
 
+  const graphRepository = createGraphRepository(deps.db);
+
   const graph = createGraphService({
-    repository: createGraphRepository(deps.db),
+    repository: graphRepository,
+    storage: deps.storage,
+    logger: deps.logger,
+  });
+
+  const messages = createMessageService({
+    repository: createMessageRepository(deps.db),
+    graph: graphRepository,
     storage: deps.storage,
     logger: deps.logger,
   });
@@ -77,8 +92,9 @@ export function createSocialModule(deps: {
   const routes = Router();
   routes.use(profileRoutes(profiles));
   routes.use(graphRoutes(graph));
+  routes.use(messageRoutes(messages, deps.config));
   routes.use(postRoutes(posts, deps.config));
   routes.use(interactionRoutes(interactions));
 
-  return { profiles, posts, interactions, graph, routes };
+  return { profiles, posts, interactions, graph, messages, routes };
 }
