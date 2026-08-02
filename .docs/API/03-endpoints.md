@@ -81,16 +81,18 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Workflows
 
-| Method | Path                                         | Auth | Purpose                              |
-| ------ | -------------------------------------------- | :--: | ------------------------------------ |
-| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child.            |
-| POST   | `/me/leave`                                  |  🛡   | Teacher applies for their own leave. |
-| GET    | `/me/leave`                                  |  🔑  | My applications and their status.    |
-| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.                 |
-| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.                     |
-| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.                       |
-| POST   | `/schools/:id/feedback`                      |  🛡   | Complaint/suggestion.                |
-| GET    | `/schools/:id/feedback`                      |  🛡   | Review.                              |
+| Method | Path                                         | Auth | Purpose                                                         |
+| ------ | -------------------------------------------- | :--: | --------------------------------------------------------------- |
+| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child.                                       |
+| POST   | `/me/leave`                                  |  🛡   | Teacher applies for their own leave.                            |
+| GET    | `/me/leave`                                  |  🔑  | My applications and their status.                               |
+| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.                                            |
+| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.                                                |
+| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.                                                  |
+| POST   | `/schools/:id/feedback`                      |  🛡   | Parent, teacher, or principal raises a complaint or suggestion. |
+| GET    | `/schools/:id/feedback`                      |  🛡   | The queue — school staff only; `?status=` filters.              |
+| GET    | `/me/feedback`                               |  🔑  | What I raised, and where it got to.                             |
+| POST   | `/feedback/:id/review`                       |  🛡   | School or principal moves it forward.                           |
 
 ## Social
 

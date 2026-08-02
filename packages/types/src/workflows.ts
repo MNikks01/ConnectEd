@@ -79,3 +79,48 @@ export interface LeaveApplicationResponse {
   decidedAt: string | null;
   createdAt: string;
 }
+
+/**
+ * Complaints and suggestions (FR-WF-010..012).
+ *
+ * One entity with a `kind`, not two: a school reviews both in the same queue, and the only thing
+ * that differs is the word on the badge.
+ */
+export const FeedbackKind = {
+  COMPLAINT: 'COMPLAINT',
+  SUGGESTION: 'SUGGESTION',
+} as const;
+export type FeedbackKind = (typeof FeedbackKind)[keyof typeof FeedbackKind];
+
+export const FeedbackStatus = {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  RESOLVED: 'RESOLVED',
+} as const;
+export type FeedbackStatus = (typeof FeedbackStatus)[keyof typeof FeedbackStatus];
+
+export const submitFeedbackSchema = z.object({
+  kind: z.enum(FeedbackKind),
+  body: z.string().trim().min(1).max(5000),
+});
+
+export const reviewFeedbackSchema = z.object({
+  /** `OPEN` is the initial state; a review moves it forward, never back to unread. */
+  status: z.enum([FeedbackStatus.UNDER_REVIEW, FeedbackStatus.RESOLVED]),
+});
+
+export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
+export type ReviewFeedbackInput = z.infer<typeof reviewFeedbackSchema>;
+
+export interface FeedbackResponse {
+  id: string;
+  kind: FeedbackKind;
+  status: FeedbackStatus;
+  schoolId: string;
+  body: string;
+  authorAccountId: string;
+  authorName: string | null;
+  reviewedByAccountId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}

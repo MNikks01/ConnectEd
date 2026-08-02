@@ -249,6 +249,21 @@ export function createNotificationsService({
           });
           return;
 
+        case 'feedback.reviewed':
+          // To whoever raised it. The status is the whole message: "someone looked at this".
+          await deliver({
+            recipientAccountId: event.authorAccountId,
+            type: 'feedback.reviewed',
+            category: 'LEAVE',
+            payload: {
+              feedbackId: event.feedbackId,
+              schoolId: event.schoolId,
+              status: event.status,
+            },
+            eventId: event.eventId,
+          });
+          return;
+
         case 'membership.revoked':
           await deliver({
             recipientAccountId: event.accountId,
