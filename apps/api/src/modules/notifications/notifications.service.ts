@@ -233,6 +233,22 @@ export function createNotificationsService({
           return;
         }
 
+        case 'leave.decided':
+          // Straight to the applicant; leave is between one person and one approver.
+          await deliver({
+            recipientAccountId: event.applicantAccountId,
+            type: 'leave.decided',
+            category: 'LEAVE',
+            payload: {
+              leaveId: event.leaveId,
+              schoolId: event.schoolId,
+              kind: event.kind,
+              status: event.status,
+            },
+            eventId: event.eventId,
+          });
+          return;
+
         case 'membership.revoked':
           await deliver({
             recipientAccountId: event.accountId,

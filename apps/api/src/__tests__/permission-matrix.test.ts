@@ -408,6 +408,115 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Submit leave application',
+    outcomes: {
+      // A student's leave is applied for by their parent (PRD 05-workflows).
+      student: 'deny',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'deny',
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const dates = { startDate: '2026-09-14', endDate: '2026-09-15', reason: 'Matrix' };
+
+      // A parent applies for their child; everyone else can only try to apply for themselves.
+      const response =
+        role === 'parent'
+          ? await request(app)
+              .post(`/api/v1/children/${fixture.childId}/leave`)
+              .set('Authorization', await authFor(role))
+              .send(dates)
+          : await request(app)
+              .post('/api/v1/me/leave')
+              .set('Authorization', await authFor(role))
+              .send({ schoolId: fixture.schoolAccountId, ...dates });
+
+      return response.status;
+    },
+  },
+  {
+    name: 'Approve student/parent leave',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'allow',
+      principal: 'deny',
+      // 👁 in the matrix: the school watches the queue, it does not decide.
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Class A, whose class teacher is the fixture's first teacher, and a child placed in it so
+      // the application has somewhere to go.
+      const child = await db.child.create({
+        data: {
+          parentAccountId: fixture.parentAccountId,
+          fullName: 'Matrix child',
+          schoolId: fixture.schoolAccountId,
+          classId: fixture.classAId,
+        },
+        select: { id: true },
+      });
+
+      const leave = await db.leaveApplication.create({
+        data: {
+          kind: 'STUDENT',
+          schoolId: fixture.schoolAccountId,
+          classId: fixture.classAId,
+          childId: child.id,
+          applicantAccountId: fixture.parentAccountId,
+          startDate: new Date('2026-09-14T00:00:00.000Z'),
+          endDate: new Date('2026-09-15T00:00:00.000Z'),
+          reason: 'Matrix',
+        },
+        select: { id: true },
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/leave/${leave.id}/decision`)
+        .set('Authorization', await authFor(role))
+        .send({ decision: 'ACCEPT' });
+
+      return response.status;
+    },
+  },
+  {
+    name: 'Approve teacher leave',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'allow',
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const leave = await db.leaveApplication.create({
+        data: {
+          kind: 'TEACHER',
+          schoolId: fixture.schoolAccountId,
+          applicantAccountId: fixture.otherTeacherAccountId,
+          startDate: new Date('2026-09-14T00:00:00.000Z'),
+          endDate: new Date('2026-09-15T00:00:00.000Z'),
+          reason: 'Matrix',
+        },
+        select: { id: true },
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/leave/${leave.id}/decision`)
+        .set('Authorization', await authFor(role))
+        .send({ decision: 'ACCEPT' });
+
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -469,9 +578,6 @@ describe('permission matrix', () => {
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
 const UNIMPLEMENTED = [
-  'Submit leave application',
-  'Approve student/parent leave',
-  'Approve teacher leave',
   'Submit complaints/suggestions',
   'Review complaints',
   'Manage subscription/billing',

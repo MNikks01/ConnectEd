@@ -19,6 +19,7 @@ import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
+import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
@@ -146,15 +147,18 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     // rather than present and failing.
     const media = storage ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES) : undefined;
 
+    const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
+
     api.use(
       authenticate(tokens),
       institution.routes,
       verification.routes,
       notifications.routes,
       academics.routes,
+      workflows.routes,
       ...(media ? [media.routes] : []),
     );
-    // Module routers mount here as they land: academics, workflows, social, …
+    // Module routers mount here as they land: social, billing, …
   }
 
   app.use(API_PREFIX, api);

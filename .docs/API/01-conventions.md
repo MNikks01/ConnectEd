@@ -1,6 +1,6 @@
 # API — Conventions
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 ## HTTP methods
 
@@ -44,6 +44,22 @@ GET /api/v1/classes/:id/homework?limit=20&cursor=<opaque>
 ```
 
 Offset pagination only for small, bounded admin lists.
+
+## Dates and timestamps
+
+Two different things, deliberately spelled differently on the wire.
+
+| Kind              | Format                     | Used for                                   | Example                    |
+| ----------------- | -------------------------- | ------------------------------------------ | -------------------------- |
+| **Instant**       | ISO-8601 with offset (UTC) | Anything that happened at a moment in time | `2026-09-14T09:30:00.000Z` |
+| **Calendar date** | `YYYY-MM-DD`, no time      | Anything counted in whole days             | `2026-09-14`               |
+
+Leave `startDate`/`endDate` are **calendar dates** and the columns are `date`, not `timestamptz`. Sending an
+instant instead is rejected rather than coerced: `2026-09-14T00:00:00Z` is the 13th of September in a school
+west of Greenwich, so the same request would book a different day depending on where the server stood. A leave
+day is the day the school says it is.
+
+Event times (`eventAt`) and due dates (`dueAt`) are **instants** — an assembly starts at a time, not on a day.
 
 ## Headers
 
