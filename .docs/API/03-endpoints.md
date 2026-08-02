@@ -33,6 +33,7 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET    | `/classes/:id/subjects`           |  🔑  | Subjects of a class (needed before verification). |
 | PATCH  | `/classes/:id`                    |  🛡   | Rename, activate, or deactivate a class.          |
 | GET    | `/classes/:id/class-teacher`      |  🛡   | Who the class teacher is; 404 when unallocated.   |
+| GET    | `/me/class-teacher`               |  🔑  | Classes I am class teacher of — the queues I own. |
 | POST   | `/classes/:id/class-teacher`      |  🛡   | Allocate class teacher.                           |
 | GET    | `/schools/:id/members`            |  🛡   | Roster.                                           |
 | DELETE | `/schools/:id/members/:accountId` |  🛡   | Remove/revoke member.                             |

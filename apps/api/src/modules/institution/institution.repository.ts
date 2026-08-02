@@ -73,6 +73,17 @@ export interface InstitutionRepository {
     actorAccountId: string;
   }) => Promise<{ allocatedAt: Date }>;
   findClassTeacher: (classId: string) => Promise<ClassTeacherRow | null>;
+  /** Every class the account is class teacher of — how they discover the queues they own. */
+  listClassTeacherAllocationsFor: (accountId: string) => Promise<ClassTeacherAllocationRow[]>;
+}
+
+export interface ClassTeacherAllocationRow {
+  classId: string;
+  medium: string;
+  level: string;
+  section: string;
+  schoolId: string;
+  schoolName: string | null;
 }
 
 export interface ClassTeacherRow {
@@ -202,6 +213,32 @@ export function createInstitutionRepository(db: Db): InstitutionRepository {
       ]);
 
       return allocation;
+    },
+
+    listClassTeacherAllocationsFor: async (accountId) => {
+      const rows = await db.classTeacher.findMany({
+        where: { teacher: { accountId } },
+        select: {
+          class: {
+            select: {
+              id: true,
+              medium: true,
+              level: true,
+              section: true,
+              school: { select: { accountId: true, name: true } },
+            },
+          },
+        },
+      });
+
+      return rows.map((row) => ({
+        classId: row.class.id,
+        medium: row.class.medium,
+        level: row.class.level,
+        section: row.class.section,
+        schoolId: row.class.school.accountId,
+        schoolName: row.class.school.name,
+      }));
     },
 
     findClassTeacher: async (classId) => {

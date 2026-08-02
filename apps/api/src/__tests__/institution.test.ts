@@ -507,3 +507,46 @@ describe('POST /classes/:id/class-teacher (FR-INST-004)', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('GET /me/class-teacher — finding the queues you own', () => {
+  interface Body {
+    data: { classId: string; className: string; schoolId: string }[];
+  }
+
+  it('returns the caller’s own allocations', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/class-teacher')
+      .set('Authorization', await auth(fixture.teacherAccountId, 'INDIVIDUAL', 'TEACHER'));
+
+    expect(response.status).toBe(200);
+
+    const { data } = bodyAs<Body>(response);
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({
+      classId: fixture.classAId,
+      schoolId: fixture.schoolAccountId,
+    });
+    expect(data[0]?.className).toContain('8');
+  });
+
+  it('is empty for a teacher who holds no allocation', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/class-teacher')
+      .set('Authorization', await auth(fixture.otherTeacherAccountId, 'INDIVIDUAL', 'TEACHER'));
+
+    expect(bodyAs<Body>(response).data).toHaveLength(0);
+  });
+
+  it('scopes to the caller — a student sees nothing', async () => {
+    const response = await request(app)
+      .get('/api/v1/me/class-teacher')
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    expect(bodyAs<Body>(response).data).toHaveLength(0);
+  });
+
+  it('requires a session', async () => {
+    const response = await request(app).get('/api/v1/me/class-teacher');
+    expect(response.status).toBe(401);
+  });
+});

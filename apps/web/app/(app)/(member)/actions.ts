@@ -7,7 +7,14 @@
  * the API against the teacher's subject allocation, and marking a notification read is scoped to
  * the caller by the API's query. A Server Action is reachable by anyone who can reach the app.
  */
-import { publishAcademicItemSchema, upsertSyllabusTopicSchema } from '@connected/types';
+import {
+  applyForChildLeaveSchema,
+  applyForOwnLeaveSchema,
+  leaveDecisionSchema,
+  publishAcademicItemSchema,
+  submitFeedbackSchema,
+  upsertSyllabusTopicSchema,
+} from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
 import { apiErrorMessage, apiFieldErrors, callAsUser } from '@/lib/server-api';
@@ -88,5 +95,63 @@ export async function recordSyllabusAction(
   return run(
     () => callAsUser(`/subjects/${subjectId}/syllabus`, { method: 'POST', body: parsed.data }),
     [`/subjects/${subjectId}`],
+  );
+}
+
+/**
+ * A parent applies for their child (FR-WF-001).
+ *
+ * The child is chosen from the caller's own memberships, and the API checks the link again — the
+ * select is a convenience, not the boundary.
+ */
+export async function applyForChildLeaveAction(formData: FormData): Promise<ActionResult> {
+  const raw = Object.fromEntries(formData);
+  const childId = typeof raw.childId === 'string' ? raw.childId : '';
+
+  const parsed = applyForChildLeaveSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  if (!childId) {
+    return { ok: false, message: 'Choose a child.', fieldErrors: { childId: 'Required.' } };
+  }
+
+  return run(
+    () => callAsUser(`/children/${childId}/leave`, { method: 'POST', body: parsed.data }),
+    ['/leave'],
+  );
+}
+
+/** A teacher applies for themselves (FR-WF-002). */
+export async function applyForOwnLeaveAction(formData: FormData): Promise<ActionResult> {
+  const parsed = applyForOwnLeaveSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(() => callAsUser('/me/leave', { method: 'POST', body: parsed.data }), ['/leave']);
+}
+
+/** Accept or reject (FR-WF-003, 004). Revalidates both queues; only one will be on screen. */
+export async function decideLeaveAction(
+  leaveId: string,
+  decision: 'ACCEPT' | 'REJECT',
+): Promise<ActionResult> {
+  const parsed = leaveDecisionSchema.safeParse({ decision });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/leave/${leaveId}/decision`, { method: 'POST', body: parsed.data }),
+    ['/leave/approvals', '/leave'],
+  );
+}
+
+/** Raise a complaint or a suggestion (FR-WF-010). */
+export async function submitFeedbackAction(
+  schoolId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = submitFeedbackSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/schools/${schoolId}/feedback`, { method: 'POST', body: parsed.data }),
+    ['/complaints'],
   );
 }
