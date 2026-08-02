@@ -10,6 +10,7 @@
 import { assertIsSchool, assertVerifiedMemberOfClass } from '../../shared/authz/index.js';
 import { NotFoundError } from '../../shared/errors/index.js';
 
+import type { MediaClaims } from './academics.service.js';
 import type { TimetableRepository, TimetableRow } from './timetable.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Db } from '../../shared/db/index.js';
@@ -36,6 +37,7 @@ export interface TimetableServiceDeps {
   db: Db;
   storage?: Storage | undefined;
   logger: Logger;
+  media?: MediaClaims | undefined;
 }
 
 export function createTimetableService({
@@ -43,6 +45,7 @@ export function createTimetableService({
   db,
   storage,
   logger,
+  media,
 }: TimetableServiceDeps): TimetableService {
   async function toResponse(row: TimetableRow): Promise<TimetableResponse> {
     return {
@@ -73,6 +76,9 @@ export function createTimetableService({
       await assertOwnsClass(actor, classId);
 
       const row = await repository.add({ classId, imageKey: input.imageKey });
+
+      // Referenced now, so it is no longer an orphan.
+      await media?.claim(input.imageKey);
 
       logger.info({ classId, version: row.version }, 'Timetable uploaded');
 

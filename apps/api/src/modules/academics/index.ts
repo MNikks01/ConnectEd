@@ -19,7 +19,7 @@ import type { Db } from '../../shared/db/index.js';
 import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
-import type { AcademicsService } from './academics.service.js';
+import type { AcademicsService, MediaClaims } from './academics.service.js';
 import type { NoticesService } from './notices.service.js';
 import type { SyllabusService } from './syllabus.service.js';
 import type { TimetableService } from './timetable.service.js';
@@ -42,6 +42,8 @@ export function createAcademicsModule(deps: {
   storage?: Storage | undefined;
   events: EventPublisher;
   logger: Logger;
+  /** Told when an uploaded key becomes referenced, so the orphan sweep leaves it alone. */
+  media?: MediaClaims | undefined;
 }): AcademicsModule {
   const service = createAcademicsService({
     repository: createAcademicsRepository(deps.db),
@@ -49,6 +51,7 @@ export function createAcademicsModule(deps: {
     storage: deps.storage,
     events: deps.events,
     logger: deps.logger,
+    media: deps.media,
   });
 
   const notices = createNoticesService({
@@ -63,6 +66,7 @@ export function createAcademicsModule(deps: {
     db: deps.db,
     storage: deps.storage,
     logger: deps.logger,
+    media: deps.media,
   });
 
   const syllabus = createSyllabusService({
