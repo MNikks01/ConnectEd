@@ -18,6 +18,7 @@ import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
+import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
@@ -159,6 +160,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     });
 
     const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
+    const social = createSocialModule({ db, storage, logger, media: media?.service });
 
     api.use(
       authenticate(tokens),
@@ -167,6 +169,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       notifications.routes,
       academics.routes,
       workflows.routes,
+      social.routes,
       ...(media ? [media.routes] : []),
     );
     // Module routers mount here as they land: social, billing, …

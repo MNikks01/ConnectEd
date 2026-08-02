@@ -23,6 +23,7 @@ Added while implementing the schema, for columns the tables above list without n
 
 - `AccountStatus`: `ACTIVE | SUSPENDED | DEACTIVATED` — `account.status`
 - `FeedbackStatus`: `OPEN | UNDER_REVIEW | RESOLVED` — `feedback.status`
+- `ProfileVisibility`: `PUBLIC | CONNECTIONS` — `user_profile.visibility`; the name-and-avatar card is always visible
 - `ConnectionStatus`: `PENDING | ACCEPTED` — `connection.status`
 - `ReadReceiptSubject`: `NOTICE | ACADEMIC_ITEM | EVENT | TIMETABLE` — `read_receipt.subject_type`
 - `NotificationCategory`: `ACADEMIC | NOTICE | EVENT | LEAVE | SOCIAL | MESSAGE | VERIFICATION | BILLING` —
