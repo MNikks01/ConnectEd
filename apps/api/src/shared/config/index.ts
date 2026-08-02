@@ -59,10 +59,38 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   /**
-   * Access-token signing key. 32 chars minimum so a weak dev secret cannot reach an environment
-   * that matters. See ADR-0007; asymmetric signing + JWKS is the documented target.
+   * Access-token signing key for HS256. 32 chars minimum so a weak dev secret cannot reach an
+   * environment that matters.
+   *
+   * Still required, and still the default: it is the only setting a developer needs to run the
+   * API. Production supplies the Ed25519 pair below instead, and then this is unused
+   * (`ADR-0014`).
    */
   JWT_ACCESS_SECRET: z.string().min(32),
+
+  /**
+   * Ed25519 signing key, PKCS#8 PEM. When present, access tokens are signed with **EdDSA** and the
+   * public half is published at `/.well-known/jwks.json` — no verifier ever needs the signing key.
+   *
+   * Ed25519 rather than RSA: 64-byte signatures against RSA-2048's 256, no parameter choices to
+   * get wrong, and no risk of the RSA algorithm-confusion family. Ed25519 support is required by
+   * FIPS 186-5 and available in every runtime this project targets.
+   */
+  JWT_PRIVATE_KEY: z.string().optional(),
+  /** The matching SPKI PEM. Both or neither — a private key alone cannot serve JWKS. */
+  JWT_PUBLIC_KEY: z.string().optional(),
+  /**
+   * Key id published in JWKS and set in every token header, so a verifier can pick the right key
+   * during a rotation instead of trying all of them.
+   */
+  JWT_KEY_ID: z.string().default('connected-access-1'),
+  /**
+   * The previous public key, kept verifiable through the overlap window of a rotation. Tokens
+   * already issued stay valid until they expire; nothing new is signed with it.
+   */
+  JWT_PREVIOUS_PUBLIC_KEY: z.string().optional(),
+  /** The id of that previous key, so JWKS can publish both and a header can select one. */
+  JWT_PREVIOUS_KEY_ID: z.string().optional(),
   /** Short by design — the refresh token, not the access token, carries session lifetime. */
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_SECONDS: z.coerce
@@ -116,6 +144,8 @@ export type Config = z.infer<typeof envSchema> & {
   isTest: boolean;
   /** Resolved rather than read directly: Secure cookies are mandatory in production. */
   cookieSecure: boolean;
+  /** True when an Ed25519 pair was supplied; false means HS256 and no JWKS endpoint. */
+  jwtAsymmetric: boolean;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -131,6 +161,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   const isProduction = parsed.data.NODE_ENV === 'production';
 
+  // Both or neither. A private key with no public half cannot serve JWKS, and a public key with no
+  // private half signs nothing — either alone means someone half-finished a rotation.
+  const hasPrivate = Boolean(parsed.data.JWT_PRIVATE_KEY);
+  const hasPublic = Boolean(parsed.data.JWT_PUBLIC_KEY);
+
+  if (hasPrivate !== hasPublic) {
+    throw new Error(
+      'Invalid environment configuration:\n  - JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set together.',
+    );
+  }
+
+  if (parsed.data.JWT_PREVIOUS_PUBLIC_KEY && !parsed.data.JWT_PREVIOUS_KEY_ID) {
+    throw new Error(
+      'Invalid environment configuration:\n  - JWT_PREVIOUS_PUBLIC_KEY needs JWT_PREVIOUS_KEY_ID, or a verifier cannot select it.',
+    );
+  }
+
   return {
     ...parsed.data,
     isProduction,
@@ -138,5 +185,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // Production cannot opt out: an unencrypted refresh cookie is a session-theft vector, and a
     // misconfigured env var must not be able to turn that off.
     cookieSecure: isProduction ? true : (parsed.data.COOKIE_SECURE ?? false),
+    jwtAsymmetric: hasPrivate,
   };
 }
