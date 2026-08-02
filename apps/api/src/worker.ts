@@ -8,8 +8,14 @@
 import { loadConfig } from './shared/config/index.js';
 import { createDb } from './shared/db/index.js';
 import { createLogger } from './shared/logger/index.js';
-import { createEventWorker, createRedisConnection } from './shared/queue/index.js';
+import {
+  createEventWorker,
+  createMaintenanceScheduler,
+  createRedisConnection,
+} from './shared/queue/index.js';
+import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
+import { createStorage } from './shared/storage/index.js';
 
 const config = loadConfig();
 const logger = createLogger(config);
@@ -25,6 +31,26 @@ const worker = createEventWorker(connection, logger, (event) =>
   notifications.service.handleEvent(event),
 );
 
+/**
+ * Housekeeping. The orphan sweep lives here rather than in the API: it is slow, periodic, and
+ * nobody is waiting for its response.
+ */
+const media = createMediaModule(createStorage(config, logger), logger, config.MAX_UPLOAD_BYTES, db);
+
+const maintenance = createMaintenanceScheduler(
+  connection,
+  logger,
+  {
+    'media:sweep-orphans': async () => {
+      await media.service.sweepOrphans();
+    },
+  },
+  // Nightly, off the hour. An upload abandoned during the day is collected the following night.
+  { 'media:sweep-orphans': '17 3 * * *' },
+);
+
+await maintenance.ready;
+
 logger.info('Event worker listening');
 
 async function shutdown(signal: string): Promise<void> {
@@ -32,6 +58,7 @@ async function shutdown(signal: string): Promise<void> {
 
   // Close the worker first so in-flight jobs finish before the connections go.
   await worker.close();
+  await maintenance.close();
   await connection.quit();
   await db.$disconnect();
 

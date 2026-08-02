@@ -54,12 +54,23 @@ export interface AcademicsService {
   remove: (actor: Actor, itemId: string) => Promise<void>;
 }
 
+/**
+ * The slice of media this module needs.
+ *
+ * A narrow port rather than the whole `MediaService`: academics only ever tells media "this key is
+ * now referenced", and depending on the full interface would let that quietly grow.
+ */
+export interface MediaClaims {
+  claim: (key: string) => Promise<void>;
+}
+
 export interface AcademicsServiceDeps {
   repository: AcademicsRepository;
   db: Db;
   storage?: Storage | undefined;
   events: EventPublisher;
   logger: Logger;
+  media?: MediaClaims | undefined;
 }
 
 export function createAcademicsService({
@@ -68,6 +79,7 @@ export function createAcademicsService({
   storage,
   events,
   logger,
+  media,
 }: AcademicsServiceDeps): AcademicsService {
   /** Only the author and the school see who has read an item. */
   function maySeeReadCounts(actor: Actor, item: AcademicItemRow, schoolOwned: boolean): boolean {
@@ -135,6 +147,10 @@ export function createAcademicsService({
         ...(input.imageKey ? { imageKey: input.imageKey } : {}),
         ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
       });
+
+      // The key now has a row pointing at it, so the orphan sweep must leave it alone.
+      // The key now has a row pointing at it, so the orphan sweep must leave it alone.
+      if (input.imageKey) await media?.claim(input.imageKey);
 
       logger.info(
         { itemId: item.id, classId, subjectId: input.subjectId, type: input.type },
@@ -210,6 +226,8 @@ export function createAcademicsService({
       if (!(await isOwningSchool(actor, item.classId))) {
         assertOwnsResource(actor, item.authorAccountId);
       }
+
+      if (input.imageKey) await media?.claim(input.imageKey);
 
       const updated = await repository.update(itemId, {
         ...(input.title === undefined ? {} : { title: input.title }),

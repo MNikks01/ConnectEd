@@ -143,16 +143,20 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     const institution = createInstitutionModule(db, verification.service);
     // Notifications resolves class recipients through verification, which owns membership.
     const notifications = createNotificationsModule(db, logger, verification.service);
+    // Media only exists when storage was supplied; without it the routes are simply absent
+    // rather than present and failing.
+    const media = storage
+      ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES, db)
+      : undefined;
+
     const academics = createAcademicsModule({
       db,
       storage,
       events: events ?? noopPublisher,
       logger,
+      // So an attached image stops looking like an abandoned upload.
+      media: media?.service,
     });
-
-    // Media only exists when storage was supplied; without it the routes are simply absent
-    // rather than present and failing.
-    const media = storage ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES) : undefined;
 
     const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
 

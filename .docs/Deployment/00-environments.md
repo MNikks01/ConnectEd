@@ -1,6 +1,6 @@
 # Deployment — Environments & Topology
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 ## Environments
 
@@ -42,6 +42,20 @@ flowchart TB
 - **Redis**: managed/HA for cache + queue.
 - **Worker**: separate process/deployment consuming BullMQ (first candidate for extraction).
 - **Object storage**: S3/compatible + CDN for public assets.
+
+## Scheduled work
+
+The worker process runs housekeeping on a clock as well as consuming domain events. Schedules are BullMQ
+repeatable jobs rather than a cron sidecar: Redis is already there, the schedule lives beside the code that
+implements it, and **only one instance runs each job however many worker replicas are deployed** — a cron
+container would have to be told which of them to call.
+
+| Job                   | Schedule     | What it does                                                     |
+| --------------------- | ------------ | ---------------------------------------------------------------- |
+| `media:sweep-orphans` | `17 3 * * *` | Deletes uploads nothing ever referenced, older than 24h (S3-12). |
+
+Off the hour on purpose — every scheduler in the world fires at `0 * * * *`, and a bucket sweep does not need
+to compete with them.
 
 ## Packaging
 

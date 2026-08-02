@@ -1,6 +1,6 @@
 # Database — Schema & ERD
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 Logical schema (Prisma models will mirror this). Types are indicative; all tables have `id`, `created_at`,
 `updated_at`; user-content tables add `deleted_at`.
@@ -82,6 +82,7 @@ Added while implementing the schema, for columns the tables above list without n
 | Table               | Key columns                                                                                                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `leave_application` | `id`, `kind (LeaveKind)`, `applicant_account_id FK`, `child_id FK?`, `class_id FK?`, `school_id FK`, `start_date`, `end_date`, `reason`, `status (LeaveStatus)`, `decided_by`, `decided_at` |
+| `media_object`      | `key PK`, `prefix`, `content_type`, `size_bytes`, `uploaded_by FK`, `claimed_at`, `created_at` — what was uploaded, and whether anything ever referenced it                                 |
 | `feedback`          | `id`, `kind (FeedbackKind)`, `author_account_id FK`, `school_id FK`, `body`, `status`, `reviewed_by`, `reviewed_at`                                                                         |
 
 ## Social

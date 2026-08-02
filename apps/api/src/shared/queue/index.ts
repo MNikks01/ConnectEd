@@ -110,6 +110,68 @@ export interface WorkerBundle {
   close: () => Promise<void>;
 }
 
+const MAINTENANCE_QUEUE = 'connected-maintenance';
+
+/**
+ * Scheduled housekeeping — work that runs on a clock rather than in response to an event.
+ *
+ * A BullMQ repeatable job rather than a cron container: Redis is already here, the schedule lives
+ * with the code that implements it, and only one instance runs the job however many replicas are
+ * deployed. A cron sidecar would have to be told which of them to talk to.
+ */
+export function createMaintenanceScheduler(
+  connection: Redis,
+  logger: Logger,
+  tasks: Record<string, () => Promise<void>>,
+  schedules: Record<string, string>,
+): WorkerBundle & { ready: Promise<void> } {
+  const queue = new Queue(MAINTENANCE_QUEUE, {
+    connection: connection as unknown as ConnectionOptions,
+    defaultJobOptions: { removeOnComplete: 20, removeOnFail: 50 },
+  });
+
+  const processor: Processor = async (job) => {
+    const task = tasks[job.name];
+
+    if (!task) {
+      // An unknown job means a schedule outlived the code that served it. Logged, not thrown:
+      // failing it would retry forever.
+      logger.warn({ job: job.name }, 'No handler for scheduled job');
+      return;
+    }
+
+    await task();
+  };
+
+  const worker = new Worker(MAINTENANCE_QUEUE, processor, {
+    connection: connection as unknown as ConnectionOptions,
+    concurrency: 1,
+  });
+
+  worker.on('failed', (job, error) => {
+    logger.error({ job: job?.name, err: error }, 'Scheduled job failed');
+  });
+
+  // `upsertJobScheduler` keyed by name, so a restart replaces the schedule rather than adding a
+  // second one — BullMQ 6 replaced the old `repeat` option on `add` for exactly that reason.
+  const ready = Promise.all(
+    Object.entries(schedules).map(([name, pattern]) =>
+      queue.upsertJobScheduler(name, { pattern }, { name }),
+    ),
+  ).then(() => {
+    logger.info({ jobs: Object.keys(schedules) }, 'Scheduled maintenance registered');
+  });
+
+  return {
+    worker,
+    ready,
+    close: async () => {
+      await worker.close();
+      await queue.close();
+    },
+  };
+}
+
 export function createEventWorker(
   connection: Redis,
   logger: Logger,

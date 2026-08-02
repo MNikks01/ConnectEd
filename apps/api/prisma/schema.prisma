@@ -189,6 +189,7 @@ model Account {
   notifications        Notification[]
   notificationPrefs    NotificationPref[]
   pushTokens           PushToken[]
+  mediaObjects         MediaObject[]
 
   @@index([type])
   @@map("account")
@@ -251,25 +252,25 @@ model UserProfile {
 
 /// Institution accounts are web-only (enforced at login, not here).
 model SchoolProfile {
-  accountId        String   @id @map("account_id") @db.Uuid
-  name             String
-  adminName        String?  @map("admin_name")
-  phone            String?
-  addressLine1     String?  @map("address_line1")
-  addressLine2     String?  @map("address_line2")
-  city             String?
-  state            String?
-  postalCode       String?  @map("postal_code")
-  country          String?
-  about            String?
-  mission          String?
-  vision           String?
-  facilities       String?
-  establishmentYear Int?    @map("establishment_year")
-  affiliation      String?
-  displayPicKey    String?  @map("display_pic_key")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  accountId         String   @id @map("account_id") @db.Uuid
+  name              String
+  adminName         String?  @map("admin_name")
+  phone             String?
+  addressLine1      String?  @map("address_line1")
+  addressLine2      String?  @map("address_line2")
+  city              String?
+  state             String?
+  postalCode        String?  @map("postal_code")
+  country           String?
+  about             String?
+  mission           String?
+  vision            String?
+  facilities        String?
+  establishmentYear Int?     @map("establishment_year")
+  affiliation       String?
+  displayPicKey     String?  @map("display_pic_key")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -305,13 +306,13 @@ model Class {
 
   school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
 
-  subjects          Subject[]
-  classTeacher      ClassTeacher?
-  children          Child[]
-  memberships       Membership[]
-  academicItems     AcademicItem[]
-  timetables        Timetable[]
-  leaveApplications LeaveApplication[]
+  subjects             Subject[]
+  classTeacher         ClassTeacher?
+  children             Child[]
+  memberships          Membership[]
+  academicItems        AcademicItem[]
+  timetables           Timetable[]
+  leaveApplications    LeaveApplication[]
   verificationRequests VerificationRequest[]
 
   @@unique([schoolId, medium, level, section])
@@ -388,13 +389,13 @@ model ClassTeacher {
 
 /// A parent's child. Not an account — children do not log in; the parent acts within their scope.
 model Child {
-  id              String   @id @default(uuid()) @db.Uuid
-  parentAccountId String   @map("parent_account_id") @db.Uuid
-  fullName        String   @map("full_name")
-  schoolId        String?  @map("school_id") @db.Uuid
-  classId         String?  @map("class_id") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  parentAccountId String    @map("parent_account_id") @db.Uuid
+  fullName        String    @map("full_name")
+  schoolId        String?   @map("school_id") @db.Uuid
+  classId         String?   @map("class_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
   parent Account        @relation(fields: [parentAccountId], references: [id], onDelete: Cascade)
@@ -565,6 +566,30 @@ model SyllabusProgress {
   @@unique([subjectId, topic])
   @@index([subjectId])
   @@map("syllabus_progress")
+}
+
+/// Every object written to the bucket, so the ones nothing ever referenced can be found again.
+///
+/// An upload and the row that references it are two requests: the client uploads, gets a key, and
+/// then attaches it. When the second request fails — a validation error, a closed tab, a dropped
+/// connection — the object stays in the bucket with nothing pointing at it and no way to identify
+/// it later. This table is that way: unclaimed rows older than the grace period are swept.
+model MediaObject {
+  key         String    @id
+  prefix      String
+  contentType String    @map("content_type")
+  sizeBytes   Int       @map("size_bytes")
+  /// Who uploaded it. Kept for the audit trail on a deletion, not for authorization.
+  uploadedBy  String    @map("uploaded_by") @db.Uuid
+  /// Set when a module attaches the key to something. Null means nothing references it yet.
+  claimedAt   DateTime? @map("claimed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  uploader Account @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  /// The sweep's query: unclaimed, oldest first.
+  @@index([claimedAt, createdAt])
+  @@map("media_object")
 }
 
 /// Replaces the legacy VIEWED_BY[] arrays. The unique constraint makes "mark as read" idempotent.
