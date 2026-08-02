@@ -27,7 +27,7 @@ export default async function NotificationsPage({
   let list: NotificationListResponse;
   try {
     list = await readAsUser<NotificationListResponse>(
-      `/notifications${after ? `?after=${encodeURIComponent(after)}` : ''}`,
+      `/notifications${after ? `?cursor=${encodeURIComponent(after)}` : ''}`,
     );
   } catch (error) {
     if (error instanceof SessionExpiredError) redirect('/api/auth/refresh?next=/notifications');

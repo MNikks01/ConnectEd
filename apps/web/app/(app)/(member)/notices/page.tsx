@@ -52,7 +52,7 @@ export default async function NoticesPage({
   }
 
   const schoolId = schools.some(([id]) => id === school) ? school : schools[0]?.[0];
-  const query = after ? `?after=${encodeURIComponent(after)}` : '';
+  const query = after ? `?cursor=${encodeURIComponent(after)}` : '';
   const notices = await readAsUser<Paginated<NoticeResponse>>(
     `/schools/${schoolId}/notices${query}`,
   );
