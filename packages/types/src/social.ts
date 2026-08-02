@@ -171,3 +171,37 @@ export interface InboxResponse {
   /** Across every thread — what the badge shows (FR-SOC-021). */
   unreadTotal: number;
 }
+
+export const ReportSubject = {
+  POST: 'POST',
+  COMMENT: 'COMMENT',
+  MESSAGE: 'MESSAGE',
+  ACCOUNT: 'ACCOUNT',
+} as const;
+export type ReportSubject = (typeof ReportSubject)[keyof typeof ReportSubject];
+
+export const createReportSchema = z.object({
+  subjectType: z.enum(ReportSubject),
+  subjectId: z.uuid(),
+  reason: z.string().trim().min(1).max(2000),
+});
+
+export type CreateReportInput = z.infer<typeof createReportSchema>;
+
+export interface ReportResponse {
+  id: string;
+  subjectType: ReportSubject;
+  subjectId: string;
+  reason: string;
+  status: 'OPEN' | 'REVIEWED' | 'ACTIONED' | 'DISMISSED';
+  createdAt: string;
+}
+
+export interface BlockResponse {
+  accountId: string;
+  blocked: boolean;
+}
+
+export interface BlockListResponse {
+  data: ProfileCardResponse[];
+}
