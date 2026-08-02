@@ -248,6 +248,23 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
     });
   }
 
+  /**
+   * Proves the fixture is actually in the database before any test uses it.
+   *
+   * A rare failure mode has produced authorization tests failing as though a member were not a
+   * member — which is what a fixture that was seeded and then lost looks like from inside a test.
+   * Checking here names the step instead: if this throws, the seed did not survive, and the test
+   * that would otherwise have failed was never the problem.
+   */
+  const seeded = await db.membership.count({ where: { schoolId } });
+
+  if (seeded !== memberships.length) {
+    throw new Error(
+      `seedSchool: expected ${memberships.length} memberships after seeding, found ${seeded}. ` +
+        'The fixture did not survive — suspect the reset, not the test that follows.',
+    );
+  }
+
   return {
     schoolAccountId: schoolId,
     classAId: classA.id,

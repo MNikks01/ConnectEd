@@ -104,3 +104,32 @@ export interface LikeResponse {
   liked: boolean;
   likeCount: number;
 }
+
+export const ConnectionStatus = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+} as const;
+export type ConnectionStatus = (typeof ConnectionStatus)[keyof typeof ConnectionStatus];
+
+export const requestConnectionSchema = z.object({
+  accountId: z.uuid(),
+});
+
+export type RequestConnectionInput = z.infer<typeof requestConnectionSchema>;
+
+export interface FollowStateResponse {
+  accountId: string;
+  following: boolean;
+  followerCount: number;
+  followingCount: number;
+}
+
+export interface ConnectionResponse {
+  id: string;
+  status: ConnectionStatus;
+  /** The other party, whichever side of the pair they are stored on. */
+  other: ProfileCardResponse;
+  /** True when the caller sent it — what tells "waiting on them" from "waiting on you". */
+  requestedByMe: boolean;
+  createdAt: string;
+}

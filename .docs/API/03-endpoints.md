@@ -116,9 +116,13 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST         | `/posts/:id/comments`                |  🔑  | Comment on a post.                                                                      |
 | GET          | `/posts/:id/comments`                |  🔑  | Comments, oldest first, blocked authors hidden.                                         |
 | DELETE       | `/comments/:id`                      |  🔑  | The comment's author only; delete is soft.                                              |
-| POST         | `/accounts/:id/follow` / `DELETE`    |  🔑  | Follow/unfollow.                                                                        |
-| POST         | `/connections`                       |  🔑  | Request connection.                                                                     |
-| POST         | `/connections/:id/accept`            |  🔑  | Accept.                                                                                 |
+| POST         | `/accounts/:id/follow`               |  🔑  | Follow; idempotent.                                                                     |
+| DELETE       | `/accounts/:id/follow`               |  🔑  | Unfollow; works even after a block.                                                     |
+| GET          | `/accounts/:id/follow`               |  🔑  | Follow state and counts.                                                                |
+| POST         | `/connections`                       |  🔑  | Request a connection; one row per pair.                                                 |
+| GET          | `/me/connections`                    |  🔑  | Mine, `?status=` filters.                                                               |
+| POST         | `/connections/:id/accept`            |  🔑  | The other party accepts.                                                                |
+| DELETE       | `/connections/:id`                   |  🔑  | Reject, cancel, or disconnect — the same row, removed.                                  |
 | GET          | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                                                                              |
 | POST         | `/threads/:id/messages`              |  🔑  | Send message.                                                                           |
 

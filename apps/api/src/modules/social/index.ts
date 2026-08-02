@@ -3,6 +3,9 @@
  */
 import { Router } from 'express';
 
+import { createGraphRepository } from './graph.repository.js';
+import { graphRoutes } from './graph.routes.js';
+import { createGraphService } from './graph.service.js';
 import { createInteractionRepository } from './interaction.repository.js';
 import { interactionRoutes } from './interaction.routes.js';
 import { createInteractionService } from './interaction.service.js';
@@ -17,10 +20,12 @@ import type { Config } from '../../shared/config/index.js';
 import type { Db } from '../../shared/db/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
+import type { GraphService } from './graph.service.js';
 import type { InteractionService } from './interaction.service.js';
 import type { PostService } from './post.service.js';
 import type { ProfileService } from './profile.service.js';
 
+export type { GraphService } from './graph.service.js';
 export type { InteractionService } from './interaction.service.js';
 export type { PostService } from './post.service.js';
 export type { ProfileService } from './profile.service.js';
@@ -30,6 +35,7 @@ export interface SocialModule {
   profiles: ProfileService;
   posts: PostService;
   interactions: InteractionService;
+  graph: GraphService;
 }
 
 export function createSocialModule(deps: {
@@ -62,10 +68,17 @@ export function createSocialModule(deps: {
     logger: deps.logger,
   });
 
+  const graph = createGraphService({
+    repository: createGraphRepository(deps.db),
+    storage: deps.storage,
+    logger: deps.logger,
+  });
+
   const routes = Router();
   routes.use(profileRoutes(profiles));
+  routes.use(graphRoutes(graph));
   routes.use(postRoutes(posts, deps.config));
   routes.use(interactionRoutes(interactions));
 
-  return { profiles, posts, interactions, routes };
+  return { profiles, posts, interactions, graph, routes };
 }
