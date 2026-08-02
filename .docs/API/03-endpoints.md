@@ -111,7 +111,7 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET          | `/posts/:id`                         |  🔑  | Read one; 404 when blocked, deleted, or missing.                                        |
 | PATCH/DELETE | `/posts/:id`                         |  🔑  | Author only; delete is soft.                                                            |
 | GET          | `/accounts/:id/posts`                |  🔑  | An account's timeline, cursor-paginated.                                                |
-| GET          | `/feed`                              |  🔑  | Aggregated feed (cursor).                                                               |
+| GET          | `/feed`                              |  🔑  | Own posts plus follows and connections, reverse-chronological, cursor-paginated.        |
 | POST         | `/posts/:id/like`                    |  🔑  | Toggle a like; 200 either way, and the same request twice leaves you where you started. |
 | POST         | `/posts/:id/comments`                |  🔑  | Comment on a post.                                                                      |
 | GET          | `/posts/:id/comments`                |  🔑  | Comments, oldest first, blocked authors hidden.                                         |

@@ -35,7 +35,7 @@ export default async function ClassFeedPage({
   const { after } = await searchParams;
 
   // The cursor is opaque and comes straight back from the API; it is only ever passed through.
-  const query = after ? `?after=${encodeURIComponent(after)}` : '';
+  const query = after ? `?cursor=${encodeURIComponent(after)}` : '';
 
   let feed: Paginated<AcademicItemResponse>;
   let memberships: MyMembershipResponse[];

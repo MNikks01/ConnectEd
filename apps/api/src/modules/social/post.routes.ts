@@ -56,6 +56,13 @@ export function postRoutes(service: PostService, config: Config): ExpressRouter 
   );
 
   router.get(
+    '/feed',
+    handler(async (req, res) => {
+      res.status(200).json(await service.listFeed(requireActor(req), parsePageRequest(req.query)));
+    }),
+  );
+
+  router.get(
     '/posts/:id',
     handler(async (req, res) => {
       res.status(200).json(await service.get(requireActor(req), uuidParam(req, 'id')));

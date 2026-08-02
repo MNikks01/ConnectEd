@@ -23,6 +23,8 @@ export interface PostService {
   create: (actor: Actor, input: CreatePostInput) => Promise<PostResponse>;
   get: (actor: Actor, postId: string) => Promise<PostResponse>;
   listTimeline: (actor: Actor, accountId: string, page: PageRequest) => Promise<Page<PostResponse>>;
+  /** Reverse-chronological, from follows and connections (FR-SOC-012). */
+  listFeed: (actor: Actor, page: PageRequest) => Promise<Page<PostResponse>>;
   update: (actor: Actor, postId: string, input: UpdatePostInput) => Promise<PostResponse>;
   remove: (actor: Actor, postId: string) => Promise<void>;
 }
@@ -91,6 +93,16 @@ export function createPostService({
 
     listTimeline: async (actor, accountId, page) => {
       const rows = await repository.listByAuthor(accountId, actor.accountId, page);
+      const paged = toPage(rows, page.limit);
+
+      return {
+        data: await Promise.all(paged.data.map((row) => toResponse(row, actor))),
+        nextCursor: paged.nextCursor,
+      };
+    },
+
+    listFeed: async (actor, page) => {
+      const rows = await repository.listFeed(actor.accountId, page);
       const paged = toPage(rows, page.limit);
 
       return {

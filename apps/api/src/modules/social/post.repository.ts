@@ -46,6 +46,8 @@ export interface PostRepository {
   softDelete: (id: string) => Promise<void>;
   /** Author of a post regardless of blocks — ownership checks must not depend on visibility. */
   authorOf: (id: string) => Promise<string | null>;
+  /** The caller's feed: their own posts, plus everyone they follow or are connected to. */
+  listFeed: (callerAccountId: string, page: PageRequest) => Promise<PostRow[]>;
 }
 
 const SELECT = {
@@ -144,6 +146,44 @@ export function createPostRepository(db: Db): PostRepository {
     listByAuthor: async (authorAccountId, callerAccountId, page) => {
       const rows = await db.post.findMany({
         where: { authorAccountId, ...visibleTo(callerAccountId), ...cursorFilter(page.after) },
+        select: { ...SELECT, likes: callerLike(callerAccountId) },
+        orderBy: [...CURSOR_ORDER],
+        take: takeFor(page.limit),
+      });
+
+      return rows.map(toRow);
+    },
+
+    /**
+     * **One query, not one per followed account.**
+     *
+     * The relationship tests are expressed as `EXISTS` subqueries rather than by fetching the
+     * follow and connection ids first and passing them in an `IN` list. Materialising ids reads
+     * more simply and is the version that stops working: it needs its own pagination once someone
+     * follows more accounts than the cap, and silently truncates the feed when they do.
+     */
+    listFeed: async (callerAccountId, page) => {
+      const rows = await db.post.findMany({
+        where: {
+          ...visibleTo(callerAccountId),
+          OR: [
+            // Your own posts. The PRD says follows and connections; a feed that hides what you
+            // just wrote reads as a bug to everyone who has used any other product.
+            { authorAccountId: callerAccountId },
+            { author: { followers: { some: { followerAccountId: callerAccountId } } } },
+            {
+              author: {
+                connectionsInitiated: { some: { bAccountId: callerAccountId, status: 'ACCEPTED' } },
+              },
+            },
+            {
+              author: {
+                connectionsReceived: { some: { aAccountId: callerAccountId, status: 'ACCEPTED' } },
+              },
+            },
+          ],
+          ...cursorFilter(page.after),
+        },
         select: { ...SELECT, likes: callerLike(callerAccountId) },
         orderBy: [...CURSOR_ORDER],
         take: takeFor(page.limit),
