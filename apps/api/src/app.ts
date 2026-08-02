@@ -160,7 +160,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     });
 
     const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
-    const social = createSocialModule({ db, storage, logger, media: media?.service });
+    const social = createSocialModule({ db, config, storage, logger, media: media?.service });
 
     api.use(
       authenticate(tokens),

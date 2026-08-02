@@ -200,6 +200,8 @@ model Account {
   notificationPrefs    NotificationPref[]
   pushTokens           PushToken[]
   mediaObjects         MediaObject[]
+  blocksMade           Block[]               @relation("Blocker")
+  blocksReceived       Block[]               @relation("Blocked")
 
   @@index([type])
   @@map("account")
@@ -723,6 +725,25 @@ model PostComment {
   @@index([postId, createdAt])
   @@index([accountId])
   @@map("post_comment")
+}
+
+/// One account has blocked another (`PRD/06-social.md`, Moderation & safety).
+///
+/// Stored directional — who blocked whom — and applied **both ways** on read: a blocked account
+/// must not see the blocker's content either, or blocking becomes a one-sided mute that the other
+/// party can work around by simply looking.
+model Block {
+  id               String   @id @default(uuid()) @db.Uuid
+  blockerAccountId String   @map("blocker_account_id") @db.Uuid
+  blockedAccountId String   @map("blocked_account_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  blocker Account @relation("Blocker", fields: [blockerAccountId], references: [id], onDelete: Cascade)
+  blocked Account @relation("Blocked", fields: [blockedAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerAccountId, blockedAccountId])
+  @@index([blockedAccountId])
+  @@map("block")
 }
 
 model Follow {

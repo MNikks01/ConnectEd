@@ -52,3 +52,33 @@ export interface ProfileResponse extends ProfileCardResponse {
   city?: string | null;
   about?: string | null;
 }
+
+export const createPostSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+  /** A key from `POST /media/posts`; the signed URL is issued on read. */
+  imageKey: z.string().trim().max(300).nullish(),
+});
+
+export const updatePostSchema = z.object({
+  body: z.string().trim().min(1).max(5000).optional(),
+  imageKey: z.string().trim().max(300).nullish(),
+});
+
+export type CreatePostInput = z.infer<typeof createPostSchema>;
+export type UpdatePostInput = z.infer<typeof updatePostSchema>;
+
+export interface PostResponse {
+  id: string;
+  author: ProfileCardResponse;
+  body: string;
+  /** Short-lived signed URL, issued only after the caller has been authorized. */
+  imageUrl: string | null;
+  likeCount: number;
+  commentCount: number;
+  /** Whether *this* caller has liked it. */
+  liked: boolean;
+  /** True when the caller wrote it — what the client uses to offer edit and delete. */
+  mine: boolean;
+  createdAt: string;
+  editedAt: string | null;
+}
