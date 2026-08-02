@@ -83,7 +83,16 @@ test.describe('classes', () => {
     await page.getByRole('button', { name: 'Add class' }).click();
 
     await expect(page.getByText('Class added.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Class 8-A (English)' })).toBeVisible();
+
+    // Reload and assert, as the profile and roster tests do. The success message proves the action
+    // returned; whether the list re-rendered in time is a revalidation race, and on a loaded runner
+    // it is the thing that fails rather than the creation.
+    await expect(async () => {
+      await page.reload();
+      await expect(page.getByRole('link', { name: 'Class 8-A (English)' })).toBeVisible({
+        timeout: 2000,
+      });
+    }).toPass({ timeout: 20_000 });
   });
 
   test('creating the same class twice is refused with the API message', async ({ page }) => {

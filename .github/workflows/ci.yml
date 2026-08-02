@@ -151,6 +151,27 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
+  # Alert rules and routing are configuration, and configuration that is only exercised in
+  # production is configuration nobody trusts. A typo here used to mean a rule that silently never
+  # fired; both binaries refuse a bad file, so CI catches it in seconds.
+  observability-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Prometheus alert rules
+        run: |
+          docker run --rm -v "$PWD/infrastructure:/w:ro" --entrypoint promtool \
+            prom/prometheus:v3.1.0 check rules /w/prometheus/alerts.yml
+
+      - name: Check Alertmanager routing
+        run: |
+          docker run --rm -v "$PWD/infrastructure:/w:ro" --entrypoint amtool \
+            prom/alertmanager:v0.28.0 check-config /w/alertmanager/alertmanager.yml
+
+      - name: Every alert routes somewhere and names a runbook that exists
+        run: node scripts/check-alerts.mjs
+
   changeset-check:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

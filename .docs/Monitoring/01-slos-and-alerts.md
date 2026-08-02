@@ -1,6 +1,6 @@
 # Monitoring — SLOs & Alerting
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 ## SLIs / SLOs
 
@@ -24,8 +24,31 @@
 
 ## Routing
 
-Grafana alerting → on-call (paging) for urgent, chat/ticket for the rest. Every alert links to a **runbook**
-(`../Runbooks/`) and a dashboard. No alert without an owner and a runbook.
+**Implemented as of S3-11, with one deviation:** routing is **Alertmanager**, not Grafana alerting. The rules
+already lived in Prometheus (`infrastructure/prometheus/alerts.yml`), and Alertmanager is what Prometheus sends
+to — routing them through Grafana would have meant a second rule engine and two places to look when something
+did not page.
+
+| Label              | Receiver | First notification | Repeats until acted on |
+| ------------------ | -------- | ------------------ | ---------------------- |
+| `severity: page`   | `oncall` | 10s                | hourly                 |
+| `severity: ticket` | `chat`   | 30s                | every 12h              |
+
+- Alerts group by `alertname` + `service`, so one bad deploy is one notification rather than forty.
+- A **page inhibits the tickets** it would have caused for the same service: if the API is down, its latency is
+  also bad, and the second notification tells the on-call nothing new.
+- Receiver URLs come from **files mounted at runtime**, never from this repository. Locally there are no such
+  files and everything lands in a null receiver — firing alerts are still visible in the Alertmanager UI on
+  `:9093`, which is the local feedback loop.
+
+Every alert links to a **runbook** (`../Runbooks/`) that exists. `scripts/check-alerts.mjs` runs in CI and fails
+the build on an alert with no `severity`, no `service`, or a runbook path that does not resolve — `promtool`
+validates the PromQL and has nothing to say about any of that.
+
+**Still not alertable:** queue lag, notification delivery, and the business alerts in the list above. The API
+exports `http_request_duration_seconds` and the process defaults; nothing emits queue depth or delivery
+outcomes yet. Rules against series that do not exist would give a permanently green board that means nothing,
+so they are absent rather than aspirational.
 
 ## Dashboards (in `infrastructure/grafana`)
 
