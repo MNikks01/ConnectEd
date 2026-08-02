@@ -88,15 +88,16 @@ Added while implementing the schema, for columns the tables above list without n
 
 ## Social
 
-| Table            | Key columns                                                                               |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `post`           | `id`, `author_account_id FK`, `body`, `image_key?`                                        |
-| `post_like`      | `post_id FK`, `account_id FK`, UNIQUE(`post_id,account_id`)                               |
-| `post_comment`   | `id`, `post_id FK`, `account_id FK`, `body`                                               |
-| `follow`         | `follower_account_id FK`, `followee_account_id FK`, UNIQUE(pair)                          |
-| `connection`     | `a_account_id`, `b_account_id`, `status (pending/accepted)`, `requested_by`, UNIQUE(pair) |
-| `message_thread` | `id`, `participant_a`, `participant_b`                                                    |
-| `message`        | `id`, `thread_id FK`, `sender_account_id FK`, `body`, `read_at?`                          |
+| Table            | Key columns                                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `post`           | `id`, `author_account_id FK`, `body`, `image_key?`                                                                |
+| `post_like`      | `post_id FK`, `account_id FK`, UNIQUE(`post_id,account_id`)                                                       |
+| `post_comment`   | `id`, `post_id FK`, `account_id FK`, `body`                                                                       |
+| `block`          | `id`, `blocker_account_id FK`, `blocked_account_id FK`, `created_at` — applied **both ways** on every social read |
+| `follow`         | `follower_account_id FK`, `followee_account_id FK`, UNIQUE(pair)                                                  |
+| `connection`     | `a_account_id`, `b_account_id`, `status (pending/accepted)`, `requested_by`, UNIQUE(pair)                         |
+| `message_thread` | `id`, `participant_a`, `participant_b`                                                                            |
+| `message`        | `id`, `thread_id FK`, `sender_account_id FK`, `body`, `read_at?`                                                  |
 
 ## Notifications & billing
 
