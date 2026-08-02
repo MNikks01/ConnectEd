@@ -81,15 +81,16 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Workflows
 
-| Method | Path                                         | Auth | Purpose                   |
-| ------ | -------------------------------------------- | :--: | ------------------------- |
-| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child. |
-| POST   | `/me/leave`                                  |  🛡   | Teacher applies (own).    |
-| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.      |
-| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.          |
-| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.            |
-| POST   | `/schools/:id/feedback`                      |  🛡   | Complaint/suggestion.     |
-| GET    | `/schools/:id/feedback`                      |  🛡   | Review.                   |
+| Method | Path                                         | Auth | Purpose                              |
+| ------ | -------------------------------------------- | :--: | ------------------------------------ |
+| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child.            |
+| POST   | `/me/leave`                                  |  🛡   | Teacher applies for their own leave. |
+| GET    | `/me/leave`                                  |  🔑  | My applications and their status.    |
+| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.                 |
+| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.                     |
+| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.                       |
+| POST   | `/schools/:id/feedback`                      |  🛡   | Complaint/suggestion.                |
+| GET    | `/schools/:id/feedback`                      |  🛡   | Review.                              |
 
 ## Social
 
