@@ -16,10 +16,14 @@ import type { InstitutionRepository, ClassRow } from './institution.repository.j
 import type { Actor } from '../../shared/authz/actor.js';
 import type {
   AllocateClassTeacherInput,
+  ClassLevel,
   ClassResponse,
   ClassTeacherResponse,
   CreateClassInput,
   CreateSubjectInput,
+  Medium,
+  MyClassTeacherResponse,
+  Section,
   SchoolProfileResponse,
   SubjectResponse,
   UpdateClassInput,
@@ -52,6 +56,8 @@ export interface InstitutionService {
     input: AllocateClassTeacherInput,
   ) => Promise<ClassTeacherResponse>;
   getClassTeacher: (actor: Actor, classId: string) => Promise<ClassTeacherResponse>;
+  /** The caller's own class-teacher allocations. Scoped to them by construction. */
+  listMyClassTeacherAllocations: (actor: Actor) => Promise<MyClassTeacherResponse[]>;
 }
 
 /**
@@ -208,6 +214,21 @@ export function createInstitutionService({
         teacherName: teacher.fullName,
         allocatedAt: allocatedAt.toISOString(),
       };
+    },
+
+    listMyClassTeacherAllocations: async (actor) => {
+      const rows = await repository.listClassTeacherAllocationsFor(actor.accountId);
+
+      return rows.map((row) => ({
+        classId: row.classId,
+        className: classDisplayName({
+          medium: row.medium as Medium,
+          level: row.level as ClassLevel,
+          section: row.section as Section,
+        }),
+        schoolId: row.schoolId,
+        schoolName: row.schoolName,
+      }));
     },
 
     getClassTeacher: async (_actor, classId) => {

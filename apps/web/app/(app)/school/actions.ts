@@ -13,6 +13,7 @@
  */
 import {
   allocateClassTeacherSchema,
+  reviewFeedbackSchema,
   createClassSchema,
   createEventSchema,
   createNoticeSchema,
@@ -225,4 +226,18 @@ export async function uploadTimetableAction(
       body: { imageKey: stored.key },
     });
   }, [`/school/classes/${classId}`, `/classes/${classId}`]);
+}
+
+/** The school moves a complaint forward (FR-WF-011). */
+export async function reviewFeedbackAction(
+  feedbackId: string,
+  status: 'UNDER_REVIEW' | 'RESOLVED',
+): Promise<ActionResult> {
+  const parsed = reviewFeedbackSchema.safeParse({ status });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/feedback/${feedbackId}/review`, { method: 'POST', body: parsed.data }),
+    ['/school/complaints'],
+  );
 }

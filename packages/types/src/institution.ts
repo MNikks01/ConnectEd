@@ -157,3 +157,17 @@ export function classDisplayName(parts: {
 }): string {
   return `${LEVEL_LABELS[parts.level]}-${parts.section} (${MEDIUM_LABELS[parts.medium]})`;
 }
+
+/**
+ * A class the caller is the class teacher of.
+ *
+ * Nothing else answers this. Class-teacher allocation is stored against the class, so a teacher
+ * could be handed leave-approval powers and have no way to discover it — the same shape of gap
+ * `/me/memberships` and `/me/subjects` closed for students and teachers.
+ */
+export interface MyClassTeacherResponse {
+  classId: string;
+  className: string;
+  schoolId: string;
+  schoolName: string | null;
+}

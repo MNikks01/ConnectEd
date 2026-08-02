@@ -117,6 +117,15 @@ export function institutionRoutes(service: InstitutionService): ExpressRouter {
   );
 
   router.get(
+    '/me/class-teacher',
+    handler(async (req, res) => {
+      res
+        .status(200)
+        .json({ data: await service.listMyClassTeacherAllocations(requireActor(req)) });
+    }),
+  );
+
+  router.get(
     '/classes/:id/class-teacher',
     handler(async (req, res) => {
       res.status(200).json(await service.getClassTeacher(requireActor(req), uuidParam(req, 'id')));
