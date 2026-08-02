@@ -8,6 +8,9 @@ import { graphRoutes } from './graph.routes.js';
 import { createGraphService } from './graph.service.js';
 import { createInteractionRepository } from './interaction.repository.js';
 import { createMessageRepository } from './message.repository.js';
+import { createModerationRepository } from './moderation.repository.js';
+import { moderationRoutes } from './moderation.routes.js';
+import { createModerationService } from './moderation.service.js';
 import { messageRoutes } from './message.routes.js';
 import { createMessageService } from './message.service.js';
 import { interactionRoutes } from './interaction.routes.js';
@@ -26,12 +29,14 @@ import type { Storage } from '../../shared/storage/index.js';
 import type { GraphService } from './graph.service.js';
 import type { InteractionService } from './interaction.service.js';
 import type { MessageService } from './message.service.js';
+import type { ModerationService } from './moderation.service.js';
 import type { PostService } from './post.service.js';
 import type { ProfileService } from './profile.service.js';
 
 export type { GraphService } from './graph.service.js';
 export type { InteractionService } from './interaction.service.js';
 export type { MessageService } from './message.service.js';
+export type { ModerationService } from './moderation.service.js';
 export type { PostService } from './post.service.js';
 export type { ProfileService } from './profile.service.js';
 
@@ -42,6 +47,7 @@ export interface SocialModule {
   interactions: InteractionService;
   graph: GraphService;
   messages: MessageService;
+  moderation: ModerationService;
 }
 
 export function createSocialModule(deps: {
@@ -89,12 +95,19 @@ export function createSocialModule(deps: {
     logger: deps.logger,
   });
 
+  const moderation = createModerationService({
+    repository: createModerationRepository(deps.db),
+    storage: deps.storage,
+    logger: deps.logger,
+  });
+
   const routes = Router();
   routes.use(profileRoutes(profiles));
+  routes.use(moderationRoutes(moderation));
   routes.use(graphRoutes(graph));
   routes.use(messageRoutes(messages, deps.config));
   routes.use(postRoutes(posts, deps.config));
   routes.use(interactionRoutes(interactions));
 
-  return { profiles, posts, interactions, graph, messages, routes };
+  return { profiles, posts, interactions, graph, messages, moderation, routes };
 }

@@ -557,6 +557,46 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Social: post/like/comment/follow/message',
+    outcomes: {
+      // Every column is ✅ in the matrix, and that is the requirement rather than an omission:
+      // social is open to all account types, verified or not (PRD 06). Asserted anyway, because
+      // "everyone can" is a claim that regresses as silently as any other.
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'allow',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post('/api/v1/posts')
+        .set('Authorization', await authFor(role))
+        .send({ body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'View feed / profiles',
+    outcomes: {
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'allow',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get('/api/v1/feed')
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -617,11 +657,7 @@ describe('permission matrix', () => {
  * Matrix rows with no endpoint yet. Listed rather than omitted so the distance between the product
  * contract and the implementation is visible in the suite that claims to enforce it.
  */
-const UNIMPLEMENTED = [
-  'Manage subscription/billing',
-  'Social: post/like/comment/follow/message',
-  'View feed / profiles',
-] as const;
+const UNIMPLEMENTED = ['Manage subscription/billing'] as const;
 
 describe('matrix rows not yet implemented', () => {
   it.each(UNIMPLEMENTED)('%s — no endpoint yet; add a capability here when it lands', (row) => {

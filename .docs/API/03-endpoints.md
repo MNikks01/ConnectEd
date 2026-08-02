@@ -121,6 +121,11 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET          | `/accounts/:id/follow`    |  🔑  | Follow state and counts.                                                                |
 | POST         | `/connections`            |  🔑  | Request a connection; one row per pair.                                                 |
 | GET          | `/me/connections`         |  🔑  | Mine, `?status=` filters.                                                               |
+| POST         | `/accounts/:id/block`     |  🔑  | Block; idempotent. Hides content both ways, everywhere.                                 |
+| DELETE       | `/accounts/:id/block`     |  🔑  | Unblock; restores what was there rather than clearing it.                               |
+| GET          | `/me/blocks`              |  🔑  | Who I have blocked. Never who has blocked me.                                           |
+| POST         | `/reports`                |  🔑  | Report a post, comment, message, or account.                                            |
+| GET          | `/me/reports`             |  🔑  | What I have reported.                                                                   |
 | POST         | `/connections/:id/accept` |  🔑  | The other party accepts.                                                                |
 | DELETE       | `/connections/:id`        |  🔑  | Reject, cancel, or disconnect — the same row, removed.                                  |
 | POST         | `/threads`                |  🔑  | Find or start a thread with an account; 200 either way.                                 |
