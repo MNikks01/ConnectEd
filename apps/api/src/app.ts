@@ -21,6 +21,7 @@ import { createNotificationsModule } from './modules/notifications/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { jwksRoutes } from './routes/jwks.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
 import { loadConfig, type Config } from './shared/config/index.js';
@@ -118,14 +119,20 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
 
+  const tokens = createTokenService(config);
+
   // Operational endpoints are unversioned; product routes live under /api/v1.
   app.use(healthRoutes({ readiness, metrics, metricsEnabled: config.METRICS_ENABLED }));
+
+  // Only when there is a public half to publish. See the note in the route module.
+  if (config.jwtAsymmetric) {
+    app.use(jwksRoutes(tokens));
+  }
 
   const api = express.Router();
 
   if (db) {
     const passwords = createPasswordHasher(config);
-    const tokens = createTokenService(config);
 
     api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
 

@@ -74,6 +74,12 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET          | `/classes/:id/syllabus`           |  🛡   | Coverage for every subject of a class.              |
 | DELETE       | `/syllabus/:id`                   |  🛡   | Remove a topic recorded in error.                   |
 
+## Well-known
+
+| Method | Path                     | Auth | Purpose                                                                                   |
+| ------ | ------------------------ | :--: | ----------------------------------------------------------------------------------------- |
+| GET    | `/.well-known/jwks.json` |  —   | Public keys access tokens are signed with (`ADR-0014`). Absent when signing is symmetric. |
+
 ## Media
 
 | Method | Path             | Auth | Purpose                                                                                                                                                             |
