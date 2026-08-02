@@ -82,3 +82,25 @@ export interface PostResponse {
   createdAt: string;
   editedAt: string | null;
 }
+
+export const createCommentSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+});
+
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
+export interface CommentResponse {
+  id: string;
+  postId: string;
+  author: ProfileCardResponse;
+  body: string;
+  /** True when the caller wrote it — what the client uses to offer delete. */
+  mine: boolean;
+  createdAt: string;
+}
+
+export interface LikeResponse {
+  postId: string;
+  liked: boolean;
+  likeCount: number;
+}
