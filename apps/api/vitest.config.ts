@@ -9,23 +9,27 @@ export default defineConfig({
      * shared test database between cases, so files must not run concurrently — one file's reset
      * would wipe another's fixtures mid-assertion.
      *
-     * **Known unsolved (S4-12).** This is not sufficient, and the failure it does not prevent has
-     * been misdiagnosed twice. What is established: a run occasionally fails asserting on data the
-     * same test created moments earlier — a notice whose creation returned 201 and which was
-     * absent from a list read immediately after — and one such run showed **two process ids**,
-     * because vitest recycles the worker per file and a finishing process briefly coexists with
-     * the next.
+     * **A local-only flake lives here, and it is worth knowing before chasing it (S4-12).**
      *
-     * Two fixes were tried and rejected:
+     * Roughly one local run in four fails asserting on data the same test created moments earlier
+     * — a notice whose creation returned 201 and which was absent from a list read immediately
+     * after — or on a token that was just signed. **CI has never reproduced it: 20 consecutive
+     * `verify` jobs green.** The difference is the developer machine, where the same Postgres
+     * serves `connected`, `connected_test` and `connected_e2e` while E2E servers, dev servers and
+     * Docker are running alongside.
+     *
+     * Three fixes were tried and rejected, so the next attempt does not repeat them:
      *
      * - `pool: 'forks'` + `poolOptions.forks.singleFork` — `poolOptions` no longer exists in
      *   Vitest 4, and `fileParallelism: false` already pins the run to one worker.
-     * - `isolate: false`, which does put every file in one process — and leaks module state
-     *   between them. It made `error-handling.test.ts` fail on a mocked logger that a previous
-     *   file had already touched. A different fault, not a fix.
+     * - `isolate: false` puts every file in one process, and leaks module state between them: it
+     *   made `error-handling.test.ts` fail on a mocked logger another file had touched. A
+     *   different fault, not a fix.
+     * - A per-file Postgres advisory lock, so a finishing worker cannot overlap the next. It did
+     *   serialise the files; the failure rate did not measurably change, so it was reverted rather
+     *   than kept as complexity that pays for nothing.
      *
-     * Next thing to try: give each file its own Postgres schema, so a stray reset cannot reach
-     * another file's rows at all.
+     * If it ever appears in CI, the next thing to try is a database per test file.
      */
     fileParallelism: false,
     /**
