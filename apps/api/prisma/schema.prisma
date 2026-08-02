@@ -117,6 +117,16 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+/// Who may see the parts of a profile beyond the name-and-avatar card.
+///
+/// The card is always visible to a signed-in account — without it nobody could find anyone to
+/// connect with, and a "private" profile that cannot be discovered is a profile that cannot be
+/// used. Everything else — bio, achievements, date of birth — follows this setting.
+enum ProfileVisibility {
+  PUBLIC
+  CONNECTIONS
+}
+
 enum ConnectionStatus {
   PENDING
   ACCEPTED
@@ -231,18 +241,19 @@ model RefreshToken {
 }
 
 model UserProfile {
-  accountId     String    @id @map("account_id") @db.Uuid
-  fullName      String    @map("full_name")
-  handle        String    @unique
+  accountId     String            @id @map("account_id") @db.Uuid
+  fullName      String            @map("full_name")
+  handle        String            @unique
   mobile        String?
   gender        String?
-  dob           DateTime? @db.Date
+  dob           DateTime?         @db.Date
   bio           String?
-  displayPicKey String?   @map("display_pic_key")
+  displayPicKey String?           @map("display_pic_key")
   achievements  String?
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  role          UserRole          @default(USER)
+  visibility    ProfileVisibility @default(PUBLIC)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 

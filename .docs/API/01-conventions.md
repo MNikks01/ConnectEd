@@ -45,6 +45,28 @@ GET /api/v1/classes/:id/homework?limit=20&cursor=<opaque>
 
 Offset pagination only for small, bounded admin lists.
 
+## `/me/*` — asking about yourself
+
+Every scoped endpoint is addressed from the **resource** inward: `/classes/:id/academics`,
+`/schools/:id/members`, `/subjects/:id/syllabus`. That is right for authorization — the policy needs the
+resource to reason about — and it leaves a hole: a screen that starts from the _person_ has nothing to ask.
+
+Three endpoints were added one at a time to fill it, each discovered only when a screen could not be built:
+
+| Endpoint            | Added | Because                                                             |
+| ------------------- | ----- | ------------------------------------------------------------------- |
+| `/me/memberships`   | S2-7  | A verified student could not find their own class.                  |
+| `/me/subjects`      | S2-11 | A teacher's membership is school-wide, so it names no class.        |
+| `/me/class-teacher` | S3-8  | Class-teacher allocation is stored on the class, not on the person. |
+
+**The convention, from here on.** When a capability is granted through a row the caller does not own — a
+membership, an allocation, a connection — there must be a `/me/*` endpoint that lists it. Adding the write
+without the corresponding read ships a permission nobody can discover they have.
+
+Such an endpoint is **scoped by the query, not by an id in the path**: `where: { accountId: actor.accountId }`,
+never `/accounts/:id/...` with a check afterwards. Scoping the query is the version that cannot be forgotten,
+and it is why none of these three needs an authorization policy at all.
+
 ## Dates and timestamps
 
 Two different things, deliberately spelled differently on the wire.

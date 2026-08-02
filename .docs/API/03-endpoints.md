@@ -7,19 +7,21 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Auth & accounts
 
-| Method | Path                    | Auth | Purpose                                      |
-| ------ | ----------------------- | :--: | -------------------------------------------- |
-| POST   | `/auth/register`        |  🔓  | Register individual.                         |
-| POST   | `/auth/register/school` |  🔓  | Register school (web only).                  |
-| POST   | `/auth/login`           |  🔓  | Login → access + refresh.                    |
-| POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                               |
-| POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                       |
-| POST   | `/auth/password/forgot` |  🔓  | Start reset.                                 |
-| POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                      |
-| POST   | `/auth/email/verify`    |  🔑  | Confirm email.                               |
-| GET    | `/me`                   |  🔑  | Current account + roles + verified contexts. |
-| PATCH  | `/me/profile`           |  🔑  | Update own profile.                          |
-| POST   | `/me/role`              |  🔑  | Declare/switch academic role.                |
+| Method | Path                    | Auth | Purpose                                                          |
+| ------ | ----------------------- | :--: | ---------------------------------------------------------------- |
+| POST   | `/auth/register`        |  🔓  | Register individual.                                             |
+| POST   | `/auth/register/school` |  🔓  | Register school (web only).                                      |
+| POST   | `/auth/login`           |  🔓  | Login → access + refresh.                                        |
+| POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                                                   |
+| POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                                           |
+| POST   | `/auth/password/forgot` |  🔓  | Start reset.                                                     |
+| POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                                          |
+| POST   | `/auth/email/verify`    |  🔑  | Confirm email.                                                   |
+| GET    | `/me`                   |  🔑  | Current account + roles + verified contexts.                     |
+| GET    | `/me/profile`           |  🔑  | My own profile, unrestricted, with my visibility setting.        |
+| PATCH  | `/me/profile`           |  🔑  | Update own profile (individuals; schools use the portal).        |
+| GET    | `/accounts/:id/profile` |  🔑  | Someone's profile — the card always, the rest per their setting. |
+| POST   | `/me/role`              |  🔑  | Declare/switch academic role.                                    |
 
 ## Institution & classes
 
