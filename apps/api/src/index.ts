@@ -42,6 +42,15 @@ const storage = createStorage(config, logger);
 await storage.ensureBucket();
 readiness.register({ name: 'object-storage', probe: () => storage.ping() });
 
+/**
+ * The plan catalogue is code (`modules/billing/plan-catalogue.ts`); the table is its projection.
+ * Applying it at boot — idempotently, like the bucket above — means "the plans exist" holds in
+ * every environment without anyone remembering to run a script, and school registration cannot
+ * fail for want of a row.
+ */
+const { createBillingModule } = await import('./modules/billing/index.js');
+await createBillingModule(db, logger).service.ensureCatalogue();
+
 const app = createApp({ config, logger, readiness, db, events: events.publisher, storage });
 
 /**

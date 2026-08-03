@@ -49,8 +49,8 @@ a checkout against the wrong provider is a week thrown away.
 | S5-4 | Checkout and activation (FR-BILL-002)                          | backend       | M    | Provider session; `trialing → active` only on a verified provider signal, never on a redirect  |
 | S5-5 | Webhook reconciliation (FR-BILL-004)                           | backend       | M    | Signature-verified; **idempotent by provider event id**; out-of-order events cannot regress    |
 | S5-6 | Dunning (FR-BILL-005)                                          | backend       | M    | `past_due` grace period; notification fan-out; downgrade on cancel; grace period is a constant |
-| S5-7 | Billing in the web app — principal only                        | frontend      | M    | Plan, usage against each limit, upgrade, and what happens at the end of a trial                |
-| S5-8 | The last permission-matrix row (`Manage subscription/billing`) | backend       | S    | Principal `✅`, six `➖`; **inventory reaches zero**                                           |
+| S5-7 | Billing in the web app — the school account only               | frontend      | M    | Plan, usage against each limit, upgrade, and what happens at the end of a trial                |
+| S5-8 | The last permission-matrix row (`Manage subscription/billing`) | backend       | S    | School `✅`, six `➖` — **including the principal**; inventory reaches zero                    |
 
 ## Stretch (only if committed done)
 
@@ -81,6 +81,9 @@ roadmap — a stretch list that only grows is a backlog pretending to be a plan.
 - **Nothing in this product currently charges anyone, and that is a feature of the tests.** The provider port
   must have a fake with no network access, or CI acquires a dependency on a third party's sandbox — which will
   be down on the morning of a release.
+- **Billing belongs to the school account, not the principal.** The matrix gives `Manage
+subscription/billing` a single `✅`, in the School column. A principal runs the school day and does
+  not hold the contract — and school accounts are web-only, so the whole surface is desktop.
 - **Individuals are free, and must stay free.** The PRD is explicit. Every entitlement check must be scoped to
   a school; an accidental global gate would break the social layer for everyone with no school at all.
 - **Secrets.** Provider API keys and webhook signing secrets join the config schema. `infrastructure/` holds no
