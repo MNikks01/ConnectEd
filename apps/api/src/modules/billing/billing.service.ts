@@ -15,6 +15,7 @@ import {
 } from './plan-catalogue.js';
 
 import { assertIsSchool } from '../../shared/authz/index.js';
+import { PlanLimitExceededError } from '../../shared/errors/index.js';
 
 import type { Actor } from '../../shared/authz/index.js';
 import type { BillingRepository, SubscriptionRow } from './billing.repository.js';
@@ -54,7 +55,18 @@ export interface BillingService {
   entitlementsFor: (schoolId: string) => Promise<Entitlements>;
   /** The school's own view of its subscription. Authorized: only the school itself. */
   subscriptionFor: (actor: Actor, schoolId: string) => Promise<SubscriptionResponse>;
+  /**
+   * FR-BILL-003. Throws `PlanLimitExceededError` when the school has no room left under `limit`.
+   *
+   * Throws rather than returning a boolean, for the same reason the authz policies do: a boolean
+   * invites `if (canAdd(...)) {}` with a forgotten `else`, and a forgotten `else` here is a limit
+   * that silently does not apply.
+   */
+  assertWithinLimit: (schoolId: string, limit: LimitName) => Promise<void>;
 }
+
+/** The limits the API enforces. Named so a typo is a compile error rather than a missing check. */
+export type LimitName = 'classes' | 'members';
 
 export interface BillingServiceDeps {
   repository: BillingRepository;
@@ -170,6 +182,41 @@ export function createBillingService({ repository, logger }: BillingServiceDeps)
     }),
 
     entitlementsFor: resolve,
+
+    /**
+     * Checked **at the write that would exceed the limit**, never retroactively.
+     *
+     * That is the whole design. A school on a plan capped at ten classes that already has fifty —
+     * because it downgraded, or because the cap was lowered — keeps all fifty. Enforcing on read,
+     * or reconciling downwards on a status change, would mean a school losing access to its own
+     * timetable the morning a card expired, which is a far worse product than one that occasionally
+     * has a customer above their tier.
+     *
+     * **Concurrency:** two simultaneous creates at limit-1 can both pass, leaving a school one
+     * over. That is deliberate rather than overlooked — a plan limit is a commercial guardrail, not
+     * a security boundary, and serialising every school-scoped write behind a lock on the
+     * subscription row would cost far more than one extra class is worth. If it ever needs to be
+     * exact, the fix is to take that lock in the same transaction as the insert.
+     */
+    assertWithinLimit: async (schoolId, limit) => {
+      const [entitlements, usage] = await Promise.all([
+        resolve(schoolId),
+        repository.countSchoolUsage(schoolId),
+      ]);
+
+      const allowed = entitlements.limits[limit];
+      // `null` is unlimited, and is checked explicitly: `!allowed` would also be true of 0.
+      if (allowed === null) return;
+
+      if (usage[limit] >= allowed) {
+        throw new PlanLimitExceededError({
+          limit,
+          allowed,
+          used: usage[limit],
+          planName: entitlements.planName,
+        });
+      }
+    },
 
     subscriptionFor: async (actor, schoolId) => {
       // A school's commercial position is its own business, and nobody else's: not its principal,

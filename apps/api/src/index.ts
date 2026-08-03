@@ -49,7 +49,8 @@ readiness.register({ name: 'object-storage', probe: () => storage.ping() });
  * fail for want of a row.
  */
 const { createBillingModule } = await import('./modules/billing/index.js');
-await createBillingModule(db, logger).service.ensureCatalogue();
+const billing = createBillingModule(db, logger);
+await billing.service.ensureCatalogue();
 
 const app = createApp({ config, logger, readiness, db, events: events.publisher, storage });
 
@@ -58,7 +59,12 @@ const app = createApp({ config, logger, readiness, db, events: events.publisher,
  * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
  */
 const { createVerificationModule } = await import('./modules/verification/index.js');
-const verificationForWorker = createVerificationModule(db, logger, events.publisher);
+const verificationForWorker = createVerificationModule(
+  db,
+  logger,
+  events.publisher,
+  billing.service,
+);
 const notifications = createNotificationsModule(db, logger, verificationForWorker.service);
 const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)

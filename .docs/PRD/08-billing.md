@@ -43,6 +43,32 @@ until it subscribes again. Cancelling is not deleting.
 
 **Trial length is 30 days**, applied at registration in the same statement that creates the school.
 
+## Where entitlements are enforced (FR-BILL-003)
+
+| Limit     | The write that consumes it       | Counted as                      |
+| --------- | -------------------------------- | ------------------------------- |
+| `classes` | `POST /schools/:id/classes`      | Classes belonging to the school |
+| `members` | Approving a verification request | **Verified** memberships only   |
+
+`advancedAnalytics` gates nothing yet — the dashboards it would gate are still unbuilt (S5-10).
+
+Three rules hold everywhere a limit is enforced:
+
+- **At the write that would exceed it, never retroactively.** A school that downgrades keeps every
+  class and member it already has. Reads are never gated, so a plan limit can never become a
+  student unable to see their own homework.
+- **Authorization first, entitlement second.** A school acting on another school's data gets the
+  404 it would have got anyway, rather than a 402 that confirms the other school exists.
+- **Only approval consumes a seat.** People waiting in the verification queue do not count, or
+  anyone could exhaust a school's plan from outside by applying; and a revoked membership gives its
+  seat back, or a school would pay for people who have left.
+
+A school that has run out of seats can still **reject** — a commercial limit must not turn into a
+stuck workflow.
+
+**Concurrency:** two simultaneous writes at the cap can both pass, leaving a school one over. That
+is accepted deliberately; a plan limit is a commercial guardrail, not a security boundary.
+
 ## Provider decision
 
 Deferred to an ADR at implementation time (`ADR-00xx`). Candidates: **Stripe** (global), **Razorpay** (India-first,

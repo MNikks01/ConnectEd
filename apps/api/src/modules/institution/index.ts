@@ -10,9 +10,17 @@ import { createInstitutionService } from './institution.service.js';
 
 import type { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
-import type { InstitutionService, MembershipDirectory } from './institution.service.js';
+import type {
+  EntitlementGuard,
+  InstitutionService,
+  MembershipDirectory,
+} from './institution.service.js';
 
-export type { InstitutionService, MembershipDirectory } from './institution.service.js';
+export type {
+  EntitlementGuard,
+  InstitutionService,
+  MembershipDirectory,
+} from './institution.service.js';
 
 export interface InstitutionModule {
   routes: Router;
@@ -22,10 +30,12 @@ export interface InstitutionModule {
 export function createInstitutionModule(
   db: Db,
   membership: MembershipDirectory,
+  entitlements: EntitlementGuard,
 ): InstitutionModule {
   const service = createInstitutionService({
     repository: createInstitutionRepository(db),
     membership,
+    entitlements,
   });
 
   return { service, routes: institutionRoutes(service) };

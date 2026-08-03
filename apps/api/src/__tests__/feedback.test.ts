@@ -10,6 +10,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app.js';
+import { createBillingModule } from '../modules/billing/index.js';
 import { createNotificationsModule } from '../modules/notifications/index.js';
 import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
@@ -35,6 +36,9 @@ const logger = createLogger({ ...config, LOG_LEVEL: 'silent' });
 interface FeedbackList {
   data: FeedbackResponse[];
 }
+
+/** The real guard rather than a fake, so these constructions cannot drift from the app's. */
+const billingService = () => createBillingModule(testDb(), logger).service;
 
 beforeAll(async () => {
   db = testDb();
@@ -340,7 +344,12 @@ describe('notification on review (FR-WF-012)', () => {
   });
 
   it('notifies the author, and nobody else', async () => {
-    const verification = createVerificationModule(db, logger, recordingPublisher());
+    const verification = createVerificationModule(
+      db,
+      logger,
+      recordingPublisher(),
+      billingService(),
+    );
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({
