@@ -19,6 +19,7 @@ const LINKS = [
   { href: '/school/complaints', label: 'Complaints' },
   { href: '/school/members', label: 'Members' },
   { href: '/school/verifications', label: 'Verifications' },
+  { href: '/school/billing', label: 'Billing' },
 ];
 
 export function SchoolNav({ schoolName }: { schoolName: string }) {
