@@ -1,6 +1,6 @@
 # Sprint 4 — Social
 
-`Status: Planned` · `Last updated: 2026-08-02` · Duration: 2 weeks
+`Status: Done` · `Last updated: 2026-08-02` · Duration: 2 weeks
 
 Goal: the layer that is open to everyone. Maps to roadmap **Phase 4**. This is a **proposal for planning** —
 adjust the split before committing.
@@ -85,8 +85,62 @@ Billing — Phase 5. Push notifications and the mobile app — mobile phase.
 
 ## Review notes
 
-_Filled at sprint review._
+**The committed backlog shipped in full.** The three stretch items did not, and are carried.
+
+| Item                                     | PR  |
+| ---------------------------------------- | --- |
+| S4-0a `/me/*` convention · S4-1 profiles | #38 |
+| S4-2 posts, and the blocking filter      | #39 |
+| S4-3 likes and comments                  | #40 |
+| S4-4, S4-5 follows and connections       | #41 |
+| S4-6 the feed                            | #43 |
+| S4-7 direct messages                     | #44 |
+| S4-8 report and block                    | #45 |
+| S4-9 social in the web app               | #46 |
+
+Tests grew from 603 to **738 API + 57 UI + 61 E2E**. The permission-matrix inventory is down to **one row**,
+`Manage subscription/billing`, which is Phase 5.
+
+**The sprint's premise held.** Social is the first module with no verification gate, and the plan predicted the
+risk would be a reviewer reading the absence of membership checks as unfinished. Every module docstring and the
+profile test file say so explicitly, and the two social matrix rows assert `✅` for all seven roles precisely
+because "everyone can" regresses as quietly as anything else.
+
+**Blocking was built before the feature that needed it, and that was the right call.** S4-2 added the filter
+with the posts it applied to, four PRs before the endpoints that create a block. By the time S4-8 landed, the
+filter had already been threaded through the timeline, the feed, comments, threads and the unread badge — and
+two of those needed their own fix:
+
+- The comment list needed its own filter, because a comment under a post you can see is a different query.
+- **`unreadTotal` counted messages from blocked accounts**, so the badge pointed at a conversation neither party
+  could open. Found by a test written for exactly that.
+
+Retrofitting that filter across five queries after the fact would have been the sprint's worst afternoon.
+
+**Two tests were wrong before they were right.**
+
+- The feed's cost test passed **vacuously**: the shared client has no query logging, so the listener never
+  fired and `0 === 0` passed. It now builds its own client and asserts the count is non-zero before comparing.
+- A sabotage check on messaging was run without asserting the edit applied; the string had not matched, so the
+  first "it still passes" result meant nothing. Both now guard themselves.
+
+**A shipped bug, found by writing a test for something else.** The API reads `?cursor=`; the web app sent
+`?after=` on the class feed, notices and notifications. **Every "older" link had silently returned page one
+since the day it shipped.** Three one-word fixes.
+
+**The `/me/*` convention paid for itself immediately** — social added four more such endpoints (`/me/blocks`,
+`/me/reports`, `/me/connections`, `/me/profile`), and none of them needed the question asking again.
+
+**A promise the product does not yet keep.** Reporting records rows and **nothing reads them**. Who reviews a
+report is unresolved: a school moderates its own community, but social spans schools and there is no
+platform-admin role. It is written into `PRD/06-social.md` as the one place a user-facing promise is unkept, and
+it needs a product decision before social reaches real children.
+
+**Carried into Sprint 5:** the four unbuilt dashboards and their metrics, websocket message delivery, the
+local-only test flake, and the report-review question above.
+
+**Still open for the team, fifth sprint running:** branch protection.
 
 ## Retro
 
-_Filled at retro._
+_To be completed by the team at the retro — went well / didn't / actions with owners and due dates._
