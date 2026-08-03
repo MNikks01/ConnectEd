@@ -45,11 +45,23 @@ export interface CreateIndividualInput {
   dob?: string | undefined;
 }
 
+/**
+ * The terms of the trial a new school starts on. Owned by the billing module and passed in as
+ * plain data — this repository writes the row, but it does not decide what a trial is.
+ */
+export interface TrialInput {
+  planCode: string;
+  periodStart: Date;
+  periodEnd: Date;
+}
+
 export interface CreateSchoolInput {
   email: string;
   passwordHash: string;
   algo: string;
   name: string;
+  /** FR-BILL-001, P0. Not optional: a school without a subscription cannot be reasoned about. */
+  trial: TrialInput;
   adminName?: string | undefined;
   phone?: string | undefined;
   city?: string | undefined;
@@ -132,6 +144,15 @@ export function createAuthRepository(db: Db): AuthRepository {
         select: { id: true },
       }),
 
+    /**
+     * Account, credential, profile **and trial subscription** — one nested create, so they are one
+     * statement and one transaction. There is no window in which a school exists without a
+     * subscription, which is what makes `FR-BILL-001` an invariant rather than a follow-up write
+     * that can fail on its own.
+     *
+     * The plan is `connect`ed by code rather than looked up first: if the catalogue is missing,
+     * registration fails loudly here instead of quietly producing a school nothing can price.
+     */
     createSchool: (input: CreateSchoolInput) =>
       db.account.create({
         data: {
@@ -141,6 +162,14 @@ export function createAuthRepository(db: Db): AuthRepository {
           schoolProfile: {
             create: {
               name: input.name,
+              subscription: {
+                create: {
+                  status: 'TRIALING',
+                  periodStart: input.trial.periodStart,
+                  periodEnd: input.trial.periodEnd,
+                  plan: { connect: { code: input.trial.planCode } },
+                },
+              },
               ...(input.adminName ? { adminName: input.adminName } : {}),
               ...(input.phone ? { phone: input.phone } : {}),
               ...(input.city ? { city: input.city } : {}),

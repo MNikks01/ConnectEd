@@ -11,6 +11,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../../generated/prisma/client.js';
+import { createBillingRepository } from '../../modules/billing/billing.repository.js';
+import { TRIAL_PLAN_CODE } from '../../modules/billing/plan-catalogue.js';
 import { membershipScopeKey } from '../../shared/db/membership-scope.js';
 
 import type { Db } from '../../shared/db/index.js';
@@ -71,6 +73,12 @@ export async function resetDb(): Promise<void> {
   } catch (error) {
     throw new Error(`resetDb could not truncate: ${await describeBlockers(error)}`);
   }
+
+  // The plan catalogue is reference data, not fixture: registering a school connects a plan by
+  // code, so a truncated `plan` table would fail every registration test with an error about a
+  // missing record rather than about billing. Reapplying it from the same definition the app uses
+  // keeps the two from drifting.
+  await createBillingRepository(db).ensureCatalogue();
 }
 
 /** Names whatever is holding the locks, so the failure explains itself. */
@@ -164,6 +172,19 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
     select: { id: true },
   });
   const schoolId = schoolAccount.id;
+
+  // Every school registered through the API gets a trial in the same statement (FR-BILL-001), so
+  // a fixture school without one would be a shape production never produces. Tests that want the
+  // no-subscription path delete this row explicitly.
+  await db.subscription.create({
+    data: {
+      school: { connect: { accountId: schoolId } },
+      status: 'TRIALING',
+      periodStart: new Date(),
+      periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      plan: { connect: { code: TRIAL_PLAN_CODE } },
+    },
+  });
 
   const classA = await db.class.create({
     data: { schoolId, medium: 'ENGLISH', level: 'CLASS_8', section: 'A' },

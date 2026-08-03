@@ -143,6 +143,7 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                                     |
 | POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).                        |
 | GET    | `/plans`                    |  🔑  | Available plans.                                 |
+| GET    | `/schools/:id/subscription` |  🛡   | The school's own plan, limits, and usage.        |
 | POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
 | POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
 

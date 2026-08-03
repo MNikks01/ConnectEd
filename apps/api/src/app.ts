@@ -14,6 +14,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
+import { createBillingModule } from './modules/billing/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
@@ -135,7 +136,13 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
   if (db) {
     const passwords = createPasswordHasher(config);
 
-    api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
+    // Billing is constructed before auth: registering a school must create its trial in the same
+    // statement (FR-BILL-001), so auth needs billing's terms to hand.
+    const billing = createBillingModule(db, logger);
+
+    api.use(
+      createAuthModule({ db, config, logger, passwords, tokens, billing: billing.service }).routes,
+    );
 
     // Everything past auth requires a valid token; each module still authorizes per resource.
     // Verification owns membership, and institution needs to ask it whether an account is a
@@ -170,9 +177,9 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       academics.routes,
       workflows.routes,
       social.routes,
+      billing.routes,
       ...(media ? [media.routes] : []),
     );
-    // Module routers mount here as they land: social, billing, …
   }
 
   app.use(API_PREFIX, api);

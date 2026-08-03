@@ -56,11 +56,22 @@ export interface AuthService {
   currentAccount: (accountId: string) => Promise<CurrentAccount>;
 }
 
+/**
+ * The slice of billing that auth needs: what trial a new school starts on (FR-BILL-001).
+ *
+ * A narrow port rather than the whole service, and plain data rather than a Prisma write, so the
+ * two modules stay independent while the subscription still lands in the school's own transaction.
+ */
+export interface TrialTermsSource {
+  trialTerms: () => { planCode: string; periodStart: Date; periodEnd: Date };
+}
+
 export interface AuthServiceDeps {
   repository: AuthRepository;
   passwords: PasswordHasher;
   tokens: TokenService;
   logger: Logger;
+  billing: TrialTermsSource;
 }
 
 export function createAuthService({
@@ -68,6 +79,7 @@ export function createAuthService({
   passwords,
   tokens,
   logger,
+  billing,
 }: AuthServiceDeps): AuthService {
   /**
    * A real argon2id hash of a random value, computed once. Logins for addresses that do not exist
@@ -144,10 +156,16 @@ export function createAuthService({
           city: input.city,
           state: input.state,
           country: input.country,
+          // Every school starts on a trial, and starts on it in the same statement that creates
+          // it — nobody has to remember to grant one, and none can be missed.
+          trial: billing.trialTerms(),
         }),
       );
 
-      logger.info({ accountId: account.id, accountType: 'SCHOOL' }, 'Account registered');
+      logger.info(
+        { accountId: account.id, accountType: 'SCHOOL' },
+        'Account registered with trial subscription',
+      );
 
       return issueSession({ id: account.id, type: 'SCHOOL', role: null });
     },

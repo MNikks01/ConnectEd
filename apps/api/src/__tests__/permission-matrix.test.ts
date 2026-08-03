@@ -597,6 +597,26 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Manage subscription/billing',
+    outcomes: {
+      // The one row where the principal is refused something their own school can do. They run the
+      // school day; they do not hold the contract. Six columns are ➖ and only `school` is ✅.
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/subscription`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -654,15 +674,21 @@ describe('permission matrix', () => {
 });
 
 /**
- * Matrix rows with no endpoint yet. Listed rather than omitted so the distance between the product
- * contract and the implementation is visible in the suite that claims to enforce it.
+ * Matrix rows with no endpoint yet.
+ *
+ * **This list is now empty**, which is the point it has been counting towards since S1-7: every
+ * capability in `PRD/09-permissions-matrix.md` is asserted against the live API, for every role.
+ * A new row in the product contract belongs here the moment it is written and moves into
+ * `CAPABILITIES` when its endpoint lands.
  */
-const UNIMPLEMENTED = ['Manage subscription/billing'] as const;
+const UNIMPLEMENTED: readonly string[] = [];
 
 describe('matrix rows not yet implemented', () => {
+  it('has none left — every row in the product contract is asserted above', () => {
+    expect(UNIMPLEMENTED).toEqual([]);
+  });
+
   it.each(UNIMPLEMENTED)('%s — no endpoint yet; add a capability here when it lands', (row) => {
-    // Deliberately trivial. The value is the inventory, not the assertion: this list shrinking to
-    // empty is the signal that the enforcement contract fully covers the product contract.
     expect(row).toBeTruthy();
   });
 });

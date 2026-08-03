@@ -27,6 +27,7 @@ import {
   UserRole,
   VerificationStatus,
 } from '../src/generated/prisma/client.js';
+import { PLAN_CATALOGUE } from '../src/modules/billing/plan-catalogue.js';
 import { membershipScopeKey } from '../src/shared/db/membership-scope.js';
 
 const DEMO_PASSWORD = 'DemoPassw0rd!';
@@ -459,16 +460,24 @@ async function main(): Promise<void> {
   }
 
   // ---- Billing ------------------------------------------------------------
-  const plan = await prisma.plan.upsert({
-    where: { code: 'demo-standard' },
-    update: { name: 'Standard (demo)' },
-    create: {
-      code: 'demo-standard',
-      name: 'Standard (demo)',
-      limits: { classes: 50, members: 2000 },
-      features: { academics: true, social: true, billing: true },
-    },
-  });
+  // The catalogue is not demo data — it is the same one the API applies at boot, so local
+  // entitlement behaviour matches deployed behaviour. Only the *subscription* below is demo.
+  for (const definition of PLAN_CATALOGUE) {
+    await prisma.plan.upsert({
+      where: { code: definition.code },
+      update: { name: definition.name, limits: definition.limits, features: definition.features },
+      create: {
+        code: definition.code,
+        name: definition.name,
+        limits: definition.limits,
+        features: definition.features,
+      },
+    });
+  }
+
+  // The demo school is on a paid plan rather than a trial, so local development exercises the
+  // ordinary case rather than the countdown.
+  const plan = await prisma.plan.findUniqueOrThrow({ where: { code: 'standard' } });
 
   await prisma.subscription.upsert({
     where: { schoolId: school.accountId },
