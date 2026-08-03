@@ -30,6 +30,14 @@ import type {
   UpdateSchoolProfileInput,
 } from '@connected/types';
 
+/**
+ * The slice of billing this module needs. A narrow port rather than the whole service, so
+ * institution depends on "may this school add one more?" and not on how plans work.
+ */
+export interface EntitlementGuard {
+  assertWithinLimit: (schoolId: string, limit: 'classes' | 'members') => Promise<void>;
+}
+
 export interface InstitutionService {
   getSchoolProfile: (actor: Actor, schoolId: string) => Promise<SchoolProfileResponse>;
   updateSchoolProfile: (
@@ -79,11 +87,13 @@ export interface MembershipDirectory {
 export interface InstitutionServiceDeps {
   repository: InstitutionRepository;
   membership: MembershipDirectory;
+  entitlements: EntitlementGuard;
 }
 
 export function createInstitutionService({
   repository,
   membership,
+  entitlements,
 }: InstitutionServiceDeps): InstitutionService {
   /**
    * Loads a class and proves the caller may administer it. Every write below goes through here,
@@ -126,6 +136,10 @@ export function createInstitutionService({
 
     createClass: async (actor, schoolId, input) => {
       assertIsSchool(actor, schoolId);
+      // Authorization first, entitlement second, and in that order deliberately: a school asking
+      // about someone else's structure must get the 404 it would have got anyway, rather than a
+      // 402 that confirms the other school exists and tells them about its plan.
+      await entitlements.assertWithinLimit(schoolId, 'classes');
 
       try {
         return toClassResponse(await repository.createClass({ schoolId, ...input }));

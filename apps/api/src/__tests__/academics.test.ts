@@ -9,6 +9,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app.js';
+import { createBillingModule } from '../modules/billing/index.js';
 import { createNotificationsModule } from '../modules/notifications/index.js';
 import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
@@ -36,6 +37,9 @@ interface ItemPage {
   data: AcademicItemResponse[];
   nextCursor: string | null;
 }
+
+/** The real guard rather than a fake, so these constructions cannot drift from the app's. */
+const billingService = () => createBillingModule(testDb(), logger).service;
 
 beforeAll(async () => {
   db = testDb();
@@ -405,7 +409,12 @@ describe('notifications on publish (FR-ACAD-004)', () => {
   });
 
   it('fans out to every verified member of the class except the author', async () => {
-    const verification = createVerificationModule(db, logger, recordingPublisher());
+    const verification = createVerificationModule(
+      db,
+      logger,
+      recordingPublisher(),
+      billingService(),
+    );
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({
@@ -431,7 +440,12 @@ describe('notifications on publish (FR-ACAD-004)', () => {
   });
 
   it('is idempotent across a redelivered event', async () => {
-    const verification = createVerificationModule(db, logger, recordingPublisher());
+    const verification = createVerificationModule(
+      db,
+      logger,
+      recordingPublisher(),
+      billingService(),
+    );
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     const event = {

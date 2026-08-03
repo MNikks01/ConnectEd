@@ -147,8 +147,13 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     // Everything past auth requires a valid token; each module still authorizes per resource.
     // Verification owns membership, and institution needs to ask it whether an account is a
     // verified teacher — so it is constructed first and its service passed in as a narrow port.
-    const verification = createVerificationModule(db, logger, events ?? noopPublisher);
-    const institution = createInstitutionModule(db, verification.service);
+    const verification = createVerificationModule(
+      db,
+      logger,
+      events ?? noopPublisher,
+      billing.service,
+    );
+    const institution = createInstitutionModule(db, verification.service, billing.service);
     // Notifications resolves class recipients through verification, which owns membership.
     const notifications = createNotificationsModule(db, logger, verification.service);
     // Media only exists when storage was supplied; without it the routes are simply absent

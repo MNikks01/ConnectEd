@@ -73,17 +73,24 @@ export interface VerificationService {
   listMyTeachingSubjects: (actor: Actor) => Promise<MyTeachingSubjectResponse[]>;
 }
 
+/** The slice of billing this module needs: may this school take on one more member? */
+export interface EntitlementGuard {
+  assertWithinLimit: (schoolId: string, limit: 'classes' | 'members') => Promise<void>;
+}
+
 export interface VerificationServiceDeps {
   repository: VerificationRepository;
   logger: Logger;
   /** Side effects travel as domain events, so this module never calls notifications directly. */
   events: EventPublisher;
+  entitlements: EntitlementGuard;
 }
 
 export function createVerificationService({
   repository,
   logger,
   events,
+  entitlements,
 }: VerificationServiceDeps): VerificationService {
   return {
     submit: async (actor, input) => {
@@ -189,6 +196,11 @@ export function createVerificationService({
       }
 
       if (input.decision === 'APPROVE') {
+        // Approving is the write that turns a request into a verified member, so it is where the
+        // members limit bites. Rejecting is never refused for want of room: a school that has run
+        // out of seats must still be able to clear its queue.
+        await entitlements.assertWithinLimit(request.schoolId, 'members');
+
         await repository.approve({
           requestId,
           actorAccountId: actor.accountId,
