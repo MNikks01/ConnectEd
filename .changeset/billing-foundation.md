@@ -1,9 +1,9 @@
 ---
-'@connected/api': minor
 '@connected/types': minor
 ---
 
-Billing foundations: a plan catalogue, entitlement resolution, and a trial that starts with the
-school (S5-1, S5-2). Every school registered from now on has a subscription created in the same
-statement as the school itself, so `FR-BILL-001` is an invariant rather than a follow-up write.
-Closes the last row of the permission matrix.
+Billing DTOs: `SubscriptionResponse`, plan limits and features, and usage measured against them.
+
+The API side (S5-1, S5-2) is a plan catalogue, entitlement resolution, and a trial created in the
+same statement as the school — `@connected/api` is private and ignored by changesets, so only the
+shared types carry a version bump.
