@@ -129,6 +129,14 @@ const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
 
+  /**
+   * Where the **standalone worker** serves `/metrics`.
+   *
+   * It has no HTTP server of its own — but a worker nobody can scrape is a worker whose queue lag
+   * and fan-out failures are invisible in exactly the deployment that split it out for load.
+   */
+  WORKER_METRICS_PORT: z.coerce.number().int().positive().default(4001),
+
   OTEL_SERVICE_NAME: z.string().default('connected-api'),
   /** Traces are exported only when a collector endpoint is configured. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),

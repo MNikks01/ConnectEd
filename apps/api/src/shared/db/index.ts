@@ -8,6 +8,7 @@
  * repository interfaces, never on this client directly.
  */
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
 import { PrismaClient } from '../../generated/prisma/client.js';
 
@@ -19,10 +20,24 @@ export interface CreateDbOptions {
   connectionString: string;
   /** Query logging is useful locally and far too noisy (and PII-adjacent) in production. */
   logQueries?: boolean;
+  /**
+   * Receives the underlying connection pool, for metrics.
+   *
+   * A callback rather than a returned handle: every existing caller wants a `Db` and nothing else,
+   * and only the composition root cares that a pool exists at all. Pool occupancy is one of the
+   * few numbers that explains a latency spike nothing else can — requests queueing for a
+   * connection look identical to a slow database until you can see the waiting count.
+   */
+  onPool?: (pool: pg.Pool) => void;
 }
 
-export function createDb({ connectionString, logQueries = false }: CreateDbOptions): Db {
-  const adapter = new PrismaPg({ connectionString });
+export function createDb({ connectionString, logQueries = false, onPool }: CreateDbOptions): Db {
+  // Constructed here rather than left to the adapter so it can be observed. Prisma 7's adapter
+  // accepts either a connection string or a pool; given a pool it uses it as-is.
+  const pool = new pg.Pool({ connectionString });
+  onPool?.(pool);
+
+  const adapter = new PrismaPg(pool);
 
   return new PrismaClient({
     adapter,

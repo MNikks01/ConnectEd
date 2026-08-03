@@ -7,7 +7,8 @@
  * Retries use exponential backoff and leave failures on the queue rather than discarding them
  * (`.docs/PRD/07-notifications.md` FR-NOTIF-005: "retried with backoff; dead-letter after N").
  * BullMQ keeps exhausted jobs in a failed set, which is the dead-letter queue — it is only useful
- * if someone watches it, so `queue_jobs_failed` is exported for alerting.
+ * if someone watches it, so queue depth by state is exported as `queue_jobs{state="failed"}` and
+ * alerted on (S5-10). That claim was in this comment for four sprints before it was true.
  */
 import { Queue, Worker, type ConnectionOptions, type Processor } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -172,13 +173,50 @@ export function createMaintenanceScheduler(
   };
 }
 
+/**
+ * What the worker reports about its own work. Optional, so a test can construct a worker without
+ * dragging a registry in — and so the standalone worker process and the in-process one can each
+ * supply their own.
+ */
+export interface WorkerMetrics {
+  domainEventsProcessed: { inc: (labels: { type: string; result: string }) => void };
+  domainEventLatency: { observe: (labels: { type: string }, value: number) => void };
+  queueJobWait: { observe: (labels: { queue: string }, value: number) => void };
+}
+
 export function createEventWorker(
   connection: Redis,
   logger: Logger,
   handle: (event: DomainEvent) => Promise<void>,
+  metrics?: WorkerMetrics,
 ): WorkerBundle {
   const processor: Processor = async (job) => {
-    await handle(job.data as DomainEvent);
+    const event = job.data as DomainEvent;
+
+    // Enqueued → picked up. BullMQ stamps `timestamp` on add, so this is queue lag measured from
+    // the queue itself rather than inferred from when the handler happened to run.
+    if (metrics && typeof job.timestamp === 'number') {
+      metrics.queueJobWait.observe({ queue: EVENTS_QUEUE }, (Date.now() - job.timestamp) / 1000);
+    }
+
+    try {
+      await handle(event);
+      metrics?.domainEventsProcessed.inc({ type: event.type, result: 'ok' });
+    } catch (error) {
+      // Counted before rethrowing: BullMQ needs the throw to retry, and a failure that is retried
+      // and then succeeds should appear as both, not only as the success.
+      metrics?.domainEventsProcessed.inc({ type: event.type, result: 'failed' });
+      throw error;
+    } finally {
+      // Published → handled, whatever the outcome. Measured in the `finally` because a fan-out
+      // that takes a minute and then fails is exactly the case this SLI exists to catch.
+      if (metrics && event.occurredAt) {
+        const elapsed = (Date.now() - new Date(event.occurredAt).getTime()) / 1000;
+        // A clock skew between API and worker can make this negative; a negative observation
+        // would corrupt the histogram's sum rather than showing up as an outlier.
+        if (elapsed >= 0) metrics.domainEventLatency.observe({ type: event.type }, elapsed);
+      }
+    }
   };
 
   const worker = new Worker(EVENTS_QUEUE, processor, {

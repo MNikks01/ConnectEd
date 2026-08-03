@@ -1,6 +1,6 @@
 # Monitoring — SLOs & Alerting
 
-`Status: Accepted` · `Last updated: 2026-08-02`
+`Status: Accepted` · `Last updated: 2026-08-03`
 
 ## SLIs / SLOs
 
@@ -45,18 +45,31 @@ Every alert links to a **runbook** (`../Runbooks/`) that exists. `scripts/check-
 the build on an alert with no `severity`, no `service`, or a runbook path that does not resolve — `promtool`
 validates the PromQL and has nothing to say about any of that.
 
-**Still not alertable:** queue lag, notification delivery, and the business alerts in the list above. The API
-exports `http_request_duration_seconds` and the process defaults; nothing emits queue depth or delivery
-outcomes yet. Rules against series that do not exist would give a permanently green board that means nothing,
-so they are absent rather than aspirational.
+**Closed as of S5-10.** Queue lag, dead-letter depth, fan-out failure rate, notification latency, and pool
+exhaustion are all alertable now — 12 rules, up from 6. What made them impossible was never the rules; it was
+that the API exported `http_request_duration_seconds` and the process defaults and nothing else.
+
+**Still not alertable:** anything about the browser. Web Vitals and JS errors have no pipeline, so the
+availability and latency SLOs are measured server-side only.
 
 ## Dashboards (in `infrastructure/grafana`)
 
-1. **Service overview** — RED per endpoint, availability, error budget burn.
-2. **Database** — connections, slow queries, replication lag, cache hit.
-3. **Queue/worker** — throughput, lag, failures, DLQ size.
-4. **Business** — onboarding funnel, verification rate, homework read-rate, notification latency.
-5. **Web RUM** — Core Web Vitals, JS errors.
+| #   | Dashboard            | Built | What                                                                        |
+| --- | -------------------- | :---: | --------------------------------------------------------------------------- |
+| 1   | **Service overview** |  ✅   | RED per endpoint, availability, error budget burn.                          |
+| 2   | **Database**         |  ✅   | Pool occupancy, waiting connections, request latency beside them.           |
+| 3   | **Queue/worker**     |  ✅   | Depth by state, throughput by outcome, lag percentiles, dead-letter set.    |
+| 4   | **Business**         |  ✅   | Onboarding funnel, publishing rates, fan-out latency, sign-in failures.     |
+| 5   | **Web RUM**          |  ➖   | Core Web Vitals, JS errors — **not built**; nothing in the browser reports. |
+
+Two panels the original list named are **absent from the Database dashboard**, and deliberately: slow-query
+counts and replication lag come from Postgres itself, which nothing scrapes yet. A panel over an empty series
+renders as a healthy database.
+
+**A test enforces this.** `apps/api/src/__tests__/dashboards.test.ts` reads every panel query off disk, extracts
+its metric names, and asserts the API's own `/metrics` registers each one. A dashboard whose panels query a
+series nobody emits renders as a flat green board, which is worse than no dashboard because it is trusted —
+that was the state of four of these five for four sprints.
 
 ## Health endpoints
 

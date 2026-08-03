@@ -17,14 +17,25 @@ const logger = createLogger(config);
 const { createApp } = await import('./app.js');
 const { createDb, registerDbReadiness } = await import('./shared/db/index.js');
 const { ReadinessRegistry } = await import('./shared/health/readiness.js');
-const { createEventQueue, createEventWorker, createRedisConnection } =
+const { createEventQueue, createEventWorker, createRedisConnection, EVENTS_QUEUE } =
   await import('./shared/queue/index.js');
 const { createNotificationsModule } = await import('./modules/notifications/index.js');
 const { createStorage } = await import('./shared/storage/index.js');
 
+const { createMetrics, registerDbPoolMetrics, registerQueueDepthMetrics } =
+  await import('./shared/observability/metrics.js');
+
+// Built here rather than inside createApp so the pool, the queue, and the worker can all report
+// into the same registry — /metrics is one endpoint, and a signal that lands in a second registry
+// is a signal nobody scrapes.
+const metrics = createMetrics();
+
 const db = createDb({
   connectionString: config.DATABASE_URL,
   logQueries: config.DB_LOG_QUERIES,
+  onPool: (pool) => {
+    registerDbPoolMetrics(metrics.registry, pool);
+  },
 });
 
 // BullMQ needs its own connection: a blocking worker command would otherwise stall every other
@@ -52,7 +63,17 @@ const { createBillingModule } = await import('./modules/billing/index.js');
 const billing = createBillingModule(db, logger);
 await billing.service.ensureCatalogue();
 
-const app = createApp({ config, logger, readiness, db, events: events.publisher, storage });
+registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: events.queue });
+
+const app = createApp({
+  config,
+  logger,
+  metrics,
+  readiness,
+  db,
+  events: events.publisher,
+  storage,
+});
 
 /**
  * The worker consumes what the API publishes. In-process by default; a separate process when
@@ -70,7 +91,12 @@ const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)
   : undefined;
 const worker = workerConnection
-  ? createEventWorker(workerConnection, logger, (event) => notifications.service.handleEvent(event))
+  ? createEventWorker(
+      workerConnection,
+      logger,
+      (event) => notifications.service.handleEvent(event),
+      metrics,
+    )
   : undefined;
 
 if (worker) logger.info('Event worker running in-process');
