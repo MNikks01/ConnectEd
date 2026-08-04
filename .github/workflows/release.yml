@@ -59,14 +59,21 @@ jobs:
             n=$((n + 1))
           done
 
-          # The annotation is the *release* commit, not the merge commit.
+          # The annotation is the *release* commit, and finding it takes more than HEAD^2.
           #
-          # A merge's own message is "Merge pull request #58 from …", which says who pressed the
-          # button and nothing about what shipped. The second parent is the release branch's tip,
-          # which carries the message somebody actually wrote. Falls back to HEAD for a
-          # fast-forward, where there is no second parent and HEAD is already the right commit.
+          # A merge's own message is "Merge pull request #67 from …", which says who pressed the
+          # button and nothing about what shipped — so the first attempt read the second parent,
+          # the release branch's tip. That was right until a release branch carried a fix *after*
+          # its release commit, which release/2026-08-04.3 did: the tag ended up annotated with a
+          # CI change rather than with the release.
+          #
+          # So: the newest `chore(release)` commit on the branch being merged, falling back to the
+          # tip and then to HEAD. Explicit rather than positional, because the position was the
+          # thing that turned out not to hold.
           if git rev-parse -q --verify HEAD^2 >/dev/null; then
-            message=$(git log -1 --pretty=%B HEAD^2)
+            release_commit=$(git log --format='%H %s' HEAD^1..HEAD^2 \
+              | grep -m1 '^[0-9a-f]* chore(release)' | cut -d' ' -f1 || true)
+            message=$(git log -1 --pretty=%B "${release_commit:-HEAD^2}")
           else
             message=$(git log -1 --pretty=%B)
           fi
