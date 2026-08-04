@@ -38,6 +38,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # A release that leaves no mark is one nobody can find later. Until this step existed the
+      # repository had no tags at all: nothing distinguished the commit that went to production
+      # from the forty-odd that were merged the same week.
+      - name: Tag the release
+        if: contains(github.event.head_commit.message, 'release/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # One tag per calendar day, suffixed if a day carries more than one release. Dates
+          # rather than versions because this tags the *product*, and the only versioned package
+          # here is a shared types library whose number says nothing about what shipped.
+          base="release/$(date -u +%Y-%m-%d)"
+          tag="$base"
+          n=2
+          while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do
+            tag="$base.$n"
+            n=$((n + 1))
+          done
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "$(git log -1 --pretty=%B)"
+          git push origin "$tag"
+
+          # The tag is the durable record; the Release is the readable one. `--generate-notes`
+          # lists every PR in the range, which is what someone asking "when did that ship?" wants.
+          gh release create "$tag" --title "$tag" --generate-notes --verify-tag
+
       # Placeholder deploy steps — wire to the real target (K8s/PaaS) when infra lands.
       # - name: Build & push images (api, web, worker)  # infrastructure/docker
       # - name: prisma migrate deploy                    # gated, with backup checkpoint
