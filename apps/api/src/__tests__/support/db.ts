@@ -40,6 +40,11 @@ export function testDb(): Db {
   return client;
 }
 
+/** Whether this file ever opened a connection. Read by the failure forensics, which must not. */
+export function isDbInUse(): boolean {
+  return client !== undefined;
+}
+
 export async function closeTestDb(): Promise<void> {
   await client?.$disconnect();
   client = undefined;

@@ -59,9 +59,21 @@ jobs:
             n=$((n + 1))
           done
 
+          # The annotation is the *release* commit, not the merge commit.
+          #
+          # A merge's own message is "Merge pull request #58 from …", which says who pressed the
+          # button and nothing about what shipped. The second parent is the release branch's tip,
+          # which carries the message somebody actually wrote. Falls back to HEAD for a
+          # fast-forward, where there is no second parent and HEAD is already the right commit.
+          if git rev-parse -q --verify HEAD^2 >/dev/null; then
+            message=$(git log -1 --pretty=%B HEAD^2)
+          else
+            message=$(git log -1 --pretty=%B)
+          fi
+
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" -m "$(git log -1 --pretty=%B)"
+          git tag -a "$tag" -m "$message"
           git push origin "$tag"
 
           # The tag is the durable record; the Release is the readable one. `--generate-notes`
