@@ -1,6 +1,6 @@
 # PRD — Billing & Entitlements
 
-`Status: Draft` · `Last updated: 2026-08-03`
+`Status: Draft` · `Last updated: 2026-08-04`
 
 School-subscription SaaS. Individuals are free (advertising funds the consumer side in a later phase).
 
@@ -50,7 +50,22 @@ until it subscribes again. Cancelling is not deleting.
 | `classes` | `POST /schools/:id/classes`      | Classes belonging to the school |
 | `members` | Approving a verification request | **Verified** memberships only   |
 
-`advancedAnalytics` gates nothing yet — the dashboards it would gate are still unbuilt (S5-10).
+`advancedAnalytics` gates `GET /schools/:id/analytics` (S6-7). It is a **feature flag**, not a count,
+so there is no write to intercept — the check happens on a read.
+
+**That is the single exception to "reads are never gated", and the reasoning is narrow on purpose.**
+The rule exists so a commercial dispute cannot become a student unable to see their own homework: a
+timetable belongs to the school whatever it pays, and withholding it punishes the wrong people.
+Analytics is not that. It is a report _we_ compute; it is not the school's data being withheld, and
+it does not exist until the school buys it.
+
+The test that keeps the exception narrow asserts the negative: a school refused analytics can still
+read its classes, its notices, and everything it wrote. **Anything that gates a read of data the
+school itself created is on the wrong side of this line.**
+
+A school without the feature gets `402 FEATURE_NOT_IN_PLAN` naming the feature and the plan that
+includes it — a sibling of `PLAN_LIMIT_EXCEEDED` and deliberately a different code: "you have used
+all five" and "your plan never included this" lead to the same remedy but are different sentences.
 
 Three rules hold everywhere a limit is enforced:
 

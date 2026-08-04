@@ -135,17 +135,18 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Notifications & billing
 
-| Method | Path                        | Auth | Purpose                                          |
-| ------ | --------------------------- | :--: | ------------------------------------------------ |
-| GET    | `/notifications?after=`     |  🔑  | List (`unreadCount` in the body, beside `data`). |
-| POST   | `/notifications/:id/read`   |  🔑  | Mark read.                                       |
-| POST   | `/notifications/read-all`   |  🔑  | Mark every unread one read.                      |
-| PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                                     |
-| POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).                        |
-| GET    | `/plans`                    |  🔑  | Available plans.                                 |
-| GET    | `/schools/:id/subscription` |  🛡   | The school's own plan, limits, and usage.        |
-| POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
-| POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
+| Method | Path                           | Auth | Purpose                                                         |
+| ------ | ------------------------------ | :--: | --------------------------------------------------------------- |
+| GET    | `/notifications?after=`        |  🔑  | List (`unreadCount` in the body, beside `data`).                |
+| POST   | `/notifications/:id/read`      |  🔑  | Mark read.                                                      |
+| POST   | `/notifications/read-all`      |  🔑  | Mark every unread one read.                                     |
+| PATCH  | `/me/notification-prefs`       |  🔑  | Preferences.                                                    |
+| POST   | `/me/push-tokens`              |  🔑  | Register device (mobile).                                       |
+| GET    | `/plans`                       |  🔑  | Available plans.                                                |
+| GET    | `/schools/:id/subscription`    |  🛡   | The school's own plan, limits, and usage.                       |
+| GET    | `/schools/:id/analytics?days=` |  🛡   | School analytics. Requires `advancedAnalytics`; 402 without it. |
+| POST   | `/schools/:id/subscription`    |  🛡   | Start/change subscription.                                      |
+| POST   | `/webhooks/payments`           | 🔓*  | Provider webhook (signature-verified).                          |
 
 ## Real-user monitoring
 

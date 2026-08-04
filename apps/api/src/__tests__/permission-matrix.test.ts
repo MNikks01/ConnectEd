@@ -598,6 +598,36 @@ const CAPABILITIES: Capability[] = [
     },
   },
   {
+    name: 'View school analytics',
+    outcomes: {
+      // Same column as billing, and for the same reason: an admin surface on the account that
+      // holds the contract.
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // The school is put on a plan that includes analytics first. This row asserts *who may ask*,
+      // and the fixture's trial plan would answer 402 for everybody — a real answer, but about the
+      // contract rather than about the role, and it would make the table say something it does not
+      // mean. The entitlement half is asserted in `entitlements.test.ts`.
+      const premium = await db.plan.findUniqueOrThrow({ where: { code: 'premium' } });
+      await db.subscription.update({
+        where: { schoolId: fixture.schoolAccountId },
+        data: { planId: premium.id, status: 'ACTIVE' },
+      });
+
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/analytics`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
     name: 'Manage subscription/billing',
     outcomes: {
       // The one row where the principal is refused something their own school can do. They run the

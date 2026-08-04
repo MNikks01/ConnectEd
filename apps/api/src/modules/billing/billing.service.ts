@@ -7,6 +7,7 @@
  * refused by an entitlement did nothing wrong at all, and their school has a decision to make.
  */
 import {
+  PLAN_CATALOGUE,
   planFeaturesSchema,
   planLimitsSchema,
   TRIAL_DAYS,
@@ -15,7 +16,7 @@ import {
 } from './plan-catalogue.js';
 
 import { assertIsSchool } from '../../shared/authz/index.js';
-import { PlanLimitExceededError } from '../../shared/errors/index.js';
+import { FeatureNotInPlanError, PlanLimitExceededError } from '../../shared/errors/index.js';
 
 import type { Actor } from '../../shared/authz/index.js';
 import type { BillingRepository, SubscriptionRow } from './billing.repository.js';
@@ -63,7 +64,25 @@ export interface BillingService {
    * that silently does not apply.
    */
   assertWithinLimit: (schoolId: string, limit: LimitName) => Promise<void>;
+  /**
+   * FR-BILL-003, the other half. Throws `FeatureNotInPlanError` when the school's plan does not
+   * include `feature` at all.
+   *
+   * **This one gates a read, and every other entitlement check deliberately does not.** The rule
+   * from S5-3 — enforce at the write that would exceed a limit, never on a read — exists so a
+   * commercial dispute cannot become a student unable to see their own homework. Analytics is the
+   * one place that reasoning does not apply: it is not the school's data being withheld, it is a
+   * derived product feature the school has not bought. A timetable belongs to the school whatever
+   * it pays; a report we compute for them does not exist until they do.
+   *
+   * That distinction is the whole justification, and it is narrow on purpose. Anything that gates
+   * a read of data the school itself created is on the wrong side of it.
+   */
+  assertFeature: (schoolId: string, feature: FeatureName) => Promise<void>;
 }
+
+/** Feature flags the API enforces. Named so a typo is a compile error, not a missing check. */
+export type FeatureName = keyof PlanFeatures;
 
 /** The limits the API enforces. Named so a typo is a compile error rather than a missing check. */
 export type LimitName = 'classes' | 'members';
@@ -74,6 +93,11 @@ export interface BillingServiceDeps {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** What a feature is called in a sentence a school reads. `advancedAnalytics` is not that. */
+const FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
+  advancedAnalytics: 'advanced analytics',
+};
 
 /**
  * The floor: what a school gets with no paid plan behind it.
@@ -216,6 +240,22 @@ export function createBillingService({ repository, logger }: BillingServiceDeps)
           planName: entitlements.planName,
         });
       }
+    },
+
+    assertFeature: async (schoolId, feature) => {
+      const entitlements = await resolve(schoolId);
+
+      if (entitlements.features[feature]) return;
+
+      // Named rather than described: a school told "upgrade" and not told to what has been sold
+      // nothing. The lookup is over the catalogue in code, so it cannot drift from the table.
+      const includedIn = PLAN_CATALOGUE.find((plan) => plan.features[feature])?.name ?? 'a higher';
+
+      throw new FeatureNotInPlanError({
+        feature: FEATURE_LABELS[feature],
+        planName: entitlements.planName,
+        includedIn,
+      });
     },
 
     subscriptionFor: async (actor, schoolId) => {
