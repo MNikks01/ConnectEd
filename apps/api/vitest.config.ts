@@ -29,7 +29,26 @@ export default defineConfig({
      *   serialise the files; the failure rate did not measurably change, so it was reverted rather
      *   than kept as complexity that pays for nothing.
      *
-     * If it ever appears in CI, the next thing to try is a database per test file.
+     * **S5-12, fourth attempt.** Two things were done rather than a fourth guess at the cause:
+     *
+     * - `support/db.ts` now refuses to start when another vitest process is already on this
+     *   database. Two runs sharing one database TRUNCATE each other's fixtures, which produces
+     *   exactly this signature — a wrong answer rather than an error, only on a machine where
+     *   something else might be running, never in CI where the job owns its database.
+     * - A 401 now records *why* the token was refused, in the logs and never in the response.
+     *   "a token that was just signed" was the least explicable of the observed shapes, and it
+     *   was unexplicable because nothing anywhere recorded which check had failed.
+     *
+     * **Neither is a proven fix and this comment stays until one is.** Ten consecutive local runs
+     * were green afterwards, against two failures earlier the same day — suggestive, not proof.
+     *
+     * A related finding, unrelated to the flake but worth knowing: Prisma 7.9.1's pg adapter
+     * issues concurrent `client.query` calls on a single transaction client (visible as a pg
+     * deprecation warning under `--trace-deprecation`, from `PgTransaction.performIO`). pg 8
+     * queues them, so results are correct today; **pg 9 removes that queue**. The `^8` range in
+     * `package.json` holds it back, and must not be widened without checking upstream.
+     *
+     * If it appears again, the next thing to try is a database per test file.
      */
     fileParallelism: false,
     /**
