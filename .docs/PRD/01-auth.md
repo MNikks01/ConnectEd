@@ -24,7 +24,7 @@ Actors: all. Establishes identity, account type, role, and session.
 | FR-AUTH-008 |    P1    | Individuals can declare/switch academic role (Student/Parent/Teacher/Principal).                  | Role change creates the role profile and (if academic) a `PENDING` verification against a chosen school.              |
 | FR-AUTH-009 |    P1    | Password reset via emailed, expiring, single-use token.                                           | **Built.** 30-minute expiry, single use, revokes every session. No mail transport yet — see below.                    |
 | FR-AUTH-010 |    P1    | Email verification on registration.                                                               | Unverified accounts have limited capability until email confirmed.                                                    |
-| FR-AUTH-011 |    P2    | Rate-limiting & brute-force protection on auth endpoints.                                         | Repeated failures throttled; lockout/backoff applied; events logged.                                                  |
+| FR-AUTH-011 |    P2    | Rate-limiting & brute-force protection on auth endpoints.                                         | **Built.** Per-address exponential backoff on top of the per-IP limiter. Backoff, never lockout.                      |
 | FR-AUTH-012 |    P2    | Optional 2FA (TOTP) for school admins & principals.                                               | Enrolment + verification; recovery codes issued.                                                                      |
 
 ## Password reset (FR-AUTH-009)
@@ -46,6 +46,25 @@ substance, and none of them depend on how the message leaves the process:
 construct itself in production, because a live token in a log aggregator is a retained credential)
 or `none` (sends nothing and says so at error level). Choosing a real one is a deployment decision
 that deserves its own ADR.
+
+## Failed-login backoff (FR-AUTH-011)
+
+The per-IP limiter in front of the auth routes stops one machine hammering the API. **It does
+nothing about one account attacked from a thousand machines**, which is exactly what a
+credential-stuffing list is for. So failures are also counted per address:
+
+- Five failures buys a one-minute backoff, doubling to a fifteen-minute cap.
+- **Backoff, never lockout.** A block that does not lift is a denial of service against any account
+  whose address somebody knows, and an address is the one part of a credential that is routinely
+  public.
+- While backing off, **even the correct password is refused**. A throttle that steps aside for the
+  right password does nothing against the attack it exists for.
+- It applies **identically to addresses with no account**. Throttling only real ones would make the
+  throttle an enumeration oracle — an attacker would learn which addresses are registered by
+  noticing which ones start refusing.
+- The address is **stored hashed**; this table would otherwise become a list of everyone who has
+  ever mistyped a password here.
+- A successful login clears it, and a nightly sweep drops rows nobody is backing off any more.
 
 ## Session design (summary — full detail in Security)
 

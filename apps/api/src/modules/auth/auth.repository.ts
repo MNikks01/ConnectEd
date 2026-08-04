@@ -3,6 +3,7 @@
  * rule 1) — the service depends on this interface, not on the client.
  */
 import type { Db } from '../../shared/db/index.js';
+import type { LoginThrottle } from '../../generated/prisma/client.js';
 import type { AccountType, UserRole } from '../../generated/prisma/client.js';
 
 export interface AccountWithCredential {
@@ -31,6 +32,14 @@ export interface AuthRepository {
   storeRefreshToken: (input: StoreRefreshTokenInput) => Promise<void>;
   rotateRefreshToken: (input: RotateRefreshTokenInput) => Promise<void>;
   revokeFamily: (familyId: string) => Promise<void>;
+  /** Reads the throttle for an address hash. Null when it has no recent failures. */
+  findLoginThrottle: (emailHash: string) => Promise<LoginThrottle | null>;
+  /** Records a failure and returns the resulting state, so the caller can decide the backoff. */
+  recordLoginFailure: (emailHash: string, blockedUntil: Date | null) => Promise<LoginThrottle>;
+  /** Forgets an address's failures. Called on every success. */
+  clearLoginThrottle: (emailHash: string) => Promise<void>;
+  /** Housekeeping: drops rows nothing is throttling any more. Returns how many. */
+  sweepLoginThrottles: (before: Date) => Promise<number>;
   /** The account behind an address, or null. Never distinguishes "no account" from anything else. */
   findAccountIdByEmail: (email: string) => Promise<string | null>;
   createPasswordResetToken: (input: {
@@ -253,6 +262,30 @@ export function createAuthRepository(db: Db): AuthRepository {
           },
         }),
       ]);
+    },
+
+    findLoginThrottle: (emailHash) => db.loginThrottle.findUnique({ where: { emailHash } }),
+
+    recordLoginFailure: (emailHash, blockedUntil) =>
+      db.loginThrottle.upsert({
+        where: { emailHash },
+        // `increment` rather than read-then-write: two failed attempts arriving together should
+        // count as two, and this is the one path an attacker controls the rate of.
+        update: {
+          failedCount: { increment: 1 },
+          lastFailedAt: new Date(),
+          ...(blockedUntil ? { blockedUntil } : {}),
+        },
+        create: { emailHash, failedCount: 1, ...(blockedUntil ? { blockedUntil } : {}) },
+      }),
+
+    clearLoginThrottle: async (emailHash) => {
+      await db.loginThrottle.deleteMany({ where: { emailHash } });
+    },
+
+    sweepLoginThrottles: async (before) => {
+      const result = await db.loginThrottle.deleteMany({ where: { lastFailedAt: { lt: before } } });
+      return result.count;
     },
 
     findAccountIdByEmail: async (email) => {

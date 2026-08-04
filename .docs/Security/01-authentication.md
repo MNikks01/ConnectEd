@@ -72,6 +72,10 @@ Implements `ADR-0007`.
 
 ## Abuse protection
 
-- Rate-limit + exponential backoff on login/refresh/reset; account lockout on repeated failure with alerting.
+- Rate-limit + exponential backoff on login/refresh/reset. **Built**, and deliberately _not_ as
+  lockout: a block that never lifts is a denial of service against any account whose address is
+  known. Two layers — a per-IP limiter on the routes, and a per-address backoff that survives an
+  attacker rotating addresses. The per-address counter is keyed on a hash and applies whether or
+  not the account exists, so it cannot be used to enumerate.
 - Generic auth error messages (no user enumeration).
 - Log auth events (success/failure) with correlation IDs; never log secrets/tokens.

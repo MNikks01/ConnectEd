@@ -15,6 +15,7 @@ import {
   AppError,
   ConflictError,
   ErrorCode,
+  RateLimitedError,
   SchoolWebOnlyError,
   UnauthenticatedError,
 } from '../../shared/errors/index.js';
@@ -65,6 +66,8 @@ export interface AuthService {
   requestPasswordReset: (email: string) => Promise<void>;
   /** FR-AUTH-009. Throws when the token is unknown, expired, or already spent. */
   resetPassword: (token: string, password: string) => Promise<void>;
+  /** Housekeeping: drops throttle rows nobody is backing off any more. Returns how many. */
+  sweepLoginThrottles: () => Promise<number>;
   currentAccount: (accountId: string) => Promise<CurrentAccount>;
 }
 
@@ -84,6 +87,35 @@ export interface TrialTermsSource {
  * the form to generate another one.
  */
 const PASSWORD_RESET_TTL_MINUTES = 30;
+
+/**
+ * Failed-login backoff (FR-AUTH-011).
+ *
+ * The IP limiter in front of these routes stops one machine hammering the API. It does nothing
+ * about one account attacked from a thousand machines, which is exactly what a credential-stuffing
+ * list is for — so this throttles per address as well.
+ *
+ * **Backoff, never lockout.** A block that does not lift is a denial of service against any
+ * account whose address somebody knows, and the address is the one part of a credential that is
+ * routinely public. Five wrong attempts buys a minute; it doubles from there to a quarter of an
+ * hour, which costs an attacker orders of magnitude and costs somebody who mistyped their password
+ * a cup of tea.
+ */
+const LOGIN_FAILURES_BEFORE_BACKOFF = 5;
+const LOGIN_BACKOFF_BASE_MS = 60_000;
+const LOGIN_BACKOFF_CAP_MS = 15 * 60_000;
+
+/** How long a quiet throttle row survives before the nightly sweep drops it. */
+export const LOGIN_THROTTLE_RETENTION_HOURS = 24;
+
+function backoffFor(failedCount: number): Date | null {
+  if (failedCount < LOGIN_FAILURES_BEFORE_BACKOFF) return null;
+
+  const doublings = failedCount - LOGIN_FAILURES_BEFORE_BACKOFF;
+  const delay = Math.min(LOGIN_BACKOFF_BASE_MS * 2 ** doublings, LOGIN_BACKOFF_CAP_MS);
+
+  return new Date(Date.now() + delay);
+}
 
 export interface AuthServiceDeps {
   repository: AuthRepository;
@@ -192,6 +224,21 @@ export function createAuthService({
     },
 
     login: async (input: LoginInput, clientType: ClientType) => {
+      // Hashed, and applied whether or not the address is registered. Throttling only real
+      // accounts would make the throttle an account-enumeration oracle: an attacker would learn
+      // which addresses exist by noticing which ones start refusing.
+      const emailHash = tokens.hashRefreshToken(input.email);
+      const throttle = await repository.findLoginThrottle(emailHash);
+
+      if (throttle?.blockedUntil && throttle.blockedUntil > new Date()) {
+        logger.warn(
+          { outcome: 'throttled', failedCount: throttle.failedCount },
+          'Login refused while backing off',
+        );
+        // The same code every rate limit uses, so a client already handling 429 handles this.
+        throw new RateLimitedError('Too many attempts. Please try again shortly.');
+      }
+
       const account = await repository.findAccountForLogin(input.email);
 
       const passwordMatches = await passwords.verify(
@@ -200,9 +247,16 @@ export function createAuthService({
       );
 
       if (!account || !passwordMatches) {
+        const recorded = await repository.recordLoginFailure(emailHash, null);
+        const blockedUntil = backoffFor(recorded.failedCount);
+        if (blockedUntil) await repository.recordLoginFailure(emailHash, blockedUntil);
+
         // The email itself is never logged: failed-login logs would otherwise become a list of
         // addresses worth attacking.
-        logger.warn({ outcome: 'invalid_credentials' }, 'Login failed');
+        logger.warn(
+          { outcome: 'invalid_credentials', failedCount: recorded.failedCount },
+          'Login failed',
+        );
         throw new UnauthenticatedError('Email or password is incorrect.');
       }
 
@@ -216,6 +270,11 @@ export function createAuthService({
         logger.warn({ accountId: account.id }, 'School login rejected on mobile client');
         throw new SchoolWebOnlyError();
       }
+
+      // Cleared only after every other check has passed. Clearing on a correct password alone
+      // would let somebody with valid credentials for a *web-only* school account reset the
+      // counter from a phone, forever.
+      await repository.clearLoginThrottle(emailHash);
 
       logger.info({ accountId: account.id }, 'Login succeeded');
 
@@ -335,6 +394,14 @@ export function createAuthService({
       }
 
       logger.info('Password reset completed; all sessions revoked');
+    },
+
+    sweepLoginThrottles: async () => {
+      const before = new Date(Date.now() - LOGIN_THROTTLE_RETENTION_HOURS * 60 * 60 * 1000);
+      const removed = await repository.sweepLoginThrottles(before);
+
+      if (removed > 0) logger.info({ removed }, 'Swept login throttles');
+      return removed;
     },
 
     currentAccount: async (accountId: string) => {
