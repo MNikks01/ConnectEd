@@ -28,7 +28,7 @@ import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
 import type { GraphService } from './graph.service.js';
 import type { InteractionService } from './interaction.service.js';
-import type { MessageService } from './message.service.js';
+import type { MessagePresence, MessageService } from './message.service.js';
 import type { ModerationService } from './moderation.service.js';
 import type { PostService } from './post.service.js';
 import type { ProfileService } from './profile.service.js';
@@ -56,6 +56,8 @@ export function createSocialModule(deps: {
   storage?: Storage | undefined;
   logger: Logger;
   media?: { claim: (key: string) => Promise<void> } | undefined;
+  /** Live delivery. Absent without Redis, and messaging works exactly as before. */
+  presence?: MessagePresence | undefined;
 }): SocialModule {
   const profiles = createProfileService({
     repository: createProfileRepository(deps.db),
@@ -93,6 +95,7 @@ export function createSocialModule(deps: {
     graph: graphRepository,
     storage: deps.storage,
     logger: deps.logger,
+    presence: deps.presence,
   });
 
   const moderation = createModerationService({

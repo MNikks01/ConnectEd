@@ -30,11 +30,25 @@ export interface MessageService {
   send: (actor: Actor, threadId: string, body: string) => Promise<MessageResponse>;
 }
 
+/**
+ * The slice of the realtime channel this module needs.
+ *
+ * Optional: an API built without Redis still sends messages, and the recipient sees them on their
+ * next read. Live delivery is an improvement on polling, never a precondition for it.
+ */
+export interface MessagePresence {
+  publish: (
+    accountId: string,
+    event: { type: 'message.created'; threadId: string },
+  ) => Promise<void>;
+}
+
 export interface MessageServiceDeps {
   repository: MessageRepository;
   graph: GraphRepository;
   storage?: Storage | undefined;
   logger: Logger;
+  presence?: MessagePresence | undefined;
 }
 
 export function createMessageService({
@@ -42,6 +56,7 @@ export function createMessageService({
   graph,
   storage,
   logger,
+  presence,
 }: MessageServiceDeps): MessageService {
   async function toCard(card: CardRow) {
     return {
@@ -158,13 +173,18 @@ export function createMessageService({
     },
 
     send: async (actor, threadId, body) => {
-      await assertParticipant(actor, threadId);
+      const other = await assertParticipant(actor, threadId);
 
       const message = await repository.send({
         threadId,
         senderAccountId: actor.accountId,
         body,
       });
+
+      // After the write, and awaited only to keep an unhandled rejection from escaping — the
+      // publish swallows its own failures. The recipient is told the thread moved, never what was
+      // said: they re-read through an endpoint that checks whether they still may.
+      await presence?.publish(other, { type: 'message.created', threadId });
 
       return toMessage(message, actor);
     },

@@ -65,6 +65,20 @@ await billing.service.ensureCatalogue();
 
 registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: events.queue });
 
+/**
+ * Live delivery (FR-SOC-022). Two more Redis connections, and both are necessary: ioredis refuses
+ * ordinary commands on a client in subscriber mode, so a single shared one would make ticket
+ * issuance throw the moment the first socket connected.
+ */
+const { createRealtime } = await import('./shared/realtime/index.js');
+const realtimeConnection = createRedisConnection(config.REDIS_URL);
+const realtimeSubscriber = createRedisConnection(config.REDIS_URL);
+const realtime = createRealtime({
+  redis: realtimeConnection,
+  subscriber: realtimeSubscriber,
+  logger,
+});
+
 const app = createApp({
   config,
   logger,
@@ -73,6 +87,7 @@ const app = createApp({
   db,
   events: events.publisher,
   storage,
+  realtime,
 });
 
 /**
@@ -105,6 +120,9 @@ const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
 });
 
+// After `listen`, because the upgrade handler binds to the running server.
+realtime.attach(server);
+
 /**
  * Graceful shutdown: stop accepting connections, let in-flight requests finish, then flush traces.
  * Orchestrators send SIGTERM before SIGKILL, so this window is what prevents dropped requests
@@ -131,6 +149,11 @@ function shutdown(signal: string): void {
       // Close in dependency order: stop consuming, stop publishing, then release the pool —
       // all only after in-flight requests have drained.
       await worker?.close();
+      // Sockets first: an open connection would otherwise keep the process alive past the point
+      // the load balancer has already stopped sending it work.
+      await realtime.close();
+      await realtimeConnection.quit();
+      await realtimeSubscriber.quit();
       await events.close();
       await queueConnection.quit();
       await workerConnection?.quit();

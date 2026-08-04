@@ -5,6 +5,7 @@ import { Badge, Card, PageHeader } from '@connected/ui';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { LiveMessages } from '@/components/live-messages';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { InboxResponse } from '@connected/types';
@@ -26,6 +27,7 @@ export default async function MessagesPage() {
 
   return (
     <main>
+      <LiveMessages />
       <PageHeader
         title="Messages"
         description={inbox.unreadTotal > 0 ? `${inbox.unreadTotal} unread` : 'Nothing unread.'}

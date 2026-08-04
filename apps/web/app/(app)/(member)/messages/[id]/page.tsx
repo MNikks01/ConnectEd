@@ -7,6 +7,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { MessageThread } from '@/components/message-thread';
 import { ApiError } from '@/lib/api-client';
+import { LiveMessages } from '@/components/live-messages';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { InboxResponse, MessageResponse, Paginated } from '@connected/types';
@@ -38,6 +39,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
   return (
     <main>
+      <LiveMessages />
       <p style={{ marginTop: 0 }}>
         <Link href="/messages">← All messages</Link>
       </p>

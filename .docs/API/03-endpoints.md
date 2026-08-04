@@ -147,6 +147,17 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
 | POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
 
+## Real-time
+
+| Method | Path                  | Auth | Purpose                                                     |
+| ------ | --------------------- | :--: | ----------------------------------------------------------- |
+| POST   | `/me/realtime-ticket` |  🔑  | Mints a single-use, 30s ticket for one WebSocket upgrade.   |
+| —      | `/ws?ticket=…`        |  🎫  | WebSocket. Outside `/api/v1`; not a versioned REST surface. |
+
+🎫 authorized by ticket, not by a bearer token — a browser cannot set headers on a WebSocket upgrade
+(ADR-0016). The socket carries **no content**: a frame says a thread moved, and the client re-reads
+through the REST API, which authorizes each read. Nothing sent by the client is acted on.
+
 ## Ops
 
 | Method | Path       | Auth | Purpose                                 |

@@ -23,6 +23,7 @@ import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { realtimeRoutes } from './routes/realtime.routes.js';
 import { jwksRoutes } from './routes/jwks.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
@@ -34,6 +35,7 @@ import { correlationId } from './shared/middleware/correlation-id.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { notFound } from './shared/middleware/not-found.js';
 import { createMetrics, type Metrics } from './shared/observability/metrics.js';
+import type { Realtime } from './shared/realtime/index.js';
 
 import { noopPublisher, type EventPublisher } from './shared/events/index.js';
 
@@ -47,6 +49,11 @@ export interface AppDependencies {
   config: Config;
   logger: Logger;
   metrics: Metrics;
+  /**
+   * Live delivery. Optional, and absent in most tests: the REST surface is complete without it,
+   * and a websocket channel that becomes load-bearing has stopped being an optimisation.
+   */
+  realtime?: Realtime;
   readiness: ReadinessRegistry;
   /**
    * Optional so a test can build an app for middleware-level assertions without a database.
@@ -79,12 +86,13 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     db: overrides.db,
     events: overrides.events ?? noopPublisher,
     storage: overrides.storage,
+    realtime: overrides.realtime,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, db, events, storage, errorMappers } =
+  const { config, logger, metrics, readiness, db, events, storage, realtime, errorMappers } =
     createDependencies(overrides);
 
   const app = express();
@@ -172,7 +180,14 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     });
 
     const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
-    const social = createSocialModule({ db, config, storage, logger, media: media?.service });
+    const social = createSocialModule({
+      db,
+      config,
+      storage,
+      logger,
+      media: media?.service,
+      presence: realtime,
+    });
 
     api.use(
       authenticate(tokens),
@@ -183,6 +198,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       workflows.routes,
       social.routes,
       billing.routes,
+      ...(realtime ? [realtimeRoutes(realtime, config)] : []),
       ...(media ? [media.routes] : []),
     );
   }
