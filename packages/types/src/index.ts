@@ -15,6 +15,7 @@ export interface Paginated<T> {
 }
 
 export * from './academics.js';
+export * from './analytics.js';
 export * from './auth.js';
 export * from './billing.js';
 export * from './enums.js';
