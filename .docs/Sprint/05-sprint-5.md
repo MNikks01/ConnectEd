@@ -1,6 +1,6 @@
 # Sprint 5 — Commercialisation
 
-`Status: Planned` · `Last updated: 2026-08-02` · Duration: 2 weeks
+`Status: Done (partial — see review)` · `Last updated: 2026-08-04` · Duration: 2 weeks
 
 Goal: the school pays, and paying means something. Maps to roadmap **Phase 5**. This is a **proposal for
 planning** — adjust the split before committing.
@@ -107,8 +107,78 @@ product decision carried from Sprint 4, not a billing item, but it is the oldest
 
 ## Review notes
 
-_Filled at sprint review._
+**Six of the eight committed items shipped, and every stretch item did.** The three that did not
+are `S5-4`, `S5-5` and `S5-6` — checkout, webhooks and dunning — and none of them was started,
+because all three wait on `S5-0a`, the payment provider. That was written into this plan before the
+sprint began, which is the only reason it is a known gap rather than a surprise.
+
+| Item                                                  | PR  |
+| ----------------------------------------------------- | --- |
+| S5-1, S5-2 plans, entitlements, trial on registration | #48 |
+| S5-3 entitlement enforcement                          | #49 |
+| S5-7 billing in the school portal                     | #50 |
+| S5-8 the last permission-matrix row                   | #49 |
+| S5-10 the four dashboards and their metrics           | #51 |
+| S5-11 real-time message delivery                      | #52 |
+| S5-12 the test flake — **diagnosed, not fixed**       | #53 |
+| S5-13 Web RUM, and the fifth dashboard                | #54 |
+| Sprints 3–5 to production                             | #55 |
+
+Tests grew from 738 to **815 API + 67 E2E**. Five dashboards, twelve alert rules, up from one and
+six.
+
+**The permission-matrix inventory reached zero.** It has been counting down since S1-7, and every
+capability in the product contract is now asserted against the live API for all seven roles,
+positive and negative. The last row was `Manage subscription/billing`, and it is the one place a
+principal is refused something their own school can do — they run the school day; they do not hold
+the contract.
+
+**The sprint's central premise held, and was worth stating in advance.** Billing asks a question no
+other module asks: not "may you?" but "has your school paid for it?". The plan said the two must
+fail differently, and the code does — `402` naming the limit, the usage, and what lifts it, where
+every other refusal in this API is a deliberately opaque 404. A school that cannot tell why it was
+stopped cannot decide to pay.
+
+**The design decision that will matter most is where the check sits.** A limit bites at the write
+that would exceed it and nowhere else: a school that downgrades keeps every class and member it
+has, reads are never gated, and a full school can still clear its verification queue. Enforcing on
+read would have been simpler and would have been discovered in production by a school that lost
+access to its own timetable.
+
+**Two tests were wrong before they were right, again.** A sabotage pass on entitlements caught four
+of five defects and _missed_ the verified-only member filter — the test submitted pending requests,
+and a pending request creates no membership row, so the two counts it compared were identical and
+the assertion could not have failed. Replaced with one that revokes a member and claims the seat
+back. This is the third sprint running in which sabotage found a test that proved nothing; it has
+earned its place in the routine.
+
+**S5-10 had been carried since Sprint 0, and what was missing was never the dashboards.** The API
+exported `http_request_duration_seconds` and the process defaults and nothing else. Five metric
+families later, six alert rules that were impossible to write became possible. The guard against a
+repeat is a test that reads every panel query off disk and asserts the API registers each metric —
+a dashboard over a series nobody emits renders as a flat green board, which is worse than no
+dashboard because it is trusted.
+
+**S5-12 is diagnosed, not fixed, and the code says so.** Two shapes were observed; one of them —
+a 401 on a freshly signed token — was inexplicable because nothing recorded which check had failed,
+and now something does. The other has an unruled-out cause: two test runs sharing one database
+TRUNCATE each other's fixtures, which produces a wrong answer rather than an error, only on a
+developer machine, never in CI. The suite now refuses to start in that situation. Ten consecutive
+green runs afterwards against two failures the same day is suggestive, not proof.
+
+**Releasing exposed two pieces of bookkeeping nobody had ever run.** The previous release merged its
+changesets without consuming them, so forty-seven had accumulated and `@connected/types` was still
+at `0.0.0`; and a changeset naming an ignored package is never consumed, which had the release
+workflow believing forever that something was left to publish. Both are now written into
+`CI-CD/00-git-flow.md` rather than waiting to be rediscovered. The repository also had **no tags at
+all** for five sprints; it does now, backfilled and then automatic.
+
+**Carried into Sprint 6:** S5-4, S5-5, S5-6 and S5-9 — all billing, all waiting on the same
+decision. S5-12 stays open until something proves it.
+
+**Still open for the team, sixth sprint running:** branch protection. A production release and four
+follow-ups were merged this sprint by one pair of eyes.
 
 ## Retro
 
-_Filled at retro._
+_To be completed by the team at the retro — went well / didn't / actions with owners and due dates._
