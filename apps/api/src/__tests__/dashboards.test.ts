@@ -159,14 +159,15 @@ describe('grafana dashboards', () => {
   it('covers every dashboard the SLO document names as built', () => {
     const uids = dashboards().map(({ doc }) => (doc as unknown as { uid: string }).uid);
 
-    // Web RUM is deliberately absent — see `.docs/Monitoring/01-slos-and-alerts.md`. Nothing in
-    // the browser reports Web Vitals or JS errors yet, and a dashboard over an empty pipeline is
-    // the thing this suite exists to prevent.
+    // All five, as of S5-13. Web RUM was the last, and was deliberately withheld until something
+    // in the browser actually reported — a dashboard over an empty pipeline is the thing this
+    // suite exists to prevent.
     expect(uids.sort()).toEqual([
       'connected-business',
       'connected-database',
       'connected-queue',
       'connected-service-overview',
+      'connected-web-rum',
     ]);
   });
 });

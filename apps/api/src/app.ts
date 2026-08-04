@@ -24,6 +24,7 @@ import { createVerificationModule } from './modules/verification/index.js';
 import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { realtimeRoutes } from './routes/realtime.routes.js';
+import { rumRoutes } from './routes/rum.routes.js';
 import { jwksRoutes } from './routes/jwks.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
@@ -140,6 +141,10 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
   }
 
   const api = express.Router();
+
+  // Before `authenticate`: the marketing pages have no session, and their load time is exactly
+  // what a Core Web Vitals dashboard exists to show.
+  api.use(rumRoutes({ metrics, config, logger }));
 
   if (db) {
     const passwords = createPasswordHasher(config);
