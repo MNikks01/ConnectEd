@@ -174,7 +174,14 @@ jobs:
 
   changeset-check:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Feature PRs into `development` must carry a changeset. A **release** PR into `main` is where
+    # changesets are consumed — `changeset version` deletes every one of them — so this check can
+    # only ever fail there, and failing it teaches people to ignore a red release.
+    #
+    # It passed on the first release by accident: one changeset named an ignored package, was
+    # therefore never consumed, and left something for `status` to find. Removing that leftover
+    # (#58) is what exposed this.
+    if: github.event_name == 'pull_request' && github.base_ref != 'main'
     steps:
       - uses: actions/checkout@v4
         with:
