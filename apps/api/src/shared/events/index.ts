@@ -15,7 +15,13 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import type { UserRole, VerificationStatus } from '../../generated/prisma/client.js';
+import type {
+  FeedbackStatus,
+  LeaveKind,
+  LeaveStatus,
+  UserRole,
+  VerificationStatus,
+} from '../../generated/prisma/client.js';
 
 export interface DomainEventBase {
   /** Idempotency key for consumers. Generated once, at publication. */
@@ -72,13 +78,33 @@ export interface EventPublishedEvent extends DomainEventBase {
   eventAt: string;
 }
 
+export interface LeaveDecidedEvent extends DomainEventBase {
+  type: 'leave.decided';
+  leaveId: string;
+  applicantAccountId: string;
+  schoolId: string;
+  kind: LeaveKind;
+  /** `ACCEPTED` or `REJECTED` — `RECEIVED` never produces this event. */
+  status: LeaveStatus;
+}
+
+export interface FeedbackReviewedEvent extends DomainEventBase {
+  type: 'feedback.reviewed';
+  feedbackId: string;
+  authorAccountId: string;
+  schoolId: string;
+  status: FeedbackStatus;
+}
+
 export type DomainEvent =
   | VerificationSubmittedEvent
   | VerificationDecidedEvent
   | MembershipRevokedEvent
   | AcademicPublishedEvent
   | NoticePublishedEvent
-  | EventPublishedEvent;
+  | EventPublishedEvent
+  | LeaveDecidedEvent
+  | FeedbackReviewedEvent;
 
 /**
  * What a module publishes: any event minus the envelope fields, which are filled in here.

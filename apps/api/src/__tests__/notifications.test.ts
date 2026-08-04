@@ -278,7 +278,14 @@ describe('verification emits the events', () => {
   it('publishes verification.decided when a school approves', async () => {
     const events = recordingPublisher();
     const { createVerificationModule } = await import('../modules/verification/index.js');
-    const verification = createVerificationModule(db, logger, events);
+    const { createBillingModule } = await import('../modules/billing/index.js');
+    // The real guard rather than a fake, so this construction cannot drift from the app's.
+    const verification = createVerificationModule(
+      db,
+      logger,
+      events,
+      createBillingModule(db, logger).service,
+    );
 
     const student = await db.account.create({
       data: {

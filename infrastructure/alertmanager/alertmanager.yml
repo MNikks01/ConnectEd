@@ -1,0 +1,62 @@
+# Alertmanager — where a firing rule actually goes.
+#
+# Until now the rules in `../prometheus/alerts.yml` evaluated and fired into nothing: Prometheus
+# had no `alerting:` block, so an alert changed a colour on a page nobody was watching. This file
+# is the other half of "no alert without an owner and a runbook".
+#
+# **No secrets in this tree.** Receiver endpoints are read from files mounted at runtime
+# (`*_url_file`), so the webhook URL lives in the secret manager and never in git. Locally those
+# files do not exist and the null receiver takes everything — the Alertmanager UI on :9093 is the
+# local feedback loop.
+
+global:
+  # If a receiver stops resolving alerts, treat them as resolved after this long rather than
+  # leaving a stale page open forever.
+  resolve_timeout: 5m
+
+route:
+  # Group by the alert and the service so one bad deploy is one notification, not forty.
+  group_by: ['alertname', 'service']
+  # Long enough to collect the alerts a single incident produces, short enough to page promptly.
+  group_wait: 30s
+  group_interval: 5m
+  # A page that has not been acted on repeats. A ticket does not need to.
+  repeat_interval: 4h
+  receiver: null-receiver
+
+  routes:
+    - matchers:
+        - severity = "page"
+      receiver: oncall
+      # Urgent means urgent: less waiting before the first notification, and keep reminding.
+      group_wait: 10s
+      repeat_interval: 1h
+
+    - matchers:
+        - severity = "ticket"
+      receiver: chat
+      # Nobody needs the same non-urgent alert every hour.
+      repeat_interval: 12h
+
+# A page about the same service supersedes the tickets it will have caused: if the API is down, its
+# latency is also bad, and the second notification tells the on-call nothing new.
+inhibit_rules:
+  - source_matchers:
+      - severity = "page"
+    target_matchers:
+      - severity = "ticket"
+    equal: ['service']
+
+receivers:
+  # Local default. Firing alerts are visible in the Alertmanager UI; nothing is sent anywhere.
+  - name: null-receiver
+
+  - name: oncall
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/oncall-url
+        send_resolved: true
+
+  - name: chat
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/chat-url
+        send_resolved: true

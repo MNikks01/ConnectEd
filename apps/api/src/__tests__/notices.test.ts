@@ -10,6 +10,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../app.js';
+import { createBillingModule } from '../modules/billing/index.js';
 import { createNotificationsModule } from '../modules/notifications/index.js';
 import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
@@ -31,6 +32,9 @@ let fixture: SchoolFixture;
 const config = loadConfig();
 const tokens = createTokenService(config);
 const logger = createLogger({ ...config, LOG_LEVEL: 'silent' });
+
+/** The real guard rather than a fake, so these constructions cannot drift from the app's. */
+const billingService = () => createBillingModule(testDb(), logger).service;
 
 beforeAll(async () => {
   db = testDb();
@@ -409,7 +413,12 @@ describe('notifications (FR-ACAD-012)', () => {
   });
 
   it('fans a notice out to every verified member of the school, minus its author', async () => {
-    const verification = createVerificationModule(db, logger, recordingPublisher());
+    const verification = createVerificationModule(
+      db,
+      logger,
+      recordingPublisher(),
+      billingService(),
+    );
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({
@@ -439,7 +448,12 @@ describe('notifications (FR-ACAD-012)', () => {
   });
 
   it('fans an event out, and is idempotent on redelivery', async () => {
-    const verification = createVerificationModule(db, logger, recordingPublisher());
+    const verification = createVerificationModule(
+      db,
+      logger,
+      recordingPublisher(),
+      billingService(),
+    );
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     const event = {

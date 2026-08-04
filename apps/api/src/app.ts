@@ -14,12 +14,18 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
+import { createBillingModule } from './modules/billing/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
+import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
+import { createWorkflowsModule } from './modules/workflows/index.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { realtimeRoutes } from './routes/realtime.routes.js';
+import { rumRoutes } from './routes/rum.routes.js';
+import { jwksRoutes } from './routes/jwks.routes.js';
 import { createPasswordHasher } from './shared/auth/password.js';
 import { createTokenService } from './shared/auth/tokens.js';
 import { loadConfig, type Config } from './shared/config/index.js';
@@ -30,6 +36,7 @@ import { correlationId } from './shared/middleware/correlation-id.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { notFound } from './shared/middleware/not-found.js';
 import { createMetrics, type Metrics } from './shared/observability/metrics.js';
+import type { Realtime } from './shared/realtime/index.js';
 
 import { noopPublisher, type EventPublisher } from './shared/events/index.js';
 
@@ -43,6 +50,11 @@ export interface AppDependencies {
   config: Config;
   logger: Logger;
   metrics: Metrics;
+  /**
+   * Live delivery. Optional, and absent in most tests: the REST surface is complete without it,
+   * and a websocket channel that becomes load-bearing has stopped being an optimisation.
+   */
+  realtime?: Realtime;
   readiness: ReadinessRegistry;
   /**
    * Optional so a test can build an app for middleware-level assertions without a database.
@@ -75,12 +87,13 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     db: overrides.db,
     events: overrides.events ?? noopPublisher,
     storage: overrides.storage,
+    realtime: overrides.realtime,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, db, events, storage, errorMappers } =
+  const { config, logger, metrics, readiness, db, events, storage, realtime, errorMappers } =
     createDependencies(overrides);
 
   const app = express();
@@ -117,34 +130,69 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
 
+  const tokens = createTokenService(config);
+
   // Operational endpoints are unversioned; product routes live under /api/v1.
   app.use(healthRoutes({ readiness, metrics, metricsEnabled: config.METRICS_ENABLED }));
 
+  // Only when there is a public half to publish. See the note in the route module.
+  if (config.jwtAsymmetric) {
+    app.use(jwksRoutes(tokens));
+  }
+
   const api = express.Router();
+
+  // Before `authenticate`: the marketing pages have no session, and their load time is exactly
+  // what a Core Web Vitals dashboard exists to show.
+  api.use(rumRoutes({ metrics, config, logger }));
 
   if (db) {
     const passwords = createPasswordHasher(config);
-    const tokens = createTokenService(config);
 
-    api.use(createAuthModule({ db, config, logger, passwords, tokens }).routes);
+    // Billing is constructed before auth: registering a school must create its trial in the same
+    // statement (FR-BILL-001), so auth needs billing's terms to hand.
+    const billing = createBillingModule(db, logger);
+
+    api.use(
+      createAuthModule({ db, config, logger, passwords, tokens, billing: billing.service }).routes,
+    );
 
     // Everything past auth requires a valid token; each module still authorizes per resource.
     // Verification owns membership, and institution needs to ask it whether an account is a
     // verified teacher — so it is constructed first and its service passed in as a narrow port.
-    const verification = createVerificationModule(db, logger, events ?? noopPublisher);
-    const institution = createInstitutionModule(db, verification.service);
+    const verification = createVerificationModule(
+      db,
+      logger,
+      events ?? noopPublisher,
+      billing.service,
+    );
+    const institution = createInstitutionModule(db, verification.service, billing.service);
     // Notifications resolves class recipients through verification, which owns membership.
     const notifications = createNotificationsModule(db, logger, verification.service);
+    // Media only exists when storage was supplied; without it the routes are simply absent
+    // rather than present and failing.
+    const media = storage
+      ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES, db)
+      : undefined;
+
     const academics = createAcademicsModule({
       db,
       storage,
       events: events ?? noopPublisher,
       logger,
+      // So an attached image stops looking like an abandoned upload.
+      media: media?.service,
     });
 
-    // Media only exists when storage was supplied; without it the routes are simply absent
-    // rather than present and failing.
-    const media = storage ? createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES) : undefined;
+    const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
+    const social = createSocialModule({
+      db,
+      config,
+      storage,
+      logger,
+      media: media?.service,
+      presence: realtime,
+    });
 
     api.use(
       authenticate(tokens),
@@ -152,9 +200,12 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       verification.routes,
       notifications.routes,
       academics.routes,
+      workflows.routes,
+      social.routes,
+      billing.routes,
+      ...(realtime ? [realtimeRoutes(realtime, config)] : []),
       ...(media ? [media.routes] : []),
     );
-    // Module routers mount here as they land: academics, workflows, social, …
   }
 
   app.use(API_PREFIX, api);

@@ -1,6 +1,6 @@
 # Sprint 3 — Workflows
 
-`Status: Planned` · `Last updated: 2026-08-01` · Duration: 2 weeks
+`Status: Done` · `Last updated: 2026-08-02` · Duration: 2 weeks
 
 Goal: the two request-and-decision chains a school runs every week — leave and complaints. Maps to roadmap
 **Phase 3**. This is a **proposal for planning** — adjust the split before committing.
@@ -78,8 +78,69 @@ Social — Phase 4. Billing — Phase 5. Push notifications — mobile phase.
 
 ## Review notes
 
-_Filled at sprint review._
+**Everything shipped** — the committed backlog _and_ all three stretch items, which closes every carry-over
+from Sprints 0–2.
+
+| Item                                               | PR  |
+| -------------------------------------------------- | --- |
+| S3-1..S3-6 leave applications                      | #31 |
+| S3-7 complaints and suggestions                    | #32 |
+| S3-8, S3-9 leave and complaints in the web app     | #33 |
+| S3-10 Ed25519 tokens + JWKS (carried from S0)      | #34 |
+| S3-11 alert routing (carried from S1)              | #35 |
+| S3-12 orphaned upload collection (carried from S2) | #36 |
+
+Tests grew from 479 to **603 API + 57 UI + 54 E2E**. The permission-matrix inventory is down to **three rows**,
+all social and billing — every academic and workflow capability in the product contract is now asserted against
+the live API.
+
+**The prediction that did not come true, and what was done about it.** The plan expected the first integration
+test of `assertClassTeacherOf` and `assertPrincipalOfSchool` to find something, as S2-1 had. It did not — so the
+tests were checked instead: sabotaging all five guards in the leave module fails 20 of its 39 cases, including
+the one the feature turns on (a class teacher deciding leave for a class that is not theirs). A prediction that
+misses is worth recording either way; the useful part is that "no bug found" was verified rather than assumed.
+
+**A pattern named after three instances.** `/me/class-teacher` (#33) was the third endpoint added because the
+API could not answer "what is mine?" — after `/me/memberships` for students (#22) and `/me/subjects` for
+teachers (#26). The cause is structural: every endpoint is scoped from the resource inward — class, school,
+subject — so a screen that starts from the person has nothing to ask. **Worth a `/me/*` convention in
+`API/01-conventions.md` before the next module repeats it a fourth time.**
+
+**The date contract, settled before it could bite.** The plan flagged that `start_date`/`end_date` are `@db.Date`
+and that a timezone applied on the way in would move a leave day. `API/01-conventions.md` now distinguishes
+instants from calendar dates, and a timestamp sent where a calendar date belongs is **rejected rather than
+coerced** — `2026-09-14T00:00:00Z` is the 13th of September west of Greenwich.
+
+**Two carry-overs turned out to be worse than recorded.**
+
+- Prometheus had alert rules and **no `alerting:` block at all**, so every rule evaluated and fired into
+  nothing. Every alert also linked to the runbooks _folder_ rather than a page, and none carried the label
+  routing would key on. `scripts/check-alerts.mjs` now fails CI on either, because `promtool` validates PromQL
+  and has nothing to say about whether an alert has somewhere to go.
+- Neither `main` nor `development` is protected **at all** — `GET /branches/{name}/protection` returns 404 on
+  both, which is stronger than the "does not require CI checks" reported after Sprints 1 and 2.
+
+**A test that says what it does not prove.** `refuses an HS256 token when configured for EdDSA` still passes
+with the algorithm pin removed, because jose will not use an Ed25519 key object as an HMAC secret in the first
+place. Found by sabotaging the pin and watching nothing fail. The comment says so, and the pin stays as a
+statement of intent — a green check should not imply a guarantee it is not giving.
+
+**The release process, repaired.** The `development → main` release PR came out `CONFLICTING` across 176 files:
+PR #8 had been squashed, so `main`'s only commit recreated every file as a fresh addition and git saw both
+branches adding the same files independently. A back-merge (#30) restored the shared ancestor, and the release
+(#28) went out as a merge commit — the first one that preserves the boundary. The same squash had also
+resurrected a file deleted in #22, which would have broken the Next build with two pages claiming `/home`.
+
+**Test-infrastructure work, all of it caused by real failures:** the API suite's intermittent hang was diagnosed
+as a blocked `TRUNCATE` and now fails fast naming the blocking connection; every Server-Action E2E case now
+asserts against the database after a reload rather than waiting on a re-render; and setup calls in three suites
+assert their own success so a failure names its own step.
+
+**Carried into Sprint 4:** four unbuilt dashboards (only `service-overview` exists), the metrics that would make
+queue and business alerts writable, and the unknown cause of the idle transaction that blocks the test reset.
+
+**Still open for the team, fourth sprint running:** branch protection.
 
 ## Retro
 
-_Filled at retro._
+_To be completed by the team at the retro — went well / didn't / actions with owners and due dates._

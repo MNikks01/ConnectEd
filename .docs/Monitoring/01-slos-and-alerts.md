@@ -1,6 +1,6 @@
 # Monitoring — SLOs & Alerting
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-03`
 
 ## SLIs / SLOs
 
@@ -24,16 +24,54 @@
 
 ## Routing
 
-Grafana alerting → on-call (paging) for urgent, chat/ticket for the rest. Every alert links to a **runbook**
-(`../Runbooks/`) and a dashboard. No alert without an owner and a runbook.
+**Implemented as of S3-11, with one deviation:** routing is **Alertmanager**, not Grafana alerting. The rules
+already lived in Prometheus (`infrastructure/prometheus/alerts.yml`), and Alertmanager is what Prometheus sends
+to — routing them through Grafana would have meant a second rule engine and two places to look when something
+did not page.
+
+| Label              | Receiver | First notification | Repeats until acted on |
+| ------------------ | -------- | ------------------ | ---------------------- |
+| `severity: page`   | `oncall` | 10s                | hourly                 |
+| `severity: ticket` | `chat`   | 30s                | every 12h              |
+
+- Alerts group by `alertname` + `service`, so one bad deploy is one notification rather than forty.
+- A **page inhibits the tickets** it would have caused for the same service: if the API is down, its latency is
+  also bad, and the second notification tells the on-call nothing new.
+- Receiver URLs come from **files mounted at runtime**, never from this repository. Locally there are no such
+  files and everything lands in a null receiver — firing alerts are still visible in the Alertmanager UI on
+  `:9093`, which is the local feedback loop.
+
+Every alert links to a **runbook** (`../Runbooks/`) that exists. `scripts/check-alerts.mjs` runs in CI and fails
+the build on an alert with no `severity`, no `service`, or a runbook path that does not resolve — `promtool`
+validates the PromQL and has nothing to say about any of that.
+
+**Closed as of S5-10.** Queue lag, dead-letter depth, fan-out failure rate, notification latency, and pool
+exhaustion are all alertable now — 12 rules, up from 6. What made them impossible was never the rules; it was
+that the API exported `http_request_duration_seconds` and the process defaults and nothing else.
+
+**Closed as of S5-13.** The browser now reports, so TTFB is measured as a visitor experiences it — including
+DNS, TLS and the network, none of which `http_request_duration_seconds` can see. No alert rules yet: real-user
+metrics are noisy, thresholds want a baseline from real traffic, and a rule tuned against an empty dashboard
+would page on the first school that connects over a bad line.
 
 ## Dashboards (in `infrastructure/grafana`)
 
-1. **Service overview** — RED per endpoint, availability, error budget burn.
-2. **Database** — connections, slow queries, replication lag, cache hit.
-3. **Queue/worker** — throughput, lag, failures, DLQ size.
-4. **Business** — onboarding funnel, verification rate, homework read-rate, notification latency.
-5. **Web RUM** — Core Web Vitals, JS errors.
+| #   | Dashboard            | Built | What                                                                              |
+| --- | -------------------- | :---: | --------------------------------------------------------------------------------- |
+| 1   | **Service overview** |  ✅   | RED per endpoint, availability, error budget burn.                                |
+| 2   | **Database**         |  ✅   | Pool occupancy, waiting connections, request latency beside them.                 |
+| 3   | **Queue/worker**     |  ✅   | Depth by state, throughput by outcome, lag percentiles, dead-letter set.          |
+| 4   | **Business**         |  ✅   | Onboarding funnel, publishing rates, fan-out latency, sign-in failures.           |
+| 5   | **Web RUM**          |  ✅   | Core Web Vitals (p75, Google's thresholds) and uncaught browser errors, by route. |
+
+Two panels the original list named are **absent from the Database dashboard**, and deliberately: slow-query
+counts and replication lag come from Postgres itself, which nothing scrapes yet. A panel over an empty series
+renders as a healthy database.
+
+**A test enforces this.** `apps/api/src/__tests__/dashboards.test.ts` reads every panel query off disk, extracts
+its metric names, and asserts the API's own `/metrics` registers each one. A dashboard whose panels query a
+series nobody emits renders as a flat green board, which is worse than no dashboard because it is trusted —
+that was the state of four of these five for four sprints.
 
 ## Health endpoints
 

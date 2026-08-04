@@ -4,9 +4,52 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
-    // Config validation and the logger read env at import time.
-    // Integration tests TRUNCATE the shared test database between cases, so files must not run
-    // concurrently — one file's reset would wipe another's fixtures mid-assertion.
+    /**
+     * Config validation and the logger read env at import time. Integration tests TRUNCATE the
+     * shared test database between cases, so files must not run concurrently — one file's reset
+     * would wipe another's fixtures mid-assertion.
+     *
+     * **A local-only flake lives here, and it is worth knowing before chasing it (S4-12).**
+     *
+     * Roughly one local run in four fails asserting on data the same test created moments earlier
+     * — a notice whose creation returned 201 and which was absent from a list read immediately
+     * after — or on a token that was just signed. **CI has never reproduced it: 20 consecutive
+     * `verify` jobs green.** The difference is the developer machine, where the same Postgres
+     * serves `connected`, `connected_test` and `connected_e2e` while E2E servers, dev servers and
+     * Docker are running alongside.
+     *
+     * Three fixes were tried and rejected, so the next attempt does not repeat them:
+     *
+     * - `pool: 'forks'` + `poolOptions.forks.singleFork` — `poolOptions` no longer exists in
+     *   Vitest 4, and `fileParallelism: false` already pins the run to one worker.
+     * - `isolate: false` puts every file in one process, and leaks module state between them: it
+     *   made `error-handling.test.ts` fail on a mocked logger another file had touched. A
+     *   different fault, not a fix.
+     * - A per-file Postgres advisory lock, so a finishing worker cannot overlap the next. It did
+     *   serialise the files; the failure rate did not measurably change, so it was reverted rather
+     *   than kept as complexity that pays for nothing.
+     *
+     * **S5-12, fourth attempt.** Two things were done rather than a fourth guess at the cause:
+     *
+     * - `support/db.ts` now refuses to start when another vitest process is already on this
+     *   database. Two runs sharing one database TRUNCATE each other's fixtures, which produces
+     *   exactly this signature — a wrong answer rather than an error, only on a machine where
+     *   something else might be running, never in CI where the job owns its database.
+     * - A 401 now records *why* the token was refused, in the logs and never in the response.
+     *   "a token that was just signed" was the least explicable of the observed shapes, and it
+     *   was unexplicable because nothing anywhere recorded which check had failed.
+     *
+     * **Neither is a proven fix and this comment stays until one is.** Ten consecutive local runs
+     * were green afterwards, against two failures earlier the same day — suggestive, not proof.
+     *
+     * A related finding, unrelated to the flake but worth knowing: Prisma 7.9.1's pg adapter
+     * issues concurrent `client.query` calls on a single transaction client (visible as a pg
+     * deprecation warning under `--trace-deprecation`, from `PgTransaction.performIO`). pg 8
+     * queues them, so results are correct today; **pg 9 removes that queue**. The `^8` range in
+     * `package.json` holds it back, and must not be widened without checking upstream.
+     *
+     * If it appears again, the next thing to try is a database per test file.
+     */
     fileParallelism: false,
     /**
      * Vitest's 5s default is tuned for unit tests. These talk to a real Postgres — a case that

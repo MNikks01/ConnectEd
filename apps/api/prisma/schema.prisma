@@ -117,6 +117,32 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+/// Who may see the parts of a profile beyond the name-and-avatar card.
+///
+/// The card is always visible to a signed-in account — without it nobody could find anyone to
+/// connect with, and a "private" profile that cannot be discovered is a profile that cannot be
+/// used. Everything else — bio, achievements, date of birth — follows this setting.
+/// What a report is about. Loose ids rather than four nullable FKs, matching how `ReadReceipt`
+/// already models a polymorphic subject.
+enum ReportSubject {
+  POST
+  COMMENT
+  MESSAGE
+  ACCOUNT
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  CONNECTIONS
+}
+
 enum ConnectionStatus {
   PENDING
   ACCEPTED
@@ -189,6 +215,10 @@ model Account {
   notifications        Notification[]
   notificationPrefs    NotificationPref[]
   pushTokens           PushToken[]
+  mediaObjects         MediaObject[]
+  blocksMade           Block[]               @relation("Blocker")
+  blocksReceived       Block[]               @relation("Blocked")
+  reportsMade          Report[]              @relation("Reporter")
 
   @@index([type])
   @@map("account")
@@ -230,18 +260,19 @@ model RefreshToken {
 }
 
 model UserProfile {
-  accountId     String    @id @map("account_id") @db.Uuid
-  fullName      String    @map("full_name")
-  handle        String    @unique
+  accountId     String            @id @map("account_id") @db.Uuid
+  fullName      String            @map("full_name")
+  handle        String            @unique
   mobile        String?
   gender        String?
-  dob           DateTime? @db.Date
+  dob           DateTime?         @db.Date
   bio           String?
-  displayPicKey String?   @map("display_pic_key")
+  displayPicKey String?           @map("display_pic_key")
   achievements  String?
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  role          UserRole          @default(USER)
+  visibility    ProfileVisibility @default(PUBLIC)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -251,25 +282,25 @@ model UserProfile {
 
 /// Institution accounts are web-only (enforced at login, not here).
 model SchoolProfile {
-  accountId        String   @id @map("account_id") @db.Uuid
-  name             String
-  adminName        String?  @map("admin_name")
-  phone            String?
-  addressLine1     String?  @map("address_line1")
-  addressLine2     String?  @map("address_line2")
-  city             String?
-  state            String?
-  postalCode       String?  @map("postal_code")
-  country          String?
-  about            String?
-  mission          String?
-  vision           String?
-  facilities       String?
-  establishmentYear Int?    @map("establishment_year")
-  affiliation      String?
-  displayPicKey    String?  @map("display_pic_key")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  accountId         String   @id @map("account_id") @db.Uuid
+  name              String
+  adminName         String?  @map("admin_name")
+  phone             String?
+  addressLine1      String?  @map("address_line1")
+  addressLine2      String?  @map("address_line2")
+  city              String?
+  state             String?
+  postalCode        String?  @map("postal_code")
+  country           String?
+  about             String?
+  mission           String?
+  vision            String?
+  facilities        String?
+  establishmentYear Int?     @map("establishment_year")
+  affiliation       String?
+  displayPicKey     String?  @map("display_pic_key")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -305,13 +336,13 @@ model Class {
 
   school SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
 
-  subjects          Subject[]
-  classTeacher      ClassTeacher?
-  children          Child[]
-  memberships       Membership[]
-  academicItems     AcademicItem[]
-  timetables        Timetable[]
-  leaveApplications LeaveApplication[]
+  subjects             Subject[]
+  classTeacher         ClassTeacher?
+  children             Child[]
+  memberships          Membership[]
+  academicItems        AcademicItem[]
+  timetables           Timetable[]
+  leaveApplications    LeaveApplication[]
   verificationRequests VerificationRequest[]
 
   @@unique([schoolId, medium, level, section])
@@ -388,13 +419,13 @@ model ClassTeacher {
 
 /// A parent's child. Not an account — children do not log in; the parent acts within their scope.
 model Child {
-  id              String   @id @default(uuid()) @db.Uuid
-  parentAccountId String   @map("parent_account_id") @db.Uuid
-  fullName        String   @map("full_name")
-  schoolId        String?  @map("school_id") @db.Uuid
-  classId         String?  @map("class_id") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  parentAccountId String    @map("parent_account_id") @db.Uuid
+  fullName        String    @map("full_name")
+  schoolId        String?   @map("school_id") @db.Uuid
+  classId         String?   @map("class_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
   parent Account        @relation(fields: [parentAccountId], references: [id], onDelete: Cascade)
@@ -567,6 +598,30 @@ model SyllabusProgress {
   @@map("syllabus_progress")
 }
 
+/// Every object written to the bucket, so the ones nothing ever referenced can be found again.
+///
+/// An upload and the row that references it are two requests: the client uploads, gets a key, and
+/// then attaches it. When the second request fails — a validation error, a closed tab, a dropped
+/// connection — the object stays in the bucket with nothing pointing at it and no way to identify
+/// it later. This table is that way: unclaimed rows older than the grace period are swept.
+model MediaObject {
+  key         String    @id
+  prefix      String
+  contentType String    @map("content_type")
+  sizeBytes   Int       @map("size_bytes")
+  /// Who uploaded it. Kept for the audit trail on a deletion, not for authorization.
+  uploadedBy  String    @map("uploaded_by") @db.Uuid
+  /// Set when a module attaches the key to something. Null means nothing references it yet.
+  claimedAt   DateTime? @map("claimed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  uploader Account @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  /// The sweep's query: unclaimed, oldest first.
+  @@index([claimedAt, createdAt])
+  @@map("media_object")
+}
+
 /// Replaces the legacy VIEWED_BY[] arrays. The unique constraint makes "mark as read" idempotent.
 model ReadReceipt {
   id          String             @id @default(uuid()) @db.Uuid
@@ -687,6 +742,51 @@ model PostComment {
   @@index([postId, createdAt])
   @@index([accountId])
   @@map("post_comment")
+}
+
+/// One account has blocked another (`PRD/06-social.md`, Moderation & safety).
+///
+/// Stored directional — who blocked whom — and applied **both ways** on read: a blocked account
+/// must not see the blocker's content either, or blocking becomes a one-sided mute that the other
+/// party can work around by simply looking.
+/// A report raised by a member about content or an account (`PRD/06-social.md`, Moderation).
+///
+/// **Nothing reads this queue yet.** Who reviews reports is an open product question: a school
+/// moderates its own community, but social spans schools, and this product has no platform-admin
+/// role. The rows accumulate rather than being dropped, so whoever gets that job inherits the
+/// history rather than starting from nothing.
+model Report {
+  id                String        @id @default(uuid()) @db.Uuid
+  reporterAccountId String        @map("reporter_account_id") @db.Uuid
+  subjectType       ReportSubject @map("subject_type")
+  subjectId         String        @map("subject_id") @db.Uuid
+  reason            String
+  status            ReportStatus  @default(OPEN)
+  reviewedBy        String?       @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime?     @map("reviewed_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  reporter Account @relation("Reporter", fields: [reporterAccountId], references: [id], onDelete: Cascade)
+
+  /// One report per person per thing: reporting twice is the same complaint, not two.
+  @@unique([reporterAccountId, subjectType, subjectId])
+  @@index([status, createdAt])
+  @@map("report")
+}
+
+model Block {
+  id               String   @id @default(uuid()) @db.Uuid
+  blockerAccountId String   @map("blocker_account_id") @db.Uuid
+  blockedAccountId String   @map("blocked_account_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  blocker Account @relation("Blocker", fields: [blockerAccountId], references: [id], onDelete: Cascade)
+  blocked Account @relation("Blocked", fields: [blockedAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerAccountId, blockedAccountId])
+  @@index([blockedAccountId])
+  @@map("block")
 }
 
 model Follow {

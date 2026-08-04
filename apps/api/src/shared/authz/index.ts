@@ -241,8 +241,13 @@ export function assertOwnsResource(actor: Actor, ownerAccountId: string): void {
   }
 }
 
-/** Shared tail of the role policies: the role must also be verified at that school. */
-async function assertVerifiedMembership(
+/**
+ * The caller holds this role, verified, at this school.
+ *
+ * Exported as well as used internally: teacher leave is applied for by a teacher of a *particular*
+ * school, which is neither "any member" nor a class-scoped question.
+ */
+export async function assertVerifiedMembership(
   db: Db,
   actor: Actor,
   schoolId: string,

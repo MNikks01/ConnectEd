@@ -15,6 +15,7 @@ export const ErrorCode = {
   SCHOOL_WEB_ONLY: 'SCHOOL_WEB_ONLY',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
+  PLAN_LIMIT_EXCEEDED: 'PLAN_LIMIT_EXCEEDED',
   RATE_LIMITED: 'RATE_LIMITED',
   DEPENDENCY_UNAVAILABLE: 'DEPENDENCY_UNAVAILABLE',
   INTERNAL: 'INTERNAL',
@@ -53,8 +54,47 @@ export class ValidationFailedError extends AppError {
 }
 
 export class UnauthenticatedError extends AppError {
-  constructor(message = 'Authentication is required.') {
+  /**
+   * Why the token was refused — **for logs only**, never for the response.
+   *
+   * The client is told one opaque thing on purpose: distinguishing "expired" from "bad signature"
+   * from "wrong issuer" tells an attacker which part of a forgery to fix. But an operator staring
+   * at a burst of 401s needs exactly that distinction, and it has been unavailable: a token that
+   * was refused looked identical to one that was never sent.
+   */
+  readonly reason?: string;
+
+  constructor(message = 'Authentication is required.', reason?: string) {
     super(ErrorCode.UNAUTHENTICATED, 401, message);
+    this.reason = reason;
+  }
+}
+
+/**
+ * A school has run out of what its plan allows — S5-3 (`PRD/08-billing.md`, FR-BILL-003).
+ *
+ * **This is not an authorization failure and must not read like one.** Every other refusal in this
+ * API means the caller tried to do something they were not permitted to do; this one means they
+ * were entirely entitled to try and their school has run out of room. So, unlike a scoped 404 or a
+ * bare 403, it says exactly what the limit is, how much of it is in use, and what lifts it —
+ * hiding that would be both user-hostile and commercially absurd.
+ *
+ * 402 rather than 403 so a client can branch on "needs a bigger plan" without parsing prose.
+ */
+export class PlanLimitExceededError extends AppError {
+  constructor(params: { limit: string; allowed: number; used: number; planName: string }) {
+    super(
+      ErrorCode.PLAN_LIMIT_EXCEEDED,
+      402,
+      `Your ${params.planName} plan allows ${params.allowed} ${params.limit}, and ${params.used} ` +
+        `are in use. Upgrading the plan raises the limit; nothing you already have is affected.`,
+      [
+        {
+          field: params.limit,
+          issue: `limit ${params.allowed} reached (${params.used} in use)`,
+        },
+      ],
+    );
   }
 }
 

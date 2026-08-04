@@ -1,6 +1,6 @@
 # Security — Authentication
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 Implements `ADR-0007`.
 
@@ -24,11 +24,20 @@ Implements `ADR-0007`.
   than trusting stale JWT claims.
 - **Signing keys** from the secrets manager; support key rotation (JWKS with `kid`).
 
-> **Implemented as of S0-7:** access tokens are signed **HS256** with `JWT_ACCESS_SECRET` (minimum 32 chars,
-> enforced at boot), with the algorithm pinned on verification to block `alg: none` and algorithm confusion.
-> Asymmetric signing and JWKS/`kid` rotation described above are **not yet built** — they need key management
-> and a published JWKS endpoint, which is its own task. Refresh tokens are already as described: opaque,
-> 256-bit random, stored as a SHA-256 digest, rotating per family with reuse detection.
+> **Implemented as of S3-10 (`ADR-0014`).** Access tokens are signed **Ed25519 (EdDSA)** when a key pair is
+> configured, with a `kid` in every header and the public key published at `/.well-known/jwks.json` — so a
+> verifier never needs the signing key. Rotation is an overlap: `JWT_PREVIOUS_PUBLIC_KEY` keeps the outgoing key
+> verifiable while its tokens expire, and JWKS publishes both.
+>
+> **HS256 with `JWT_ACCESS_SECRET` remains the default for local development**, so nothing but a secret is
+> needed to run the API. The two modes never mix — the algorithm is pinned to exactly one value at verification,
+> and the JWKS route is absent rather than empty when signing is symmetric.
+>
+> Refresh tokens are unaffected and already as described: opaque, 256-bit random, stored as a SHA-256 digest,
+> rotating per family with reuse detection.
+>
+> **Still open:** key material is a deployment concern — generated, stored in the secret manager, and rotated on
+> a schedule. Production has no key pair configured yet, so it runs HS256 until one is provisioned.
 
 ## Flows
 

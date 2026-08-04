@@ -11,6 +11,7 @@ Infrastructure-as-code and ops configuration. Owned by the `devops-engineer` cha
 | `terraform/`      | Cloud resources (DB, Redis, buckets, networking, secrets).                       |
 | `nginx/`          | Reverse-proxy / ingress config.                                                  |
 | `prometheus/`     | Scrape configs + alert rules.                                                    |
+| `alertmanager/`   | Where firing alerts go: routing by severity, grouping, inhibition.               |
 | `grafana/`        | Dashboards (service, DB, queue, business, RUM) + alerting.                       |
 | `loki/`           | Log aggregation config.                                                          |
 | `tempo/`          | Distributed-tracing config.                                                      |

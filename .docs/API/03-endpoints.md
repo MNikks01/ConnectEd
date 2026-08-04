@@ -7,19 +7,21 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Auth & accounts
 
-| Method | Path                    | Auth | Purpose                                      |
-| ------ | ----------------------- | :--: | -------------------------------------------- |
-| POST   | `/auth/register`        |  🔓  | Register individual.                         |
-| POST   | `/auth/register/school` |  🔓  | Register school (web only).                  |
-| POST   | `/auth/login`           |  🔓  | Login → access + refresh.                    |
-| POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                               |
-| POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                       |
-| POST   | `/auth/password/forgot` |  🔓  | Start reset.                                 |
-| POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                      |
-| POST   | `/auth/email/verify`    |  🔑  | Confirm email.                               |
-| GET    | `/me`                   |  🔑  | Current account + roles + verified contexts. |
-| PATCH  | `/me/profile`           |  🔑  | Update own profile.                          |
-| POST   | `/me/role`              |  🔑  | Declare/switch academic role.                |
+| Method | Path                    | Auth | Purpose                                                          |
+| ------ | ----------------------- | :--: | ---------------------------------------------------------------- |
+| POST   | `/auth/register`        |  🔓  | Register individual.                                             |
+| POST   | `/auth/register/school` |  🔓  | Register school (web only).                                      |
+| POST   | `/auth/login`           |  🔓  | Login → access + refresh.                                        |
+| POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                                                   |
+| POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                                           |
+| POST   | `/auth/password/forgot` |  🔓  | Start reset.                                                     |
+| POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                                          |
+| POST   | `/auth/email/verify`    |  🔑  | Confirm email.                                                   |
+| GET    | `/me`                   |  🔑  | Current account + roles + verified contexts.                     |
+| GET    | `/me/profile`           |  🔑  | My own profile, unrestricted, with my visibility setting.        |
+| PATCH  | `/me/profile`           |  🔑  | Update own profile (individuals; schools use the portal).        |
+| GET    | `/accounts/:id/profile` |  🔑  | Someone's profile — the card always, the rest per their setting. |
+| POST   | `/me/role`              |  🔑  | Declare/switch academic role.                                    |
 
 ## Institution & classes
 
@@ -33,6 +35,7 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET    | `/classes/:id/subjects`           |  🔑  | Subjects of a class (needed before verification). |
 | PATCH  | `/classes/:id`                    |  🛡   | Rename, activate, or deactivate a class.          |
 | GET    | `/classes/:id/class-teacher`      |  🛡   | Who the class teacher is; 404 when unallocated.   |
+| GET    | `/me/class-teacher`               |  🔑  | Classes I am class teacher of — the queues I own. |
 | POST   | `/classes/:id/class-teacher`      |  🛡   | Allocate class teacher.                           |
 | GET    | `/schools/:id/members`            |  🛡   | Roster.                                           |
 | DELETE | `/schools/:id/members/:accountId` |  🛡   | Remove/revoke member.                             |
@@ -73,6 +76,12 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET          | `/classes/:id/syllabus`           |  🛡   | Coverage for every subject of a class.              |
 | DELETE       | `/syllabus/:id`                   |  🛡   | Remove a topic recorded in error.                   |
 
+## Well-known
+
+| Method | Path                     | Auth | Purpose                                                                                   |
+| ------ | ------------------------ | :--: | ----------------------------------------------------------------------------------------- |
+| GET    | `/.well-known/jwks.json` |  —   | Public keys access tokens are signed with (`ADR-0014`). Absent when signing is symmetric. |
+
 ## Media
 
 | Method | Path             | Auth | Purpose                                                                                                                                                             |
@@ -81,29 +90,48 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Workflows
 
-| Method | Path                                         | Auth | Purpose                   |
-| ------ | -------------------------------------------- | :--: | ------------------------- |
-| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child. |
-| POST   | `/me/leave`                                  |  🛡   | Teacher applies (own).    |
-| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.      |
-| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.          |
-| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.            |
-| POST   | `/schools/:id/feedback`                      |  🛡   | Complaint/suggestion.     |
-| GET    | `/schools/:id/feedback`                      |  🛡   | Review.                   |
+| Method | Path                                         | Auth | Purpose                                                         |
+| ------ | -------------------------------------------- | :--: | --------------------------------------------------------------- |
+| POST   | `/children/:childId/leave`                   |  🛡   | Parent applies for child.                                       |
+| POST   | `/me/leave`                                  |  🛡   | Teacher applies for their own leave.                            |
+| GET    | `/me/leave`                                  |  🔑  | My applications and their status.                               |
+| GET    | `/classes/:id/leave?status=RECEIVED`         |  🛡   | Class-teacher queue.                                            |
+| GET    | `/schools/:id/leave/teacher?status=RECEIVED` |  🛡   | Principal queue.                                                |
+| POST   | `/leave/:id/decision`                        |  🛡   | Accept/reject.                                                  |
+| POST   | `/schools/:id/feedback`                      |  🛡   | Parent, teacher, or principal raises a complaint or suggestion. |
+| GET    | `/schools/:id/feedback`                      |  🛡   | The queue — school staff only; `?status=` filters.              |
+| GET    | `/me/feedback`                               |  🔑  | What I raised, and where it got to.                             |
+| POST   | `/feedback/:id/review`                       |  🛡   | School or principal moves it forward.                           |
 
 ## Social
 
-| Method | Path                                 | Auth | Purpose                   |
-| ------ | ------------------------------------ | :--: | ------------------------- |
-| POST   | `/posts`                             |  🔑  | Create post.              |
-| GET    | `/feed`                              |  🔑  | Aggregated feed (cursor). |
-| POST   | `/posts/:id/like` / `DELETE`         |  🔑  | Like/unlike.              |
-| POST   | `/posts/:id/comments`                |  🔑  | Comment.                  |
-| POST   | `/accounts/:id/follow` / `DELETE`    |  🔑  | Follow/unfollow.          |
-| POST   | `/connections`                       |  🔑  | Request connection.       |
-| POST   | `/connections/:id/accept`            |  🔑  | Accept.                   |
-| GET    | `/threads` · `/threads/:id/messages` |  🔑  | Messaging.                |
-| POST   | `/threads/:id/messages`              |  🔑  | Send message.             |
+| Method       | Path                      | Auth | Purpose                                                                                 |
+| ------------ | ------------------------- | :--: | --------------------------------------------------------------------------------------- |
+| POST         | `/posts`                  |  🔑  | Publish a post (rate limited, per account).                                             |
+| GET          | `/posts/:id`              |  🔑  | Read one; 404 when blocked, deleted, or missing.                                        |
+| PATCH/DELETE | `/posts/:id`              |  🔑  | Author only; delete is soft.                                                            |
+| GET          | `/accounts/:id/posts`     |  🔑  | An account's timeline, cursor-paginated.                                                |
+| GET          | `/feed`                   |  🔑  | Own posts plus follows and connections, reverse-chronological, cursor-paginated.        |
+| POST         | `/posts/:id/like`         |  🔑  | Toggle a like; 200 either way, and the same request twice leaves you where you started. |
+| POST         | `/posts/:id/comments`     |  🔑  | Comment on a post.                                                                      |
+| GET          | `/posts/:id/comments`     |  🔑  | Comments, oldest first, blocked authors hidden.                                         |
+| DELETE       | `/comments/:id`           |  🔑  | The comment's author only; delete is soft.                                              |
+| POST         | `/accounts/:id/follow`    |  🔑  | Follow; idempotent.                                                                     |
+| DELETE       | `/accounts/:id/follow`    |  🔑  | Unfollow; works even after a block.                                                     |
+| GET          | `/accounts/:id/follow`    |  🔑  | Follow state and counts.                                                                |
+| POST         | `/connections`            |  🔑  | Request a connection; one row per pair.                                                 |
+| GET          | `/me/connections`         |  🔑  | Mine, `?status=` filters.                                                               |
+| POST         | `/accounts/:id/block`     |  🔑  | Block; idempotent. Hides content both ways, everywhere.                                 |
+| DELETE       | `/accounts/:id/block`     |  🔑  | Unblock; restores what was there rather than clearing it.                               |
+| GET          | `/me/blocks`              |  🔑  | Who I have blocked. Never who has blocked me.                                           |
+| POST         | `/reports`                |  🔑  | Report a post, comment, message, or account.                                            |
+| GET          | `/me/reports`             |  🔑  | What I have reported.                                                                   |
+| POST         | `/connections/:id/accept` |  🔑  | The other party accepts.                                                                |
+| DELETE       | `/connections/:id`        |  🔑  | Reject, cancel, or disconnect — the same row, removed.                                  |
+| POST         | `/threads`                |  🔑  | Find or start a thread with an account; 200 either way.                                 |
+| GET          | `/threads`                |  🔑  | Inbox: threads, last message, unread counts and total.                                  |
+| GET          | `/threads/:id/messages`   |  🔑  | Messages, newest first, cursor-paginated. Reading marks them read.                      |
+| POST         | `/threads/:id/messages`   |  🔑  | Send (rate limited, per account).                                                       |
 
 ## Notifications & billing
 
@@ -115,8 +143,29 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                                     |
 | POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).                        |
 | GET    | `/plans`                    |  🔑  | Available plans.                                 |
+| GET    | `/schools/:id/subscription` |  🛡   | The school's own plan, limits, and usage.        |
 | POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
 | POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
+
+## Real-user monitoring
+
+| Method | Path   | Auth | Purpose                                                                 |
+| ------ | ------ | :--: | ----------------------------------------------------------------------- |
+| POST   | `/rum` |  🔓  | Core Web Vitals and browser errors. Stores nothing; always answers 204. |
+
+The only unauthenticated write in the API. Rate-limited by address, strictly validated, and the `route` label
+comes from a closed list — never from the path the caller sent.
+
+## Real-time
+
+| Method | Path                  | Auth | Purpose                                                     |
+| ------ | --------------------- | :--: | ----------------------------------------------------------- |
+| POST   | `/me/realtime-ticket` |  🔑  | Mints a single-use, 30s ticket for one WebSocket upgrade.   |
+| —      | `/ws?ticket=…`        |  🎫  | WebSocket. Outside `/api/v1`; not a versioned REST surface. |
+
+🎫 authorized by ticket, not by a bearer token — a browser cannot set headers on a WebSocket upgrade
+(ADR-0016). The socket carries **no content**: a frame says a thread moved, and the client re-reads
+through the REST API, which authorizes each read. Nothing sent by the client is acted on.
 
 ## Ops
 

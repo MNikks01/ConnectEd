@@ -408,6 +408,215 @@ const CAPABILITIES: Capability[] = [
       return response.status;
     },
   },
+  {
+    name: 'Submit leave application',
+    outcomes: {
+      // A student's leave is applied for by their parent (PRD 05-workflows).
+      student: 'deny',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'deny',
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const dates = { startDate: '2026-09-14', endDate: '2026-09-15', reason: 'Matrix' };
+
+      // A parent applies for their child; everyone else can only try to apply for themselves.
+      const response =
+        role === 'parent'
+          ? await request(app)
+              .post(`/api/v1/children/${fixture.childId}/leave`)
+              .set('Authorization', await authFor(role))
+              .send(dates)
+          : await request(app)
+              .post('/api/v1/me/leave')
+              .set('Authorization', await authFor(role))
+              .send({ schoolId: fixture.schoolAccountId, ...dates });
+
+      return response.status;
+    },
+  },
+  {
+    name: 'Approve student/parent leave',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'allow',
+      principal: 'deny',
+      // 👁 in the matrix: the school watches the queue, it does not decide.
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      // Class A, whose class teacher is the fixture's first teacher, and a child placed in it so
+      // the application has somewhere to go.
+      const child = await db.child.create({
+        data: {
+          parentAccountId: fixture.parentAccountId,
+          fullName: 'Matrix child',
+          schoolId: fixture.schoolAccountId,
+          classId: fixture.classAId,
+        },
+        select: { id: true },
+      });
+
+      const leave = await db.leaveApplication.create({
+        data: {
+          kind: 'STUDENT',
+          schoolId: fixture.schoolAccountId,
+          classId: fixture.classAId,
+          childId: child.id,
+          applicantAccountId: fixture.parentAccountId,
+          startDate: new Date('2026-09-14T00:00:00.000Z'),
+          endDate: new Date('2026-09-15T00:00:00.000Z'),
+          reason: 'Matrix',
+        },
+        select: { id: true },
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/leave/${leave.id}/decision`)
+        .set('Authorization', await authFor(role))
+        .send({ decision: 'ACCEPT' });
+
+      return response.status;
+    },
+  },
+  {
+    name: 'Approve teacher leave',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'allow',
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const leave = await db.leaveApplication.create({
+        data: {
+          kind: 'TEACHER',
+          schoolId: fixture.schoolAccountId,
+          applicantAccountId: fixture.otherTeacherAccountId,
+          startDate: new Date('2026-09-14T00:00:00.000Z'),
+          endDate: new Date('2026-09-15T00:00:00.000Z'),
+          reason: 'Matrix',
+        },
+        select: { id: true },
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/leave/${leave.id}/decision`)
+        .set('Authorization', await authFor(role))
+        .send({ decision: 'ACCEPT' });
+
+      return response.status;
+    },
+  },
+  {
+    name: 'Submit complaints/suggestions',
+    outcomes: {
+      // Hidden from students, carried from legacy.
+      student: 'deny',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      // A school complaining to itself is not a thing the product does.
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post(`/api/v1/schools/${fixture.schoolAccountId}/feedback`)
+        .set('Authorization', await authFor(role))
+        .send({ kind: 'COMPLAINT', body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'Review complaints',
+    outcomes: {
+      student: 'deny',
+      parent: 'deny',
+      // 👁 in the matrix — a teacher reads the queue, which is what this attempt does.
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/feedback`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
+    name: 'Social: post/like/comment/follow/message',
+    outcomes: {
+      // Every column is ✅ in the matrix, and that is the requirement rather than an omission:
+      // social is open to all account types, verified or not (PRD 06). Asserted anyway, because
+      // "everyone can" is a claim that regresses as silently as any other.
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'allow',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .post('/api/v1/posts')
+        .set('Authorization', await authFor(role))
+        .send({ body: 'Matrix' });
+      return response.status;
+    },
+  },
+  {
+    name: 'View feed / profiles',
+    outcomes: {
+      student: 'allow',
+      parent: 'allow',
+      teacher: 'allow',
+      classTeacher: 'allow',
+      principal: 'allow',
+      school: 'allow',
+      generalUser: 'allow',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get('/api/v1/feed')
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
+    name: 'Manage subscription/billing',
+    outcomes: {
+      // The one row where the principal is refused something their own school can do. They run the
+      // school day; they do not hold the contract. Six columns are ➖ and only `school` is ✅.
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'allow',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get(`/api/v1/schools/${fixture.schoolAccountId}/subscription`)
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
 ];
 
 let cachedSecondSchool: string | undefined;
@@ -465,24 +674,21 @@ describe('permission matrix', () => {
 });
 
 /**
- * Matrix rows with no endpoint yet. Listed rather than omitted so the distance between the product
- * contract and the implementation is visible in the suite that claims to enforce it.
+ * Matrix rows with no endpoint yet.
+ *
+ * **This list is now empty**, which is the point it has been counting towards since S1-7: every
+ * capability in `PRD/09-permissions-matrix.md` is asserted against the live API, for every role.
+ * A new row in the product contract belongs here the moment it is written and moves into
+ * `CAPABILITIES` when its endpoint lands.
  */
-const UNIMPLEMENTED = [
-  'Submit leave application',
-  'Approve student/parent leave',
-  'Approve teacher leave',
-  'Submit complaints/suggestions',
-  'Review complaints',
-  'Manage subscription/billing',
-  'Social: post/like/comment/follow/message',
-  'View feed / profiles',
-] as const;
+const UNIMPLEMENTED: readonly string[] = [];
 
 describe('matrix rows not yet implemented', () => {
+  it('has none left — every row in the product contract is asserted above', () => {
+    expect(UNIMPLEMENTED).toEqual([]);
+  });
+
   it.each(UNIMPLEMENTED)('%s — no endpoint yet; add a capability here when it lands', (row) => {
-    // Deliberately trivial. The value is the inventory, not the assertion: this list shrinking to
-    // empty is the signal that the enforcement contract fully covers the product contract.
     expect(row).toBeTruthy();
   });
 });

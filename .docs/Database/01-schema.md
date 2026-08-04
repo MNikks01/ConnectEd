@@ -1,6 +1,6 @@
 # Database — Schema & ERD
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-02`
 
 Logical schema (Prisma models will mirror this). Types are indicative; all tables have `id`, `created_at`,
 `updated_at`; user-content tables add `deleted_at`.
@@ -23,6 +23,7 @@ Added while implementing the schema, for columns the tables above list without n
 
 - `AccountStatus`: `ACTIVE | SUSPENDED | DEACTIVATED` — `account.status`
 - `FeedbackStatus`: `OPEN | UNDER_REVIEW | RESOLVED` — `feedback.status`
+- `ProfileVisibility`: `PUBLIC | CONNECTIONS` — `user_profile.visibility`; the name-and-avatar card is always visible
 - `ConnectionStatus`: `PENDING | ACCEPTED` — `connection.status`
 - `ReadReceiptSubject`: `NOTICE | ACADEMIC_ITEM | EVENT | TIMETABLE` — `read_receipt.subject_type`
 - `NotificationCategory`: `ACADEMIC | NOTICE | EVENT | LEAVE | SOCIAL | MESSAGE | VERIFICATION | BILLING` —
@@ -82,19 +83,22 @@ Added while implementing the schema, for columns the tables above list without n
 | Table               | Key columns                                                                                                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `leave_application` | `id`, `kind (LeaveKind)`, `applicant_account_id FK`, `child_id FK?`, `class_id FK?`, `school_id FK`, `start_date`, `end_date`, `reason`, `status (LeaveStatus)`, `decided_by`, `decided_at` |
+| `media_object`      | `key PK`, `prefix`, `content_type`, `size_bytes`, `uploaded_by FK`, `claimed_at`, `created_at` — what was uploaded, and whether anything ever referenced it                                 |
 | `feedback`          | `id`, `kind (FeedbackKind)`, `author_account_id FK`, `school_id FK`, `body`, `status`, `reviewed_by`, `reviewed_at`                                                                         |
 
 ## Social
 
-| Table            | Key columns                                                                               |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `post`           | `id`, `author_account_id FK`, `body`, `image_key?`                                        |
-| `post_like`      | `post_id FK`, `account_id FK`, UNIQUE(`post_id,account_id`)                               |
-| `post_comment`   | `id`, `post_id FK`, `account_id FK`, `body`                                               |
-| `follow`         | `follower_account_id FK`, `followee_account_id FK`, UNIQUE(pair)                          |
-| `connection`     | `a_account_id`, `b_account_id`, `status (pending/accepted)`, `requested_by`, UNIQUE(pair) |
-| `message_thread` | `id`, `participant_a`, `participant_b`                                                    |
-| `message`        | `id`, `thread_id FK`, `sender_account_id FK`, `body`, `read_at?`                          |
+| Table            | Key columns                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `post`           | `id`, `author_account_id FK`, `body`, `image_key?`                                                                                                            |
+| `post_like`      | `post_id FK`, `account_id FK`, UNIQUE(`post_id,account_id`)                                                                                                   |
+| `post_comment`   | `id`, `post_id FK`, `account_id FK`, `body`                                                                                                                   |
+| `report`         | `id`, `reporter_account_id FK`, `subject_type`, `subject_id`, `reason`, `status`, `reviewed_by`, `reviewed_at` — **nothing reads this queue yet; see PRD 06** |
+| `block`          | `id`, `blocker_account_id FK`, `blocked_account_id FK`, `created_at` — applied **both ways** on every social read                                             |
+| `follow`         | `follower_account_id FK`, `followee_account_id FK`, UNIQUE(pair)                                                                                              |
+| `connection`     | `a_account_id`, `b_account_id`, `status (pending/accepted)`, `requested_by`, UNIQUE(pair)                                                                     |
+| `message_thread` | `id`, `participant_a`, `participant_b`                                                                                                                        |
+| `message`        | `id`, `thread_id FK`, `sender_account_id FK`, `body`, `read_at?`                                                                                              |
 
 ## Notifications & billing
 

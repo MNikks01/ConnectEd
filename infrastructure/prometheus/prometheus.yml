@@ -13,6 +13,13 @@ global:
 rule_files:
   - /etc/prometheus/alerts.yml
 
+# Where a firing rule goes. Without this block the rules evaluate and stop — which is exactly what
+# they did until S3-11.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 scrape_configs:
   - job_name: prometheus
     static_configs:

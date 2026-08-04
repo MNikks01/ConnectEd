@@ -17,14 +17,25 @@ const logger = createLogger(config);
 const { createApp } = await import('./app.js');
 const { createDb, registerDbReadiness } = await import('./shared/db/index.js');
 const { ReadinessRegistry } = await import('./shared/health/readiness.js');
-const { createEventQueue, createEventWorker, createRedisConnection } =
+const { createEventQueue, createEventWorker, createRedisConnection, EVENTS_QUEUE } =
   await import('./shared/queue/index.js');
 const { createNotificationsModule } = await import('./modules/notifications/index.js');
 const { createStorage } = await import('./shared/storage/index.js');
 
+const { createMetrics, registerDbPoolMetrics, registerQueueDepthMetrics } =
+  await import('./shared/observability/metrics.js');
+
+// Built here rather than inside createApp so the pool, the queue, and the worker can all report
+// into the same registry — /metrics is one endpoint, and a signal that lands in a second registry
+// is a signal nobody scrapes.
+const metrics = createMetrics();
+
 const db = createDb({
   connectionString: config.DATABASE_URL,
   logQueries: config.DB_LOG_QUERIES,
+  onPool: (pool) => {
+    registerDbPoolMetrics(metrics.registry, pool);
+  },
 });
 
 // BullMQ needs its own connection: a blocking worker command would otherwise stall every other
@@ -42,20 +53,65 @@ const storage = createStorage(config, logger);
 await storage.ensureBucket();
 readiness.register({ name: 'object-storage', probe: () => storage.ping() });
 
-const app = createApp({ config, logger, readiness, db, events: events.publisher, storage });
+/**
+ * The plan catalogue is code (`modules/billing/plan-catalogue.ts`); the table is its projection.
+ * Applying it at boot — idempotently, like the bucket above — means "the plans exist" holds in
+ * every environment without anyone remembering to run a script, and school registration cannot
+ * fail for want of a row.
+ */
+const { createBillingModule } = await import('./modules/billing/index.js');
+const billing = createBillingModule(db, logger);
+await billing.service.ensureCatalogue();
+
+registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: events.queue });
+
+/**
+ * Live delivery (FR-SOC-022). Two more Redis connections, and both are necessary: ioredis refuses
+ * ordinary commands on a client in subscriber mode, so a single shared one would make ticket
+ * issuance throw the moment the first socket connected.
+ */
+const { createRealtime } = await import('./shared/realtime/index.js');
+const realtimeConnection = createRedisConnection(config.REDIS_URL);
+const realtimeSubscriber = createRedisConnection(config.REDIS_URL);
+const realtime = createRealtime({
+  redis: realtimeConnection,
+  subscriber: realtimeSubscriber,
+  logger,
+});
+
+const app = createApp({
+  config,
+  logger,
+  metrics,
+  readiness,
+  db,
+  events: events.publisher,
+  storage,
+  realtime,
+});
 
 /**
  * The worker consumes what the API publishes. In-process by default; a separate process when
  * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
  */
 const { createVerificationModule } = await import('./modules/verification/index.js');
-const verificationForWorker = createVerificationModule(db, logger, events.publisher);
+const verificationForWorker = createVerificationModule(
+  db,
+  logger,
+  events.publisher,
+  billing.service,
+);
 const notifications = createNotificationsModule(db, logger, verificationForWorker.service);
 const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)
   : undefined;
 const worker = workerConnection
-  ? createEventWorker(workerConnection, logger, (event) => notifications.service.handleEvent(event))
+  ? createEventWorker(
+      workerConnection,
+      logger,
+      (event) => notifications.service.handleEvent(event),
+      metrics,
+    )
   : undefined;
 
 if (worker) logger.info('Event worker running in-process');
@@ -63,6 +119,9 @@ if (worker) logger.info('Event worker running in-process');
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
 });
+
+// After `listen`, because the upgrade handler binds to the running server.
+realtime.attach(server);
 
 /**
  * Graceful shutdown: stop accepting connections, let in-flight requests finish, then flush traces.
@@ -90,6 +149,11 @@ function shutdown(signal: string): void {
       // Close in dependency order: stop consuming, stop publishing, then release the pool —
       // all only after in-flight requests have drained.
       await worker?.close();
+      // Sockets first: an open connection would otherwise keep the process alive past the point
+      // the load balancer has already stopped sending it work.
+      await realtime.close();
+      await realtimeConnection.quit();
+      await realtimeSubscriber.quit();
       await events.close();
       await queueConnection.quit();
       await workerConnection?.quit();

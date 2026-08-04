@@ -11,12 +11,20 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../../generated/prisma/client.js';
+import { createBillingRepository } from '../../modules/billing/billing.repository.js';
+import { TRIAL_PLAN_CODE } from '../../modules/billing/plan-catalogue.js';
 import { membershipScopeKey } from '../../shared/db/membership-scope.js';
 
 import type { Db } from '../../shared/db/index.js';
 import type { UserRole } from '../../generated/prisma/client.js';
 
 let client: PrismaClient | undefined;
+
+/**
+ * Stamped on every connection this suite opens, so `pg_stat_activity` can tell one test run from
+ * another. The pid makes it unique per process; the prefix makes it recognisable.
+ */
+const APPLICATION_NAME = `connected-vitest-${String(process.pid)}`;
 
 export function testDb(): Db {
   const connectionString = process.env.DATABASE_URL;
@@ -25,7 +33,10 @@ export function testDb(): Db {
     throw new Error('DATABASE_URL must be set for integration tests.');
   }
 
-  client ??= new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  const url = new URL(connectionString);
+  url.searchParams.set('application_name', APPLICATION_NAME);
+
+  client ??= new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString() }) });
   return client;
 }
 
@@ -71,6 +82,12 @@ export async function resetDb(): Promise<void> {
   } catch (error) {
     throw new Error(`resetDb could not truncate: ${await describeBlockers(error)}`);
   }
+
+  // The plan catalogue is reference data, not fixture: registering a school connects a plan by
+  // code, so a truncated `plan` table would fail every registration test with an error about a
+  // missing record rather than about billing. Reapplying it from the same definition the app uses
+  // keeps the two from drifting.
+  await createBillingRepository(db).ensureCatalogue();
 }
 
 /** Names whatever is holding the locks, so the failure explains itself. */
@@ -103,6 +120,44 @@ export async function assertDbReachable(): Promise<void> {
       `Integration tests need Postgres at DATABASE_URL. Start it with ` +
         `\`docker compose up -d postgres\` and apply migrations with ` +
         `\`pnpm --filter @connected/api db:deploy\`. Original error: ${String(error)}`,
+    );
+  }
+
+  await assertSoleTestRun();
+}
+
+/**
+ * Refuses to run when a second test process is already on this database — S5-12.
+ *
+ * This suite TRUNCATEs every table between cases. Two runs sharing one database therefore delete
+ * each other's fixtures at random, and the result is not an error but a *wrong answer*: a row that
+ * was created moments ago is absent, an account that exists is not found, a seeded membership
+ * vanishes between `beforeEach` and the assertion.
+ *
+ * That is precisely the shape of the long-standing local flake — "roughly one run in four", never
+ * once in CI, on a developer machine where the vitest config already notes that dev servers, E2E
+ * servers and Docker all run alongside. CI runs one job against a private database and cannot
+ * reproduce it, which fits exactly.
+ *
+ * **This does not prove that was the cause**, and it is not a fix for anything else. It removes
+ * one specific way to lose an afternoon, and makes it say so in a sentence instead of surfacing as
+ * a puzzling 404 several steps away.
+ */
+async function assertSoleTestRun(): Promise<void> {
+  const others = await testDb().$queryRaw<{ application_name: string; pid: number }[]>`
+    SELECT DISTINCT application_name, pid FROM pg_stat_activity
+    WHERE datname = current_database()
+      AND application_name LIKE 'connected-vitest-%'
+      AND application_name <> ${APPLICATION_NAME}
+  `;
+
+  if (others.length > 0) {
+    const names = [...new Set(others.map((row) => row.application_name))].join(', ');
+
+    throw new Error(
+      `Another test run is already using this database (${names}). These suites TRUNCATE between ` +
+        `cases, so two runs delete each other's fixtures and fail in ways that look like ` +
+        `application bugs. Wait for the other run, or point DATABASE_URL at a different database.`,
     );
   }
 }
@@ -164,6 +219,19 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
     select: { id: true },
   });
   const schoolId = schoolAccount.id;
+
+  // Every school registered through the API gets a trial in the same statement (FR-BILL-001), so
+  // a fixture school without one would be a shape production never produces. Tests that want the
+  // no-subscription path delete this row explicitly.
+  await db.subscription.create({
+    data: {
+      school: { connect: { accountId: schoolId } },
+      status: 'TRIALING',
+      periodStart: new Date(),
+      periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      plan: { connect: { code: TRIAL_PLAN_CODE } },
+    },
+  });
 
   const classA = await db.class.create({
     data: { schoolId, medium: 'ENGLISH', level: 'CLASS_8', section: 'A' },
@@ -246,6 +314,23 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
         status: 'VERIFIED',
       },
     });
+  }
+
+  /**
+   * Proves the fixture is actually in the database before any test uses it.
+   *
+   * A rare failure mode has produced authorization tests failing as though a member were not a
+   * member — which is what a fixture that was seeded and then lost looks like from inside a test.
+   * Checking here names the step instead: if this throws, the seed did not survive, and the test
+   * that would otherwise have failed was never the problem.
+   */
+  const seeded = await db.membership.count({ where: { schoolId } });
+
+  if (seeded !== memberships.length) {
+    throw new Error(
+      `seedSchool: expected ${memberships.length} memberships after seeding, found ${seeded}. ` +
+        'The fixture did not survive — suspect the reset, not the test that follows.',
+    );
   }
 
   return {

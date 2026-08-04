@@ -16,6 +16,10 @@ const LINKS = [
   { href: '/home', label: 'Home' },
   { href: '/notices', label: 'Notices' },
   { href: '/events', label: 'Events' },
+  { href: '/leave', label: 'Leave' },
+  { href: '/complaints', label: 'Complaints' },
+  { href: '/social', label: 'Social' },
+  { href: '/messages', label: 'Messages' },
   { href: '/notifications', label: 'Notifications' },
 ];
 
