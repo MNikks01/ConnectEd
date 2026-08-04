@@ -23,8 +23,22 @@ const LINKS = [
   { href: '/notifications', label: 'Notifications' },
 ];
 
-export function MemberNav({ name, unreadCount }: { name: string; unreadCount: number }) {
+export function MemberNav({
+  name,
+  unreadCount,
+  isPlatformAdmin = false,
+}: {
+  name: string;
+  unreadCount: number;
+  /** ConnectEd staff (ADR-0017). Adds one link; the API authorizes every call independently. */
+  isPlatformAdmin?: boolean;
+}) {
   const pathname = usePathname();
+
+  // Appended rather than woven in: the console is a staff tool that happens to be reached from a
+  // member session, and putting it between Social and Messages would suggest it is part of the
+  // product a school bought.
+  const links = isPlatformAdmin ? [...LINKS, { href: '/admin/reports', label: 'Reports' }] : LINKS;
 
   return (
     <div className="school-nav">
@@ -35,7 +49,7 @@ export function MemberNav({ name, unreadCount }: { name: string; unreadCount: nu
 
       <nav aria-label="Main">
         <ul className="school-nav__list">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
             const bell = link.href === '/notifications';
             const label =

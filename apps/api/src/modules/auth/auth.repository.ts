@@ -90,6 +90,7 @@ export interface ActorAccount {
   email: string;
   status: string;
   emailVerifiedAt: Date | null;
+  isPlatformAdmin: boolean;
   role: UserRole | null;
   fullName: string | null;
   handle: string | null;
@@ -249,6 +250,7 @@ export function createAuthRepository(db: Db): AuthRepository {
           email: true,
           status: true,
           emailVerifiedAt: true,
+          isPlatformAdmin: true,
           userProfile: { select: { role: true, fullName: true, handle: true } },
           schoolProfile: { select: { name: true } },
         },
@@ -262,6 +264,7 @@ export function createAuthRepository(db: Db): AuthRepository {
         email: account.email,
         status: account.status,
         emailVerifiedAt: account.emailVerifiedAt,
+        isPlatformAdmin: account.isPlatformAdmin,
         role: account.userProfile?.role ?? null,
         fullName: account.userProfile?.fullName ?? null,
         handle: account.userProfile?.handle ?? null,
