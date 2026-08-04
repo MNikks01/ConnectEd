@@ -31,6 +31,27 @@ export interface AuthRepository {
   storeRefreshToken: (input: StoreRefreshTokenInput) => Promise<void>;
   rotateRefreshToken: (input: RotateRefreshTokenInput) => Promise<void>;
   revokeFamily: (familyId: string) => Promise<void>;
+  /** The account behind an address, or null. Never distinguishes "no account" from anything else. */
+  findAccountIdByEmail: (email: string) => Promise<string | null>;
+  createPasswordResetToken: (input: {
+    accountId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) => Promise<void>;
+  /**
+   * Spends a reset token and applies the new password, in one transaction: the token is marked
+   * used, every other outstanding token for that account is invalidated, the credential is
+   * replaced, and every refresh-token family is revoked.
+   *
+   * Returns false when the token was unknown, expired, or already spent — the caller cannot tell
+   * which, and neither can the person holding it.
+   */
+  consumePasswordResetToken: (input: {
+    tokenHash: string;
+    passwordHash: string;
+    algo: string;
+    now: Date;
+  }) => Promise<boolean>;
   findActorAccount: (accountId: string) => Promise<ActorAccount | null>;
 }
 
@@ -232,6 +253,55 @@ export function createAuthRepository(db: Db): AuthRepository {
           },
         }),
       ]);
+    },
+
+    findAccountIdByEmail: async (email) => {
+      const account = await db.account.findUnique({ where: { email }, select: { id: true } });
+      return account?.id ?? null;
+    },
+
+    createPasswordResetToken: async ({ accountId, tokenHash, expiresAt }) => {
+      await db.passwordResetToken.create({ data: { accountId, tokenHash, expiresAt } });
+    },
+
+    consumePasswordResetToken: async ({ tokenHash, passwordHash, algo, now }) => {
+      return db.$transaction(async (tx) => {
+        // The `where` carries every condition, so the update itself is the check: two requests
+        // racing with the same token cannot both find it unspent, because only one `updateMany`
+        // can match a row whose `usedAt` is still null.
+        const spent = await tx.passwordResetToken.updateMany({
+          where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+          data: { usedAt: now },
+        });
+
+        if (spent.count === 0) return false;
+
+        const token = await tx.passwordResetToken.findUniqueOrThrow({
+          where: { tokenHash },
+          select: { accountId: true },
+        });
+
+        // Any other link that was in flight — an impatient second request, or a first one an
+        // attacker intercepted — dies with this one.
+        await tx.passwordResetToken.updateMany({
+          where: { accountId: token.accountId, usedAt: null },
+          data: { usedAt: now },
+        });
+
+        await tx.credential.update({
+          where: { accountId: token.accountId },
+          data: { passwordHash, algo },
+        });
+
+        // Every session, everywhere. Somebody resetting a password may be doing it *because*
+        // someone else is in their account, and leaving that session alive defeats the point.
+        await tx.refreshToken.updateMany({
+          where: { accountId: token.accountId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+
+        return true;
+      });
     },
 
     revokeFamily: async (familyId: string) => {

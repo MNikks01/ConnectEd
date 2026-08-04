@@ -28,6 +28,8 @@ export interface AuthController {
   login: RequestHandler;
   refresh: RequestHandler;
   logout: RequestHandler;
+  forgotPassword: RequestHandler;
+  resetPassword: RequestHandler;
   me: RequestHandler;
 }
 
@@ -131,6 +133,38 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
         try {
           await service.logout(refreshTokenFrom(req));
           res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+          res.status(204).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    /**
+     * 202 whatever happened, and nothing in the body.
+     *
+     * Registered, not registered, mail sent, mail failed — one answer. Anything else turns this
+     * into a way to ask "does this person have an account here?", which for a product used by
+     * children is a question strangers should not be able to put to it.
+     */
+    forgotPassword: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          await service.requestPasswordReset((req.body as { email: string }).email);
+          res.status(202).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    resetPassword: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { token, password } = req.body as { token: string; password: string };
+          await service.resetPassword(token, password);
+          // 204 and no session. Signing them straight in would be convenient and would mean a
+          // stolen link is a stolen session; making them log in proves they know the new password.
           res.status(204).end();
         } catch (error) {
           next(error);

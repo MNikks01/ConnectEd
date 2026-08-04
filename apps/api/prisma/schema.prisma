@@ -199,6 +199,7 @@ model Account {
   userProfile   UserProfile?
   schoolProfile SchoolProfile?
   refreshTokens RefreshToken[]
+  passwordResets PasswordResetToken[]
 
   teacherProfiles      TeacherProfile[]
   children             Child[]
@@ -269,6 +270,29 @@ model RefreshToken {
   @@index([accountId])
   @@index([familyId])
   @@map("refresh_token")
+}
+
+/// A single-use, expiring password-reset token (FR-AUTH-009).
+///
+/// **The token itself is never stored** — only its SHA-256, exactly as refresh tokens are handled.
+/// A reset token is a credential that grants an account, and a database dump should not hand one
+/// over; hashing means a leaked row buys nothing.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  /// Set the moment it is spent. Single use is enforced on this column, not by deleting the row:
+  /// a spent token that is presented again should be *recognised* as spent rather than looking
+  /// like one that never existed.
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("password_reset_token")
 }
 
 model UserProfile {

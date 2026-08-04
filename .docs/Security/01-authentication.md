@@ -45,7 +45,29 @@ Implements `ADR-0007`.
 - **Login** → verify hash → issue tokens; **reject `SCHOOL` when `X-Client-Type: mobile`** (`SCHOOL_WEB_ONLY`).
 - **Refresh** → validate + rotate (reuse detection).
 - **Logout** → revoke refresh family; clear cookie.
-- **Password reset** → single-use, expiring token; on reset revoke all sessions.
+- **Password reset** → single-use, expiring token; on reset revoke all sessions. **Built**, with
+  these properties asserted:
+  - The response to `/auth/password/forgot` is **identical** whether the address is registered,
+    unregistered, or registered-but-the-mail-failed. It is unauthenticated and strangers will call
+    it; anything that answers differently is an account-enumeration oracle.
+  - The token is **stored hashed** (SHA-256), exactly as refresh tokens are. A database dump must
+    not hand over live reset links.
+  - Spending one is a single `updateMany` whose `where` carries every condition, so two concurrent
+    requests cannot both find it unspent.
+  - It **revokes every refresh-token family**, not only the current one — somebody resetting a
+    password may be doing it _because_ someone else is in their account — and **invalidates any
+    other outstanding reset link** for that account.
+  - Reset does **not** sign the user in. Convenient, and it would make a stolen link a stolen
+    session.
+  - Unknown, expired, and already-spent produce the **same** error, so somebody holding a stolen
+    link cannot learn which part to work on.
+
+  **No mail transport is configured** (`MAIL_TRANSPORT` is `console` or `none`, defaulting to
+  `none`). Choosing one is a deployment decision that wants its own ADR; everything around sending
+  is built and tested. The console transport prints the token and **refuses to construct itself in
+  production**, because a live reset token in a log aggregator is a retained, searchable
+  credential.
+
 - **2FA (P2)** → optional TOTP for school admins/principals; recovery codes.
 
 ## Abuse protection
