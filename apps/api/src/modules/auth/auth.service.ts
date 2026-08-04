@@ -24,6 +24,7 @@ import type { LoginInput, RegisterIndividualInput, RegisterSchoolInput } from '.
 import type { PasswordHasher } from '../../shared/auth/password.js';
 import type { TokenService } from '../../shared/auth/tokens.js';
 import type { Logger } from '../../shared/logger/index.js';
+import type { Mailer } from '../../shared/mail/index.js';
 import type { AccountType, UserRole } from '../../generated/prisma/client.js';
 
 export interface AuthSession {
@@ -53,6 +54,17 @@ export interface AuthService {
   login: (input: LoginInput, clientType: ClientType) => Promise<AuthSession>;
   refresh: (token: string) => Promise<AuthSession>;
   logout: (token: string | undefined) => Promise<void>;
+  /**
+   * FR-AUTH-009. Always resolves, whatever happened.
+   *
+   * The response must not depend on whether the address is registered — an endpoint that answers
+   * differently is an account-enumeration oracle, and this one is unauthenticated and rate-limited
+   * precisely because strangers will call it. So a missing account, a failed send, and a
+   * successful send are indistinguishable from outside.
+   */
+  requestPasswordReset: (email: string) => Promise<void>;
+  /** FR-AUTH-009. Throws when the token is unknown, expired, or already spent. */
+  resetPassword: (token: string, password: string) => Promise<void>;
   currentAccount: (accountId: string) => Promise<CurrentAccount>;
 }
 
@@ -66,12 +78,20 @@ export interface TrialTermsSource {
   trialTerms: () => { planCode: string; periodStart: Date; periodEnd: Date };
 }
 
+/**
+ * How long a reset link lives. `FR-AUTH-009` says at most thirty minutes, and thirty is the right
+ * end of that range: shorter turns a delayed email into a dead link, which sends people back to
+ * the form to generate another one.
+ */
+const PASSWORD_RESET_TTL_MINUTES = 30;
+
 export interface AuthServiceDeps {
   repository: AuthRepository;
   passwords: PasswordHasher;
   tokens: TokenService;
   logger: Logger;
   billing: TrialTermsSource;
+  mailer: Mailer;
 }
 
 export function createAuthService({
@@ -80,6 +100,7 @@ export function createAuthService({
   tokens,
   logger,
   billing,
+  mailer,
 }: AuthServiceDeps): AuthService {
   /**
    * A real argon2id hash of a random value, computed once. Logins for addresses that do not exist
@@ -261,6 +282,59 @@ export function createAuthService({
 
       await repository.revokeFamily(stored.familyId);
       logger.info({ accountId: stored.accountId }, 'Logged out');
+    },
+
+    requestPasswordReset: async (email) => {
+      const accountId = await repository.findAccountIdByEmail(email);
+
+      if (!accountId) {
+        // Logged without the address: a warn stream of "no account for x@y" is a list of
+        // addresses somebody has been probing, and a list of addresses that are *not* registered
+        // is still information about the ones that are.
+        logger.info({ outcome: 'no_account' }, 'Password reset requested');
+        return;
+      }
+
+      const token = randomBytes(32).toString('base64url');
+
+      await repository.createPasswordResetToken({
+        accountId,
+        // Hashed, like a refresh token. A database dump must not hand over live reset links.
+        tokenHash: tokens.hashRefreshToken(token),
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000),
+      });
+
+      try {
+        await mailer.sendPasswordReset({
+          to: email,
+          token,
+          expiresInMinutes: PASSWORD_RESET_TTL_MINUTES,
+        });
+      } catch (error) {
+        // The row exists and the link is valid; only delivery failed. Loud in the logs, silent to
+        // the caller, because telling them would also tell a stranger that the address is real.
+        logger.error({ err: error, accountId }, 'Could not send a password-reset email');
+      }
+    },
+
+    resetPassword: async (token, password) => {
+      const passwordHash = await passwords.hash(password);
+
+      const applied = await repository.consumePasswordResetToken({
+        tokenHash: tokens.hashRefreshToken(token),
+        passwordHash,
+        algo: passwords.algo,
+        now: new Date(),
+      });
+
+      if (!applied) {
+        // Unknown, expired, and already used are one answer. Distinguishing them tells somebody
+        // holding a stolen link which part to work on.
+        logger.warn({ outcome: 'invalid_reset_token' }, 'Password reset failed');
+        throw new UnauthenticatedError('That reset link is invalid or has expired.');
+      }
+
+      logger.info('Password reset completed; all sessions revoked');
     },
 
     currentAccount: async (accountId: string) => {

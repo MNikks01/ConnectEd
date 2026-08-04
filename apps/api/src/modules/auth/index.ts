@@ -14,6 +14,7 @@ import type { Db } from '../../shared/db/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { PasswordHasher } from '../../shared/auth/password.js';
 import type { TokenService } from '../../shared/auth/tokens.js';
+import type { Mailer } from '../../shared/mail/index.js';
 import type { TrialTermsSource } from './auth.service.js';
 
 export type { AuthService, AuthSession, ClientType, CurrentAccount } from './auth.service.js';
@@ -26,6 +27,8 @@ export interface AuthModuleDeps {
   tokens: TokenService;
   /** Supplies the terms of a new school's trial (FR-BILL-001). */
   billing: TrialTermsSource;
+  /** Sends the password-reset link (FR-AUTH-009). */
+  mailer: Mailer;
 }
 
 export interface AuthModule {
@@ -40,9 +43,10 @@ export function createAuthModule({
   passwords,
   tokens,
   billing,
+  mailer,
 }: AuthModuleDeps): AuthModule {
   const repository = createAuthRepository(db);
-  const service = createAuthService({ repository, passwords, tokens, logger, billing });
+  const service = createAuthService({ repository, passwords, tokens, logger, billing, mailer });
 
   return {
     service,

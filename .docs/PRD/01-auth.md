@@ -1,6 +1,6 @@
 # PRD — Accounts & Authentication
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-04`
 
 Actors: all. Establishes identity, account type, role, and session.
 
@@ -22,10 +22,30 @@ Actors: all. Establishes identity, account type, role, and session.
 | FR-AUTH-006 |    P0    | Logout revokes the refresh token and clears client sessions.                                      | Subsequent refresh with revoked token → 401.                                                                          |
 | FR-AUTH-007 |    P0    | After login, the client is routed by account type/role.                                           | School → school portal (web); mobile school login → rejected; individual → user experience by role.                   |
 | FR-AUTH-008 |    P1    | Individuals can declare/switch academic role (Student/Parent/Teacher/Principal).                  | Role change creates the role profile and (if academic) a `PENDING` verification against a chosen school.              |
-| FR-AUTH-009 |    P1    | Password reset via emailed, expiring, single-use token.                                           | Token expires (≤ 30 min), single use; reset invalidates existing sessions.                                            |
+| FR-AUTH-009 |    P1    | Password reset via emailed, expiring, single-use token.                                           | **Built.** 30-minute expiry, single use, revokes every session. No mail transport yet — see below.                    |
 | FR-AUTH-010 |    P1    | Email verification on registration.                                                               | Unverified accounts have limited capability until email confirmed.                                                    |
 | FR-AUTH-011 |    P2    | Rate-limiting & brute-force protection on auth endpoints.                                         | Repeated failures throttled; lockout/backoff applied; events logged.                                                  |
 | FR-AUTH-012 |    P2    | Optional 2FA (TOTP) for school admins & principals.                                               | Enrolment + verification; recovery codes issued.                                                                      |
+
+## Password reset (FR-AUTH-009)
+
+Built, and deliberately built without waiting for a mail transport — the mechanics are the
+substance, and none of them depend on how the message leaves the process:
+
+- `POST /auth/password/forgot` answers **202 with an empty body, always**. Registered, unregistered,
+  or registered-but-the-send-failed are indistinguishable. It is unauthenticated and strangers will
+  call it; anything else is a way to ask "does this person have an account here?".
+- The token is 32 random bytes and is **stored hashed**, exactly as refresh tokens are.
+- Spending it is one statement whose `where` carries every condition, so two concurrent requests
+  cannot both find it unspent. It revokes **every** session and invalidates any other outstanding
+  link for that account.
+- Reset does **not** sign the user in — that would make a stolen link a stolen session.
+- Unknown, expired, and already-spent give the **same** answer.
+
+**No transport is configured.** `MAIL_TRANSPORT` is `console` (prints the link; refuses to
+construct itself in production, because a live token in a log aggregator is a retained credential)
+or `none` (sends nothing and says so at error level). Choosing a real one is a deployment decision
+that deserves its own ADR.
 
 ## Session design (summary — full detail in Security)
 

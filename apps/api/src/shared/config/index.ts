@@ -137,6 +137,15 @@ const envSchema = z.object({
    */
   WORKER_METRICS_PORT: z.coerce.number().int().positive().default(4001),
 
+  /**
+   * How email leaves this process. No real transport exists yet — choosing one is a deployment
+   * decision that wants an ADR — so `console` prints locally and `none` sends nothing and says so.
+   *
+   * Defaulting to `none` rather than `console`: the console mailer writes live reset tokens to the
+   * log, and a default that is unsafe in production is a default that will eventually run there.
+   */
+  MAIL_TRANSPORT: z.enum(['console', 'none']).default('none'),
+
   OTEL_SERVICE_NAME: z.string().default('connected-api'),
   /** Traces are exported only when a collector endpoint is configured. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),

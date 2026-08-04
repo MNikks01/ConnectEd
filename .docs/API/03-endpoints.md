@@ -14,6 +14,8 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/auth/login`           |  🔓  | Login → access + refresh.                                        |
 | POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                                                   |
 | POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                                           |
+| POST   | `/auth/password/forgot` |  🔓  | Ask for a reset link. **Always 202**, registered or not.         |
+| POST   | `/auth/password/reset`  |  🔓  | Spend a link. Single use, ≤30 min, revokes every session.        |
 | POST   | `/auth/password/forgot` |  🔓  | Start reset.                                                     |
 | POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                                          |
 | POST   | `/auth/email/verify`    |  🔑  | Confirm email.                                                   |

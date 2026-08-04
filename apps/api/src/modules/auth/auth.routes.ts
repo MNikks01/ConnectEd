@@ -10,6 +10,8 @@ import rateLimit from 'express-rate-limit';
 import { authenticate } from '../../shared/middleware/authenticate.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import { createAuthController } from './auth.controller.js';
+import { forgotPasswordSchema, resetPasswordSchema } from '@connected/types';
+
 import {
   loginSchema,
   refreshSchema,
@@ -67,6 +69,28 @@ export function authRoutes({ service, config, tokens }: AuthRoutesDeps): Router 
   // Refresh and logout carry no access token: the refresh token *is* the credential.
   router.post('/auth/refresh', credentialLimiter, validateBody(refreshSchema), controller.refresh);
   router.post('/auth/logout', validateBody(refreshSchema), controller.logout);
+
+  /**
+   * Both behind the credential limiter, and for different reasons.
+   *
+   * `forgot` is an unauthenticated endpoint that sends mail to an address a stranger chose: without
+   * a limit it is a way to have this product deliver unwanted email at volume. `reset` accepts a
+   * secret, so it is a guessing surface — though a 256-bit token means the limit is defence in
+   * depth rather than the thing standing between an attacker and an account.
+   */
+  router.post(
+    '/auth/password/forgot',
+    credentialLimiter,
+    validateBody(forgotPasswordSchema),
+    controller.forgotPassword,
+  );
+
+  router.post(
+    '/auth/password/reset',
+    credentialLimiter,
+    validateBody(resetPasswordSchema),
+    controller.resetPassword,
+  );
 
   router.get('/me', authenticate(tokens), controller.me);
 

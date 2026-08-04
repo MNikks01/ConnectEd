@@ -29,6 +29,31 @@ export const handleSchema = z
   .regex(/^[a-z0-9._]+$/, 'Handle may contain lowercase letters, numbers, dots, and underscores.');
 
 /**
+ * Asking for a reset link (FR-AUTH-009).
+ *
+ * An address and nothing else. The response is the same whether or not it is registered, so there
+ * is nothing else the server could usefully be told here.
+ */
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+/**
+ * Spending a reset token.
+ *
+ * The new password goes through the same strength rules as registration. A reset flow with weaker
+ * requirements than sign-up is a documented way to end up with weak passwords, since it is the
+ * path somebody takes when they are frustrated and in a hurry.
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'That reset link is not valid.'),
+  password: passwordSchema,
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+/**
  * Note what is absent: no `role`, `status`, or `accountType`. Those are the server's to decide,
  * and `.parse()` strips them, so a client cannot self-assign privilege.
  */
