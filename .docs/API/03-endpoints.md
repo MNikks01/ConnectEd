@@ -148,6 +148,19 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/schools/:id/subscription`    |  🛡   | Start/change subscription.                                      |
 | POST   | `/webhooks/payments`           | 🔓*  | Provider webhook (signature-verified).                          |
 
+## Moderation (platform admins only)
+
+| Method | Path                          | Auth | Purpose                                               |
+| ------ | ----------------------------- | :--: | ----------------------------------------------------- |
+| GET    | `/admin/reports?status=`      |  🛠   | The queue, oldest first. Filters by status.           |
+| GET    | `/admin/reports/:id`          |  🛠   | One report, with the content it names.                |
+| POST   | `/admin/reports/:id/decision` |  🛠   | `REVIEWED` \| `ACTIONED` \| `DISMISSED`, with a note. |
+
+🛠 requires `PLATFORM_ADMIN` (ADR-0017), read from the database on every request and never from a
+token claim. Everyone else — including the school and the principal — gets **404**, so the queue's
+existence is not something an ordinary account can confirm. Granted only by
+`pnpm --filter @connected/api admin:grant <email>`; there is deliberately no endpoint.
+
 ## Real-user monitoring
 
 | Method | Path   | Auth | Purpose                                                                 |

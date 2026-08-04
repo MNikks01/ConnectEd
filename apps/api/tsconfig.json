@@ -8,6 +8,6 @@
     "types": ["node"]
   },
   "//include": "prisma/ and the config files are included so they are type-checked and lintable; tsconfig.build.json drops them from the shipped output.",
-  "include": ["src", "prisma", "prisma.config.ts", "vitest.config.ts"],
+  "include": ["src", "prisma", "scripts", "prisma.config.ts", "vitest.config.ts"],
   "references": [{ "path": "../../packages/types" }]
 }

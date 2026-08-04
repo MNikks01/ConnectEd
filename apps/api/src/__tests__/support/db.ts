@@ -186,6 +186,8 @@ export interface SchoolFixture {
   parentAccountId: string;
   childId: string;
   outsiderAccountId: string;
+  /** ConnectEd staff (ADR-0017). A member of nothing, and that is the point. */
+  platformAdminAccountId: string;
 }
 
 let sequence = 0;
@@ -262,6 +264,14 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
   const studentAccountId = await createIndividual(db, 'STUDENT', 'student');
   const parentAccountId = await createIndividual(db, 'PARENT', 'parent');
   const outsiderAccountId = await createIndividual(db, 'USER', 'outsider');
+
+  // Staff, deliberately with no membership anywhere: a platform admin who happened to be a member
+  // of the fixture school would let a test pass for the wrong reason.
+  const platformAdminAccountId = await createIndividual(db, 'USER', 'staff');
+  await db.account.update({
+    where: { id: platformAdminAccountId },
+    data: { isPlatformAdmin: true },
+  });
 
   const teacherProfile = await db.teacherProfile.create({
     data: { accountId: teacherAccountId, schoolId },
@@ -353,6 +363,7 @@ export async function seedSchool(db: Db): Promise<SchoolFixture> {
     parentAccountId,
     childId: child.id,
     outsiderAccountId,
+    platformAdminAccountId,
   };
 }
 

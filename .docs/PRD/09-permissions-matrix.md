@@ -29,8 +29,16 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | Verify/remove members, allocate class teacher |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | Manage subscription/billing                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | View school analytics                         |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Review the moderation queue                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ➖   |      ➖      |
 
 ## Notes
+
+- **The moderation queue is `➖` in every column, and that is the row's whole content.** It is read
+  by ConnectEd staff holding `PLATFORM_ADMIN` (ADR-0017), which is not one of the seven kinds of
+  user this table describes. Not the school and not the principal: a report is often _about_
+  someone at the reporter's school, and the reporting form promises that nobody there is told. The
+  suite asserts all seven refusals, because "no user role can read this" is a claim that regresses
+  as quietly as any other.
 
 - **School analytics** is the school account's alone, like billing — it is an admin surface on a
   web-only account, and the plan that unlocks it is the school's contract. It is also the only
