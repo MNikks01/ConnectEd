@@ -9,6 +9,7 @@ import {
   AppError,
   ErrorCode,
   ForbiddenError,
+  UnauthenticatedError,
   ValidationFailedError,
 } from '../shared/errors/index.js';
 import type { ErrorMapper } from '../shared/errors/mapping.js';
@@ -157,6 +158,48 @@ describe('error logging', () => {
     expect(logger.error).not.toHaveBeenCalled();
     const [context] = vi.mocked(logger.warn).mock.calls[0] ?? [];
     expect(context).not.toHaveProperty('err');
+  });
+
+  /**
+   * S5-12. A 401 tells the caller one opaque thing on purpose — distinguishing "expired" from
+   * "bad signature" tells an attacker which part of a forgery to fix. But it told the *operator*
+   * the same one thing, and a burst of `JWTExpired` is a different incident from a burst of
+   * `JWSSignatureVerificationFailed`. The reason now travels to the logs and only there.
+   */
+  it('logs why a token was refused', async () => {
+    const logger = fakeLogger();
+
+    await request(
+      appThatThrows(
+        new UnauthenticatedError('Your session is invalid or has expired.', 'JWTExpired'),
+        {
+          logger,
+        },
+      ),
+    ).get('/boom');
+
+    const [context] = vi.mocked(logger.warn).mock.calls[0] ?? [];
+    expect(context).toMatchObject({ reason: 'JWTExpired' });
+  });
+
+  it('never puts that reason in the response', async () => {
+    const response = await request(
+      appThatThrows(
+        new UnauthenticatedError('Your session is invalid or has expired.', 'JWTExpired'),
+      ),
+    ).get('/boom');
+
+    expect(response.status).toBe(401);
+    expect(response.text).not.toContain('JWTExpired');
+  });
+
+  it('logs no reason for a 401 that has none — an absent header is not a refusal', async () => {
+    const logger = fakeLogger();
+
+    await request(appThatThrows(new UnauthenticatedError(), { logger })).get('/boom');
+
+    const [context] = vi.mocked(logger.warn).mock.calls[0] ?? [];
+    expect(context).not.toHaveProperty('reason');
   });
 });
 

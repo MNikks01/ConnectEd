@@ -54,8 +54,19 @@ export class ValidationFailedError extends AppError {
 }
 
 export class UnauthenticatedError extends AppError {
-  constructor(message = 'Authentication is required.') {
+  /**
+   * Why the token was refused — **for logs only**, never for the response.
+   *
+   * The client is told one opaque thing on purpose: distinguishing "expired" from "bad signature"
+   * from "wrong issuer" tells an attacker which part of a forgery to fix. But an operator staring
+   * at a burst of 401s needs exactly that distinction, and it has been unavailable: a token that
+   * was refused looked identical to one that was never sent.
+   */
+  readonly reason?: string;
+
+  constructor(message = 'Authentication is required.', reason?: string) {
     super(ErrorCode.UNAUTHENTICATED, 401, message);
+    this.reason = reason;
   }
 }
 

@@ -152,10 +152,14 @@ export function createTokenService(config: Config): TokenService {
           accountType: payload.accountType as AccountType,
           ...(typeof payload.role === 'string' ? { role: payload.role as UserRole } : {}),
         };
-      } catch {
+      } catch (error) {
         // Expired, tampered, wrong issuer — all the same to the caller. Distinguishing them
-        // tells an attacker which part of the forgery to fix.
-        throw new UnauthenticatedError('Your session is invalid or has expired.');
+        // tells an attacker which part of the forgery to fix. The reason travels separately, to
+        // the logs, where the person reading is the operator rather than the sender.
+        throw new UnauthenticatedError(
+          'Your session is invalid or has expired.',
+          error instanceof Error ? `${error.name}: ${error.message}` : 'unknown',
+        );
       }
     },
 
@@ -185,6 +189,8 @@ async function verifyWithAny(
   keys: Keys['verify'],
   algorithm: Keys['algorithm'],
 ): Promise<Record<string, unknown>> {
+  let lastError: unknown;
+
   for (const candidate of keys) {
     try {
       const { payload } = await jwtVerify(token, candidate.key, {
@@ -197,13 +203,14 @@ async function verifyWithAny(
       });
 
       return payload;
-    } catch {
+    } catch (error) {
       // Try the next key. The caller turns "none of them" into one opaque failure, so which key
-      // failed and why never reaches the client.
+      // failed and why never reaches the client — but the last reason is kept for the logs.
+      lastError = error;
     }
   }
 
-  throw new UnauthenticatedError();
+  throw lastError instanceof Error ? lastError : new UnauthenticatedError();
 }
 
 function sha256(value: string): string {

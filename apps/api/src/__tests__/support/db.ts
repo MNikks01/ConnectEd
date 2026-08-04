@@ -20,6 +20,12 @@ import type { UserRole } from '../../generated/prisma/client.js';
 
 let client: PrismaClient | undefined;
 
+/**
+ * Stamped on every connection this suite opens, so `pg_stat_activity` can tell one test run from
+ * another. The pid makes it unique per process; the prefix makes it recognisable.
+ */
+const APPLICATION_NAME = `connected-vitest-${String(process.pid)}`;
+
 export function testDb(): Db {
   const connectionString = process.env.DATABASE_URL;
 
@@ -27,7 +33,10 @@ export function testDb(): Db {
     throw new Error('DATABASE_URL must be set for integration tests.');
   }
 
-  client ??= new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  const url = new URL(connectionString);
+  url.searchParams.set('application_name', APPLICATION_NAME);
+
+  client ??= new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString() }) });
   return client;
 }
 
@@ -111,6 +120,44 @@ export async function assertDbReachable(): Promise<void> {
       `Integration tests need Postgres at DATABASE_URL. Start it with ` +
         `\`docker compose up -d postgres\` and apply migrations with ` +
         `\`pnpm --filter @connected/api db:deploy\`. Original error: ${String(error)}`,
+    );
+  }
+
+  await assertSoleTestRun();
+}
+
+/**
+ * Refuses to run when a second test process is already on this database — S5-12.
+ *
+ * This suite TRUNCATEs every table between cases. Two runs sharing one database therefore delete
+ * each other's fixtures at random, and the result is not an error but a *wrong answer*: a row that
+ * was created moments ago is absent, an account that exists is not found, a seeded membership
+ * vanishes between `beforeEach` and the assertion.
+ *
+ * That is precisely the shape of the long-standing local flake — "roughly one run in four", never
+ * once in CI, on a developer machine where the vitest config already notes that dev servers, E2E
+ * servers and Docker all run alongside. CI runs one job against a private database and cannot
+ * reproduce it, which fits exactly.
+ *
+ * **This does not prove that was the cause**, and it is not a fix for anything else. It removes
+ * one specific way to lose an afternoon, and makes it say so in a sentence instead of surfacing as
+ * a puzzling 404 several steps away.
+ */
+async function assertSoleTestRun(): Promise<void> {
+  const others = await testDb().$queryRaw<{ application_name: string; pid: number }[]>`
+    SELECT DISTINCT application_name, pid FROM pg_stat_activity
+    WHERE datname = current_database()
+      AND application_name LIKE 'connected-vitest-%'
+      AND application_name <> ${APPLICATION_NAME}
+  `;
+
+  if (others.length > 0) {
+    const names = [...new Set(others.map((row) => row.application_name))].join(', ');
+
+    throw new Error(
+      `Another test run is already using this database (${names}). These suites TRUNCATE between ` +
+        `cases, so two runs delete each other's fixtures and fail in ways that look like ` +
+        `application bugs. Wait for the other run, or point DATABASE_URL at a different database.`,
     );
   }
 }

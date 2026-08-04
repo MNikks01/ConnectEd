@@ -10,6 +10,8 @@
  */
 import { createErrorNormalizer } from '../errors/mapping.js';
 
+import { UnauthenticatedError } from '../errors/index.js';
+
 import type { ErrorDetail } from '../errors/index.js';
 import type { ErrorMapper } from '../errors/mapping.js';
 import type { ErrorLogger } from '../logger/index.js';
@@ -50,6 +52,12 @@ export function errorHandler({ logger, mappers }: ErrorHandlerOptions): ErrorReq
       status: appError.status,
       method: req.method,
       path: req.path,
+      // Present only on 401s that carry one. A burst of them reading "JWTExpired" is a different
+      // incident from a burst reading "JWSSignatureVerificationFailed", and until now the logs
+      // could not tell the two apart.
+      ...(appError instanceof UnauthenticatedError && appError.reason
+        ? { reason: appError.reason }
+        : {}),
     };
 
     if (appError.status >= 500) {
