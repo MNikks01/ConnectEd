@@ -61,6 +61,7 @@ export function EventComposer({ schoolId }: { schoolId: string }) {
 
 export function EventList({ events }: { events: EventResponse[] }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<EventResponse | undefined>();
 
   if (events.length === 0) {
@@ -105,6 +106,7 @@ export function EventList({ events }: { events: EventResponse[] }) {
         open={confirming !== undefined}
         title="Cancel this event?"
         onClose={() => {
+          setError(undefined);
           setConfirming(undefined);
         }}
         footer={
@@ -112,6 +114,7 @@ export function EventList({ events }: { events: EventResponse[] }) {
             <Button
               variant="secondary"
               onClick={() => {
+                setError(undefined);
                 setConfirming(undefined);
               }}
             >
@@ -124,8 +127,16 @@ export function EventList({ events }: { events: EventResponse[] }) {
                 const target = confirming;
                 if (!target) return;
 
+                setError(undefined);
+
                 startTransition(async () => {
-                  await deleteEventAction(target.id);
+                  const result = await deleteEventAction(target.id);
+
+                  if (!result.ok) {
+                    setError(result.message ?? 'That could not be cancelled. Try again.');
+                    return;
+                  }
+
                   setConfirming(undefined);
                 });
               }}
@@ -135,6 +146,12 @@ export function EventList({ events }: { events: EventResponse[] }) {
           </>
         }
       >
+        {error ? (
+          <p className="ui-field__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
         <p style={{ margin: 0 }}>
           It leaves everyone&rsquo;s calendar. Members are not told separately that it was
           cancelled.
