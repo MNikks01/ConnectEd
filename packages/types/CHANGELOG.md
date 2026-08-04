@@ -1,5 +1,22 @@
 # @connected/types
 
+## 0.2.0
+
+### Minor Changes
+
+- 12c759f: Add the moderation-queue DTOs — deliberately without the reporter, because the reporting form
+  promises that nobody at their school is told and a DTO is where that promise is kept or broken
+  (S6-5, S6-6, ADR-0017).
+- 23aa7d5: Add the school-analytics DTOs and the `FEATURE_NOT_IN_PLAN` error code (402) — a sibling of
+  `PLAN_LIMIT_EXCEEDED` for a feature a plan never included, rather than a limit it has reached
+  (S6-7).
+
+### Patch Changes
+
+- 7b385b2: `/me` now reports whether the caller is ConnectEd staff, so the web app knows whether to offer the
+  moderation console. Navigation only — every moderation endpoint re-reads the row itself (S6-6,
+  ADR-0017).
+
 ## 0.1.0
 
 ### Minor Changes
