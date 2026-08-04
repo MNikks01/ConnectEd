@@ -628,6 +628,28 @@ const CAPABILITIES: Capability[] = [
     },
   },
   {
+    name: 'Review the moderation queue',
+    outcomes: {
+      // Every column is ➖, and that is the row's whole content: the queue is read by ConnectEd
+      // staff holding PLATFORM_ADMIN (ADR-0017), which is not one of the seven kinds of user this
+      // table describes. Asserted anyway, because "no user role can read this" regresses as
+      // quietly as any other claim — and this one governs reports filed by children.
+      student: 'deny',
+      parent: 'deny',
+      teacher: 'deny',
+      classTeacher: 'deny',
+      principal: 'deny',
+      school: 'deny',
+      generalUser: 'deny',
+    },
+    attempt: async (role) => {
+      const response = await request(app)
+        .get('/api/v1/admin/reports')
+        .set('Authorization', await authFor(role));
+      return response.status;
+    },
+  },
+  {
     name: 'Manage subscription/billing',
     outcomes: {
       // The one row where the principal is refused something their own school can do. They run the

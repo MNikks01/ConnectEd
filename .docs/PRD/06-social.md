@@ -1,6 +1,6 @@
 # PRD — Social Layer
 
-`Status: Accepted` · `Last updated: 2026-08-02`
+`Status: Accepted` · `Last updated: 2026-08-04`
 
 Available to **all** account types (including General Users and Schools). No verification required.
 
@@ -35,17 +35,24 @@ Available to **all** account types (including General Users and Schools). No ver
 - Content stored with soft-delete for retention/audit.
 - Rate-limits on posting/messaging to deter spam.
 
-> **Implemented as of S4-8, with one gap that needs a product decision.**
+> **Implemented as of S4-8; the queue gained a reader in S6-6.**
 >
 > Blocking is complete: it is applied on **every** social read — timeline, feed, comments, threads, and the
 > unread badge — in **both directions**, and unblocking restores what was there rather than clearing follows and
 > connections. Reporting records a row per reporter per subject, accepts reports about soft-deleted content
 > (which is the case moderation most needs), and cannot be silenced by blocking the reporter.
 >
-> **Nothing reads the report queue.** Who reviews a report is unresolved: a school moderates its own community,
-> but social spans schools and this product has no platform-admin role. The rows accumulate deliberately, so
-> whoever gets that job inherits the history — but until someone does, a report reaches only the application
-> log. **This is the one place in the product where a user-facing promise ("report this") is not yet kept**, and
-> it should be resolved before social ships to real children rather than after.
+> **The report queue is read** (S6-6). Reports go to ConnectEd staff holding `PLATFORM_ADMIN`
+> (**ADR-0017**) — not the school and not the principal, because a report is often _about_ someone at the
+> reporter's school and the form promises in as many words that nobody there is told. The rows accumulated
+> unread from S4-8 until then, so the first reviewers inherit the history rather than starting from nothing.
+>
+> Three things the queue will not do. **It never names the reporter** — that promise is kept in the DTO, not
+> in the UI that renders it. **It does not show the body of a private message**: a conversation between two
+> people is not made public by one of them reporting it, so a reviewer gets the sender and the reporter's
+> description, which is enough to act on an account. And **`ACTIONED` removes the content** — a verdict that
+> changes nothing teaches a reviewer that the button is decorative — which is why an account report cannot be
+> actioned here at all: suspending an account needs more than a queue button, and a reviewer must not be able
+> to believe they have dealt with something they have not.
 >
 > Rate limits: 30 posts and 120 messages per account per hour, per `RATE_LIMIT_ENABLED`.
