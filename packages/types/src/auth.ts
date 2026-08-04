@@ -88,6 +88,8 @@ export interface CurrentAccountResponse {
   accountType: AccountType;
   status: string;
   emailVerified: boolean;
+  /** ConnectEd staff (ADR-0017). Navigation only — the API authorizes every call independently. */
+  isPlatformAdmin: boolean;
   role: UserRole | null;
   fullName: string | null;
   handle: string | null;

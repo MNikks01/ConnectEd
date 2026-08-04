@@ -19,8 +19,18 @@ export async function clickUntil(
   timeout = 20_000,
 ): Promise<void> {
   await expect(async () => {
-    // Gone means the click landed and the UI moved on; only wait for the outcome.
-    if (await button.isVisible()) await button.click();
+    // Gone *or disabled* means the click landed and the UI moved on; only wait for the outcome.
+    //
+    // `isVisible` alone was not enough. A button mid-action is disabled and still visible, and
+    // `click()` on a disabled button waits for it to re-enable — which never happens when the
+    // action removes it. That click can absorb the whole budget, and the failure then reports the
+    // outcome assertion rather than the wait that actually expired.
+    const clickable = (await button.isVisible()) && (await button.isEnabled());
+
+    // Bounded, so a button that becomes unactionable between the check and the click cannot eat
+    // the remaining time either. A failure here just retries the whole callback.
+    if (clickable) await button.click({ timeout: 2_000 });
+
     await settled();
   }).toPass({ timeout });
 }

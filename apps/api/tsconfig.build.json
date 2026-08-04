@@ -8,6 +8,7 @@
     "src/**/*.test.ts",
     "src/**/__tests__/**",
     "prisma",
+    "scripts",
     "prisma.config.ts",
     "vitest.config.ts"
   ]

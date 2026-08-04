@@ -15,11 +15,13 @@ export interface Paginated<T> {
 }
 
 export * from './academics.js';
+export * from './analytics.js';
 export * from './auth.js';
 export * from './billing.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './institution.js';
+export * from './moderation.js';
 export * from './notices.js';
 export * from './notifications.js';
 export * from './rum.js';

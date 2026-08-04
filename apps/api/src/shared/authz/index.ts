@@ -33,6 +33,33 @@ export function requireAccountType(actor: Actor, allowed: AccountType): void {
 }
 
 /**
+ * ConnectEd staff, for the moderation queue and nothing else (ADR-0017).
+ *
+ * **Read from the database, never from the token.** Every other identity fact in this file starts
+ * from a claim the caller presented; this one cannot, for two reasons. Revoking staff access has
+ * to take effect now rather than whenever the holder's access token happens to expire — this is
+ * the only role that can act on other people's content. And a claim is only ever as trustworthy as
+ * the narrowest place that mints one: the integration suite signs its own tokens, and a
+ * `platformAdmin: true` claim would be one line away in a test file from being the most privileged
+ * thing in the product.
+ *
+ * 404 rather than 403 for everyone else, so the queue's existence is not something an ordinary
+ * account can confirm by probing.
+ */
+export async function assertPlatformAdmin(db: Db, actor: Actor): Promise<void> {
+  const account = await db.account.findUnique({
+    where: { id: actor.accountId },
+    select: { isPlatformAdmin: true, status: true },
+  });
+
+  // A suspended staff account is not staff. Checked here rather than left to whatever set the
+  // flag, because this is the last gate before the most privileged surface in the product.
+  if (!account?.isPlatformAdmin || account.status !== 'ACTIVE') {
+    throw new NotFoundError();
+  }
+}
+
+/**
  * The school itself, acting on its own record. School accounts have no role, so role checks do
  * not apply to them — ownership is the whole test.
  */

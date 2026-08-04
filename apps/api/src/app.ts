@@ -14,7 +14,9 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 
 import { createAuthModule } from './modules/auth/index.js';
+import { createAnalyticsModule } from './modules/analytics/index.js';
 import { createBillingModule } from './modules/billing/index.js';
+import { createModerationQueueModule } from './modules/moderation/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
@@ -203,6 +205,8 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       workflows.routes,
       social.routes,
       billing.routes,
+      createAnalyticsModule(db, billing.service).routes,
+      createModerationQueueModule(db).routes,
       ...(realtime ? [realtimeRoutes(realtime, config)] : []),
       ...(media ? [media.routes] : []),
     );

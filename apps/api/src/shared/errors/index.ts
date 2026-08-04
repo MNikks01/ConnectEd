@@ -16,6 +16,7 @@ export const ErrorCode = {
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   PLAN_LIMIT_EXCEEDED: 'PLAN_LIMIT_EXCEEDED',
+  FEATURE_NOT_IN_PLAN: 'FEATURE_NOT_IN_PLAN',
   RATE_LIMITED: 'RATE_LIMITED',
   DEPENDENCY_UNAVAILABLE: 'DEPENDENCY_UNAVAILABLE',
   INTERNAL: 'INTERNAL',
@@ -94,6 +95,26 @@ export class PlanLimitExceededError extends AppError {
           issue: `limit ${params.allowed} reached (${params.used} in use)`,
         },
       ],
+    );
+  }
+}
+
+/**
+ * The school's plan does not include this feature at all — S6-7 (FR-BILL-003).
+ *
+ * A sibling of `PlanLimitExceededError` and deliberately not the same code. "You have used all
+ * five of your classes" and "your plan has never included this" lead to the same remedy but are
+ * different sentences, and a client that cannot tell them apart writes one that is wrong for the
+ * other. Both are 402, so a client that only cares about "needs a bigger plan" can branch once.
+ */
+export class FeatureNotInPlanError extends AppError {
+  constructor(params: { feature: string; planName: string; includedIn: string }) {
+    super(
+      ErrorCode.FEATURE_NOT_IN_PLAN,
+      402,
+      `Your ${params.planName} plan does not include ${params.feature}. It is part of the ` +
+        `${params.includedIn} plan.`,
+      [{ field: params.feature, issue: `not included in ${params.planName}` }],
     );
   }
 }

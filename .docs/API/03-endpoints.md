@@ -135,17 +135,31 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Notifications & billing
 
-| Method | Path                        | Auth | Purpose                                          |
-| ------ | --------------------------- | :--: | ------------------------------------------------ |
-| GET    | `/notifications?after=`     |  🔑  | List (`unreadCount` in the body, beside `data`). |
-| POST   | `/notifications/:id/read`   |  🔑  | Mark read.                                       |
-| POST   | `/notifications/read-all`   |  🔑  | Mark every unread one read.                      |
-| PATCH  | `/me/notification-prefs`    |  🔑  | Preferences.                                     |
-| POST   | `/me/push-tokens`           |  🔑  | Register device (mobile).                        |
-| GET    | `/plans`                    |  🔑  | Available plans.                                 |
-| GET    | `/schools/:id/subscription` |  🛡   | The school's own plan, limits, and usage.        |
-| POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
-| POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
+| Method | Path                           | Auth | Purpose                                                         |
+| ------ | ------------------------------ | :--: | --------------------------------------------------------------- |
+| GET    | `/notifications?after=`        |  🔑  | List (`unreadCount` in the body, beside `data`).                |
+| POST   | `/notifications/:id/read`      |  🔑  | Mark read.                                                      |
+| POST   | `/notifications/read-all`      |  🔑  | Mark every unread one read.                                     |
+| PATCH  | `/me/notification-prefs`       |  🔑  | Preferences.                                                    |
+| POST   | `/me/push-tokens`              |  🔑  | Register device (mobile).                                       |
+| GET    | `/plans`                       |  🔑  | Available plans.                                                |
+| GET    | `/schools/:id/subscription`    |  🛡   | The school's own plan, limits, and usage.                       |
+| GET    | `/schools/:id/analytics?days=` |  🛡   | School analytics. Requires `advancedAnalytics`; 402 without it. |
+| POST   | `/schools/:id/subscription`    |  🛡   | Start/change subscription.                                      |
+| POST   | `/webhooks/payments`           | 🔓*  | Provider webhook (signature-verified).                          |
+
+## Moderation (platform admins only)
+
+| Method | Path                          | Auth | Purpose                                               |
+| ------ | ----------------------------- | :--: | ----------------------------------------------------- |
+| GET    | `/admin/reports?status=`      |  🛠   | The queue, oldest first. Filters by status.           |
+| GET    | `/admin/reports/:id`          |  🛠   | One report, with the content it names.                |
+| POST   | `/admin/reports/:id/decision` |  🛠   | `REVIEWED` \| `ACTIONED` \| `DISMISSED`, with a note. |
+
+🛠 requires `PLATFORM_ADMIN` (ADR-0017), read from the database on every request and never from a
+token claim. Everyone else — including the school and the principal — gets **404**, so the queue's
+existence is not something an ordinary account can confirm. Granted only by
+`pnpm --filter @connected/api admin:grant <email>`; there is deliberately no endpoint.
 
 ## Real-user monitoring
 

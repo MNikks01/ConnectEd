@@ -37,11 +37,12 @@ All errors share one shape:
 | `NOT_FOUND`              | 404  | Resource missing or out of scope.                         |
 | `CONFLICT`               | 409  | Duplicate or illegal state transition.                    |
 | `PLAN_LIMIT_EXCEEDED`    | 402  | The school's plan has no room left (`details` populated). |
+| `FEATURE_NOT_IN_PLAN`    | 402  | The school's plan does not include this feature at all.   |
 | `RATE_LIMITED`           | 429  | Too many requests.                                        |
 | `DEPENDENCY_UNAVAILABLE` | 503  | DB/Redis/storage/provider down.                           |
 | `INTERNAL`               | 500  | Unexpected; correlationId for support.                    |
 
-## `PLAN_LIMIT_EXCEEDED` is not an authorization failure
+## `PLAN_LIMIT_EXCEEDED` and `FEATURE_NOT_IN_PLAN` are not authorization failures
 
 Every other refusal in this API means the caller tried to do something they were not permitted to
 do. This one means they were entirely entitled to try, and their **school** has run out of room
@@ -55,6 +56,11 @@ So it breaks the house style deliberately:
 - **It reassures.** The message says nothing you already have is affected, because the limit is
   enforced only at the write that would exceed it — never retroactively.
 - **402, not 403**, so a client can branch on "needs a bigger plan" without parsing prose.
+
+The two are separate codes on purpose. _"You have used all five of your classes"_ and _"your plan
+has never included this"_ lead to the same remedy but are different sentences, and a client that
+cannot tell them apart writes one that is wrong for the other. Both are 402, so a client that only
+cares about "needs a bigger plan" can branch once.
 
 **Authorization always runs first.** A school hitting this endpoint for _another_ school gets the
 404 it would have got anyway — a 402 there would confirm the other school exists and volunteer what

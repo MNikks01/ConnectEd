@@ -88,6 +88,53 @@ test.describe('notices', () => {
 
     await expect(page.getByText('Nothing has been posted yet.')).toBeVisible();
   });
+
+  test('a withdrawal that fails says so instead of closing quietly', async ({ browser }) => {
+    const { school } = await schoolWithClass('E');
+
+    // Two tabs, which is the ordinary shape of every real failure here: a stale page, a colleague,
+    // a lost race. Before this was fixed the second tab's dialog closed on the error and the
+    // notice stayed — indistinguishable, from the outside, from success.
+    const first = await browser.newContext();
+    const second = await browser.newContext();
+    const tabA = await first.newPage();
+    const tabB = await second.newPage();
+
+    try {
+      await signIn(tabA, school.email);
+      await tabA.goto('/school/notices');
+      await tabA.getByLabel('Title').fill('Withdrawn twice');
+      await tabA.getByRole('textbox', { name: 'Notice' }).fill('Once is enough.');
+      await tabA.getByRole('button', { name: 'Publish notice' }).click();
+      await expect(tabA.getByRole('heading', { name: 'Withdrawn twice' })).toBeVisible();
+
+      await signIn(tabB, school.email);
+      await tabB.goto('/school/notices');
+      await expect(tabB.getByRole('heading', { name: 'Withdrawn twice' })).toBeVisible();
+
+      // The first tab withdraws it.
+      await tabA.getByRole('button', { name: 'Withdraw' }).click();
+      await clickUntil(
+        tabA.getByRole('dialog').getByRole('button', { name: 'Withdraw notice' }),
+        async () => {
+          await expect(tabA.getByText('No notices yet.')).toBeVisible({ timeout: 2000 });
+        },
+      );
+
+      // The second tab tries to withdraw what is already gone.
+      await tabB.getByRole('button', { name: 'Withdraw' }).click();
+      const dialog = tabB.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Withdraw notice' }).click();
+
+      // The dialog stays, and says something. A confirmation that closes on failure teaches the
+      // school that it worked, and the notice is still on every member's list.
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('alert')).toBeVisible();
+    } finally {
+      await first.close();
+      await second.close();
+    }
+  });
 });
 
 test.describe('events', () => {

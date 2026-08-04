@@ -1,6 +1,6 @@
 # PRD — Permissions Matrix (server-enforced)
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-04`
 
 Legend: ✅ can do · 👁 view only · ➖ not available/hidden. **All enforced on the server** against role,
 verification state, and resource ownership. See [`../Security/02-authorization.md`](../Security/02-authorization.md).
@@ -28,8 +28,22 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | Create school & class structure               |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | Verify/remove members, allocate class teacher |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | Manage subscription/billing                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| View school analytics                         |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
+| Review the moderation queue                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ➖   |      ➖      |
 
 ## Notes
+
+- **The moderation queue is `➖` in every column, and that is the row's whole content.** It is read
+  by ConnectEd staff holding `PLATFORM_ADMIN` (ADR-0017), which is not one of the seven kinds of
+  user this table describes. Not the school and not the principal: a report is often _about_
+  someone at the reporter's school, and the reporting form promises that nobody there is told. The
+  suite asserts all seven refusals, because "no user role can read this" is a claim that regresses
+  as quietly as any other.
+
+- **School analytics** is the school account's alone, like billing — it is an admin surface on a
+  web-only account, and the plan that unlocks it is the school's contract. It is also the only
+  capability here **gated by a plan as well as by a role**: a school on a plan without
+  `advancedAnalytics` gets `402`, not `403`, because it did nothing wrong.
 
 - **Students**: Leave & Complaints modules are **hidden** (carried from legacy). Parents act for children.
 - **General Users**: social + discovery only — _once settled in that state_. See the clarification below.
