@@ -27,7 +27,7 @@ Available to **all** account types (including General Users and Schools). No ver
 | ---------- | :------: | -------------------------------------------------- | ---------------------------------------------------------------------- |
 | FR-SOC-020 |    P0    | Users message other users; schools have an inbox.  | 1:1 threads; per-message read state (`IS_VIEWED` legacy → relational). |
 | FR-SOC-021 |    P1    | Unread message badges.                             | Accurate unread counts; cleared on read.                               |
-| FR-SOC-022 |    P2    | Real-time delivery (websocket) instead of polling. | Sub-second delivery when both online.                                  |
+| FR-SOC-022 |    P2    | Real-time delivery (websocket) instead of polling. | Sub-second delivery when both online. **Built** — S5-11, ADR-0016.     |
 
 ## Moderation & safety
 

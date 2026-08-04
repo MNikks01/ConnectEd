@@ -210,3 +210,46 @@ test.describe('safety', () => {
     await expect(page.getByText('Nobody at your school is told.')).toBeVisible();
   });
 });
+
+test.describe('live delivery', () => {
+  test('a message appears without the recipient navigating', async ({ browser }) => {
+    const sender = await createIndividual('livesender');
+    const recipient = await createIndividual('liverecipient');
+
+    // Two contexts, because this is a claim about two people at once and a single page cannot
+    // make it. Anything less than a second browser is asserting the code rather than the product.
+    const senderContext = await browser.newContext();
+    const recipientContext = await browser.newContext();
+    const senderPage = await senderContext.newPage();
+    const recipientPage = await recipientContext.newPage();
+
+    try {
+      await signIn(senderPage, sender.email);
+      await signIn(recipientPage, recipient.email);
+
+      await senderPage.goto(`/accounts/${recipient.accountId}`);
+      await senderPage.getByRole('button', { name: 'Message' }).click();
+      await expect(senderPage).toHaveURL('/messages');
+      await senderPage.getByRole('link', { name: 'E2E liverecipient' }).click();
+
+      // The recipient sits on their inbox and does nothing at all from here on.
+      await recipientPage.goto('/messages');
+      await expect(recipientPage.getByText('Nothing unread.')).toBeVisible();
+
+      await senderPage.getByRole('textbox', { name: 'Message' }).fill('Are you there?');
+      await senderPage.getByRole('button', { name: 'Send' }).click();
+      await expect(senderPage.getByText('Sent.')).toBeVisible();
+
+      // No reload, no click. If the websocket never connects this fails, and it fails here rather
+      // than in a way that looks like slow polling.
+      //
+      // `.first()` because the count lands in two places at once — the page description and the
+      // thread's badge — and both updating is the point rather than an accident.
+      await expect(recipientPage.getByText('1 unread').first()).toBeVisible({ timeout: 10_000 });
+      await expect(recipientPage.getByText('Are you there?')).toBeVisible();
+    } finally {
+      await senderContext.close();
+      await recipientContext.close();
+    }
+  });
+});
