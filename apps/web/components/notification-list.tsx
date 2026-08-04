@@ -11,7 +11,7 @@
 import { academicPublishedPayload, type NotificationResponse } from '@connected/types';
 import { Badge, Button, Card } from '@connected/ui';
 import Link from 'next/link';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import { markAllNotificationsReadAction } from '@/app/(app)/(member)/actions';
 
@@ -56,9 +56,16 @@ export function NotificationList({
   nextCursor: string | null;
 }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
 
   return (
     <div>
+      {error ? (
+        <p className="ui-field__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       {unreadCount > 0 ? (
         <p style={{ marginTop: 0 }}>
           <Button
@@ -66,7 +73,10 @@ export function NotificationList({
             loading={pending}
             onClick={() => {
               startTransition(async () => {
-                await markAllNotificationsReadAction();
+                const result = await markAllNotificationsReadAction();
+                // Low stakes next to a withdrawal, and still not nothing: a badge that stays lit
+                // after you pressed the button reads as a broken page.
+                if (!result.ok) setError(result.message);
               });
             }}
           >

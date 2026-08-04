@@ -52,6 +52,7 @@ export function NoticeComposer({ schoolId }: { schoolId: string }) {
 
 export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<NoticeResponse | undefined>();
 
   if (notices.length === 0) {
@@ -91,6 +92,7 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
         open={confirming !== undefined}
         title="Withdraw this notice?"
         onClose={() => {
+          setError(undefined);
           setConfirming(undefined);
         }}
         footer={
@@ -98,6 +100,7 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
             <Button
               variant="secondary"
               onClick={() => {
+                setError(undefined);
                 setConfirming(undefined);
               }}
             >
@@ -110,8 +113,16 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
                 const target = confirming;
                 if (!target) return;
 
+                setError(undefined);
+
                 startTransition(async () => {
-                  await deleteNoticeAction(target.id);
+                  const result = await deleteNoticeAction(target.id);
+
+                  if (!result.ok) {
+                    setError(result.message ?? 'That could not be withdrawn. Try again.');
+                    return;
+                  }
+
                   setConfirming(undefined);
                 });
               }}
@@ -121,6 +132,12 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
           </>
         }
       >
+        {error ? (
+          <p className="ui-field__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
         <p style={{ margin: 0 }}>
           It disappears from every member&rsquo;s list. Anyone who has already read it will have
           seen it.
