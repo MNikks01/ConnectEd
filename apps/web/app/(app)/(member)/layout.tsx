@@ -43,6 +43,7 @@ export default async function MemberLayout({ children }: { children: ReactNode }
       <MemberNav
         name={account.fullName ?? account.schoolName ?? account.email}
         unreadCount={unreadCount}
+        isPlatformAdmin={account.isPlatformAdmin}
       />
       {children}
     </div>
