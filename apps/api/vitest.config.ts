@@ -48,8 +48,20 @@ export default defineConfig({
      * queues them, so results are correct today; **pg 9 removes that queue**. The `^8` range in
      * `package.json` holds it back, and must not be widened without checking upstream.
      *
+     * **It appeared again (S6-8), and the S5-12 guard did not catch it** — two tests in two files,
+     * no second vitest process, green on rerun. So a shared database is not the whole story, and
+     * the rerun destroyed the evidence again. `support/forensics.ts` now dumps the row counts and
+     * every other connection *before* anyone can rerun: an empty database where the fixture should
+     * be is the truncate signature, and a populated one rules it out. Whichever it turns out to be
+     * will be the first real fact this has produced.
+     *
      * If it appears again, the next thing to try is a database per test file.
      */
+    /**
+     * Dumps the database's state when a test fails, before a rerun can destroy it (S6-11).
+     * Silent for files that never touched the database.
+     */
+    setupFiles: ['./src/__tests__/support/forensics.ts'],
     fileParallelism: false,
     /**
      * Vitest's 5s default is tuned for unit tests. These talk to a real Postgres — a case that
