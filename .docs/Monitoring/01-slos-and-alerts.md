@@ -49,18 +49,20 @@ validates the PromQL and has nothing to say about any of that.
 exhaustion are all alertable now — 12 rules, up from 6. What made them impossible was never the rules; it was
 that the API exported `http_request_duration_seconds` and the process defaults and nothing else.
 
-**Still not alertable:** anything about the browser. Web Vitals and JS errors have no pipeline, so the
-availability and latency SLOs are measured server-side only.
+**Closed as of S5-13.** The browser now reports, so TTFB is measured as a visitor experiences it — including
+DNS, TLS and the network, none of which `http_request_duration_seconds` can see. No alert rules yet: real-user
+metrics are noisy, thresholds want a baseline from real traffic, and a rule tuned against an empty dashboard
+would page on the first school that connects over a bad line.
 
 ## Dashboards (in `infrastructure/grafana`)
 
-| #   | Dashboard            | Built | What                                                                        |
-| --- | -------------------- | :---: | --------------------------------------------------------------------------- |
-| 1   | **Service overview** |  ✅   | RED per endpoint, availability, error budget burn.                          |
-| 2   | **Database**         |  ✅   | Pool occupancy, waiting connections, request latency beside them.           |
-| 3   | **Queue/worker**     |  ✅   | Depth by state, throughput by outcome, lag percentiles, dead-letter set.    |
-| 4   | **Business**         |  ✅   | Onboarding funnel, publishing rates, fan-out latency, sign-in failures.     |
-| 5   | **Web RUM**          |  ➖   | Core Web Vitals, JS errors — **not built**; nothing in the browser reports. |
+| #   | Dashboard            | Built | What                                                                              |
+| --- | -------------------- | :---: | --------------------------------------------------------------------------------- |
+| 1   | **Service overview** |  ✅   | RED per endpoint, availability, error budget burn.                                |
+| 2   | **Database**         |  ✅   | Pool occupancy, waiting connections, request latency beside them.                 |
+| 3   | **Queue/worker**     |  ✅   | Depth by state, throughput by outcome, lag percentiles, dead-letter set.          |
+| 4   | **Business**         |  ✅   | Onboarding funnel, publishing rates, fan-out latency, sign-in failures.           |
+| 5   | **Web RUM**          |  ✅   | Core Web Vitals (p75, Google's thresholds) and uncaught browser errors, by route. |
 
 Two panels the original list named are **absent from the Database dashboard**, and deliberately: slow-query
 counts and replication lag come from Postgres itself, which nothing scrapes yet. A panel over an empty series

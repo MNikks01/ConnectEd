@@ -28,6 +28,18 @@ export interface Metrics {
   domainEventLatency: Histogram<'type'>;
   /** Enqueued → started. Queue lag, the SLI with the 30s p95 objective. */
   queueJobWait: Histogram<'queue'>;
+  /**
+   * Core Web Vitals, reported by the browser. Seconds, so it sits beside the server-side latency
+   * histograms — the numbers arrive in milliseconds and are converted at the edge.
+   *
+   * **CLS is not here.** It is a unitless layout-shift score, and putting it in a histogram named
+   * `_seconds` would make every dashboard and alert over it quietly wrong.
+   */
+  webVitalDuration: Histogram<'metric' | 'route'>;
+  /** Cumulative Layout Shift — unitless, so its own metric. */
+  webVitalCls: Histogram<'route'>;
+  /** Uncaught errors in the browser. Counted by route; the message goes to logs, never a label. */
+  webErrors: Counter<'route'>;
   /** Records duration for every request; mount early so it sees the full handler chain. */
   middleware: RequestHandler;
 }
@@ -102,12 +114,41 @@ export function createMetrics(): Metrics {
     registers: [registry],
   });
 
+  const webVitalDuration = new Histogram({
+    name: 'web_vital_seconds',
+    help: 'Core Web Vitals reported by the browser, in seconds.',
+    labelNames: ['metric', 'route'] as const,
+    // Google's "good/needs improvement/poor" thresholds differ per metric (LCP 2.5s/4s, INP
+    // 200ms/500ms, TTFB 800ms/1.8s), so the buckets straddle all of them rather than one.
+    buckets: [0.1, 0.2, 0.5, 0.8, 1, 1.8, 2.5, 4, 6, 10],
+    registers: [registry],
+  });
+
+  const webVitalCls = new Histogram({
+    name: 'web_vital_cls',
+    help: 'Cumulative Layout Shift reported by the browser. Unitless.',
+    labelNames: ['route'] as const,
+    // 0.1 is Google's "good" boundary and 0.25 its "poor" one.
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1],
+    registers: [registry],
+  });
+
+  const webErrors = new Counter({
+    name: 'web_errors_total',
+    help: 'Uncaught JavaScript errors reported by the browser.',
+    labelNames: ['route'] as const,
+    registers: [registry],
+  });
+
   return {
     registry,
     httpRequestDuration,
     domainEventsProcessed,
     domainEventLatency,
     queueJobWait,
+    webVitalDuration,
+    webVitalCls,
+    webErrors,
     middleware,
   };
 }

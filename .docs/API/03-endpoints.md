@@ -147,6 +147,15 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/schools/:id/subscription` |  🛡   | Start/change subscription.                       |
 | POST   | `/webhooks/payments`        | 🔓*  | Provider webhook (signature-verified).           |
 
+## Real-user monitoring
+
+| Method | Path   | Auth | Purpose                                                                 |
+| ------ | ------ | :--: | ----------------------------------------------------------------------- |
+| POST   | `/rum` |  🔓  | Core Web Vitals and browser errors. Stores nothing; always answers 204. |
+
+The only unauthenticated write in the API. Rate-limited by address, strictly validated, and the `route` label
+comes from a closed list — never from the path the caller sent.
+
 ## Real-time
 
 | Method | Path                  | Auth | Purpose                                                     |

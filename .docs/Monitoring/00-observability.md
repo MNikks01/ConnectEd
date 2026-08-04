@@ -44,8 +44,33 @@ pivots across all three signals.
 
 ## RUM & product analytics (web)
 
-- Web Vitals (LCP/CLS/INP/TTFB) + JS error tracking (Sentry-style).
-- Product events (funnels from `Product/02-metrics.md`) to an analytics sink.
+**Built as of S5-13.** The browser batches its Core Web Vitals (LCP, CLS, INP, TTFB, FCP) and any uncaught
+errors and sends them once, on `visibilitychange`, via `sendBeacon` — one beacon per page load rather than one
+per metric, because the measurement must not cost more than what it measures. They reach `POST /rum` through
+the web app's own origin.
+
+| Metric              | Type      | Labels        |
+| ------------------- | --------- | ------------- |
+| `web_vital_seconds` | histogram | metric, route |
+| `web_vital_cls`     | histogram | route         |
+| `web_errors_total`  | counter   | route         |
+
+CLS is separate because it is a **unitless** layout-shift score; in a metric named `_seconds` every dashboard
+and alert over it would be quietly wrong.
+
+**`/rum` is the only unauthenticated write in the API**, and is shaped entirely by that:
+
+- **It stores nothing.** A body becomes a histogram observation and is discarded — no row to fill, nothing to
+  read back.
+- **The path never becomes a label.** `route` is derived server-side from a closed list of page patterns;
+  anything unrecognised collapses to `other`. A label taken from a URL is one time series per URL, and a
+  stranger who can mint labels can run up a metrics bill without touching the product. A large `other` on the
+  dashboard means the list needs a page adding, not that the guard is wrong.
+- **It answers 204 whatever it is sent** — malformed, oversized, rate-limited. A monitoring endpoint that
+  reports its own failures teaches every visitor's browser to retry.
+- Error _messages_ go to the logs, never a label: they are attacker-controlled and unbounded.
+
+Product events (funnels from `Product/02-metrics.md`) to an analytics sink are **still not built**.
 
 ## Config location
 
