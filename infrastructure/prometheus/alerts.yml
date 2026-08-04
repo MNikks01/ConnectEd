@@ -4,10 +4,11 @@
 # runbook". Thresholds here match the SLO table; the `for:` durations keep a brief blip from
 # paging anyone.
 #
-# These are the rules that can be written today, against metrics the API actually exports — which
-# is still only `http_request_duration_seconds` and the process defaults. Queue lag, notification
-# delivery, and the business alerts need metrics nothing emits yet; writing rules against series
-# that do not exist would give a permanently green board that means nothing.
+# Every rule here is written against a metric the API actually exports. As of S5-10 that includes
+# queue depth and lag, domain-event fan-out outcomes, and Postgres pool occupancy — the three
+# groups at the bottom were impossible to write before those existed. A rule against a series that
+# does not exist gives a permanently green board that means nothing, so they were absent rather
+# than aspirational.
 #
 # Routing lives in `../alertmanager/alertmanager.yml`: `severity: page` reaches on-call, `ticket`
 # goes to chat, and a page inhibits the tickets it would have caused for the same service.
@@ -87,6 +88,92 @@ groups:
           service: connected-api
         annotations:
           summary: 'Write latency p95 is above the 600ms SLO.'
+          runbook: '.docs/Runbooks/api-outage.md'
+
+  - name: queue
+    rules:
+      - alert: QueueLagHigh
+        # SLO: job queue processing lag p95 < 30s.
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(queue_job_wait_seconds_bucket[5m]))
+          ) > 30
+        for: 5m
+        labels:
+          severity: page
+          service: connected-api
+        annotations:
+          summary: 'Jobs are waiting more than 30s to be picked up.'
+          description: 'Notifications are running late; the worker may have stopped consuming.'
+          runbook: '.docs/Runbooks/queue-backlog.md'
+
+      - alert: QueueBacklogGrowing
+        # Depth alone is not a problem — a burst is normal. Depth that keeps climbing is.
+        expr: sum(queue_jobs{state="waiting"}) > 500 and deriv(sum(queue_jobs{state="waiting"})[15m:]) > 0
+        for: 15m
+        labels:
+          severity: ticket
+          service: connected-api
+        annotations:
+          summary: 'The event queue is deep and still growing.'
+          runbook: '.docs/Runbooks/queue-backlog.md'
+
+      - alert: DeadLetterQueueNotEmpty
+        # BullMQ keeps jobs that exhausted every retry. They do not leave on their own.
+        expr: sum(queue_jobs{state="failed"}) > 0
+        for: 30m
+        labels:
+          severity: ticket
+          service: connected-api
+        annotations:
+          summary: 'Jobs have exhausted their retries and are sitting in the dead-letter set.'
+          description: 'Each one is a notification somebody never received.'
+          runbook: '.docs/Runbooks/queue-backlog.md'
+
+      - alert: EventFanoutFailureRate
+        # SLO: notification delivery success >= 99.5%.
+        expr: |
+          sum(rate(domain_events_processed_total{result="failed"}[10m]))
+            /
+          clamp_min(sum(rate(domain_events_processed_total[10m])), 0.0001)
+            > 0.005
+        for: 10m
+        labels:
+          severity: ticket
+          service: connected-api
+        annotations:
+          summary: 'More than 0.5% of domain events are failing their fan-out.'
+          runbook: '.docs/Runbooks/queue-backlog.md'
+
+      - alert: NotificationLatencyHigh
+        # SLO: homework publish → notification, median < 10s.
+        expr: |
+          histogram_quantile(
+            0.50,
+            sum by (le) (rate(domain_event_latency_seconds_bucket[10m]))
+          ) > 10
+        for: 10m
+        labels:
+          severity: ticket
+          service: connected-api
+        annotations:
+          summary: 'Half of all notifications are taking more than 10s to fan out.'
+          runbook: '.docs/Runbooks/queue-backlog.md'
+
+  - name: database
+    rules:
+      - alert: DbPoolExhausted
+        # Requests queueing for a connection. From outside this is indistinguishable from a slow
+        # database, which is why it is worth its own alert rather than being left to latency.
+        expr: sum(db_pool_connections{state="waiting"}) > 0
+        for: 5m
+        labels:
+          severity: page
+          service: connected-api
+        annotations:
+          summary: 'Requests are queueing for a database connection.'
+          description: 'The pool is fully checked out. Latency will look like a slow database.'
           runbook: '.docs/Runbooks/api-outage.md'
 
   - name: security

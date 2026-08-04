@@ -1,6 +1,6 @@
 # Monitoring — Observability
 
-`Status: Accepted` · `Last updated: 2026-07-31`
+`Status: Accepted` · `Last updated: 2026-08-03`
 
 Implements `ADR-0011`. Three signals, one pane of glass (Grafana).
 
@@ -16,9 +16,24 @@ Implements `ADR-0011`. Three signals, one pane of glass (Grafana).
 ## Instrumentation (in `apps/api`)
 
 - **OpenTelemetry SDK** auto-instruments HTTP, Express, Prisma, Redis; custom spans around domain operations.
-- **Metrics**: `prom-client` — `http_request_duration_seconds` histogram (labels: route, method, status),
-  `queue_jobs_total`, `db_pool_in_use`, business counters (`homework_published_total`, `member_verified_total`,
-  `notification_dispatched_total`).
+- **Metrics**: `prom-client`. What is actually exported, as of S5-10:
+
+  | Metric                          | Type      | Labels                | Answers                                       |
+  | ------------------------------- | --------- | --------------------- | --------------------------------------------- |
+  | `http_request_duration_seconds` | histogram | route, method, status | RED, availability, latency SLOs               |
+  | `domain_events_processed_total` | counter   | type, result          | Did the fan-out work?                         |
+  | `domain_event_latency_seconds`  | histogram | type                  | Publish → notified, across the queue          |
+  | `queue_job_wait_seconds`        | histogram | queue                 | Queue lag (30s p95 objective)                 |
+  | `queue_jobs`                    | gauge     | queue, state          | Depth, and the dead-letter set                |
+  | `db_pool_connections`           | gauge     | state                 | Pool exhaustion, before it looks like latency |
+
+  Business figures are **derived from these**, not counted separately: verification decisions and publishing
+  rates come from `domain_events_processed_total`, registrations from the request counter by route and status.
+  A second counter beside an event that already carries the same fact is one more thing to keep in step.
+
+- **The standalone worker serves its own `/metrics`** on `WORKER_METRICS_PORT` (4001). It has no HTTP server
+  otherwise — but a worker split out for load is exactly the one whose lag and failures matter, and it would
+  have been unscrapeable.
 - **Logs**: pino JSON with `correlationId`, `traceId`, `accountId` (never PII/secrets). `/metrics` restricted to
   the monitoring network.
 
