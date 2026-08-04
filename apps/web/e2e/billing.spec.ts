@@ -96,3 +96,41 @@ test.describe('reaching a limit', () => {
     }
   });
 });
+
+test.describe('analytics', () => {
+  test('a school on the trial is told what would unlock it, not shown a wall', async ({ page }) => {
+    const school = await createSchool('analytics');
+    await signIn(page, school.email);
+
+    await page.goto('/school/analytics');
+
+    // The state almost every school is in, because checkout does not exist yet. It has to read as
+    // the product working as sold rather than as a broken page.
+    await expect(page.getByRole('heading', { name: 'Not on your plan yet' })).toBeVisible();
+    await expect(page.getByText(/does not include advanced analytics/)).toBeVisible();
+    await expect(page.getByText(/part of the Premium plan/)).toBeVisible();
+
+    // Somewhere to go, rather than a button that would do nothing.
+    await page.getByRole('link', { name: 'See your plan' }).click();
+    await expect(page).toHaveURL('/school/billing');
+  });
+
+  test('is reachable from the portal navigation', async ({ page }) => {
+    const school = await createSchool('analytics-nav');
+    await signIn(page, school.email);
+
+    await page.goto('/school');
+    await page.getByRole('link', { name: 'Analytics' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
+  });
+
+  test('is not offered to an individual', async ({ page }) => {
+    const person = await createIndividual('noanalytics');
+    await signIn(page, person.email);
+
+    await page.goto('/school/analytics');
+
+    await expect(page).toHaveURL('/home');
+  });
+});
