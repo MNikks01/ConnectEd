@@ -21,6 +21,7 @@ Security is the headline reason for the rebuild. The legacy app had **no server-
 - [`02-authorization.md`](./02-authorization.md)
 - [`03-threat-model.md`](./03-threat-model.md)
 - [`04-compliance.md`](./04-compliance.md)
+- [`05-review-2026-08-05.md`](./05-review-2026-08-05.md) — whole-repository review at 0.3.0
 
 ## Baseline controls (apply everywhere)
 
