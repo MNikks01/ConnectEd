@@ -626,6 +626,7 @@ export function createAuthService({
         // So the web app knows whether to offer the console. It is a hint for navigation only —
         // every moderation endpoint re-reads the row itself (ADR-0017).
         isPlatformAdmin: account.isPlatformAdmin,
+        twoFactorEnabled: account.twoFactorEnabled,
         role: account.role,
         fullName: account.fullName,
         handle: account.handle,

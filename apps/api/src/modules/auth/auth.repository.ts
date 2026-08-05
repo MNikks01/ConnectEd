@@ -141,6 +141,7 @@ export interface ActorAccount {
   status: string;
   emailVerifiedAt: Date | null;
   isPlatformAdmin: boolean;
+  twoFactorEnabled: boolean;
   role: UserRole | null;
   fullName: string | null;
   handle: string | null;
@@ -441,6 +442,7 @@ export function createAuthRepository(db: Db): AuthRepository {
           status: true,
           emailVerifiedAt: true,
           isPlatformAdmin: true,
+          twoFactorSecret: { select: { confirmedAt: true } },
           userProfile: { select: { role: true, fullName: true, handle: true } },
           schoolProfile: { select: { name: true } },
         },
@@ -455,6 +457,10 @@ export function createAuthRepository(db: Db): AuthRepository {
         status: account.status,
         emailVerifiedAt: account.emailVerifiedAt,
         isPlatformAdmin: account.isPlatformAdmin,
+        // An *unconfirmed* enrolment is not two-factor: it exists, and it protects nothing yet.
+        twoFactorEnabled:
+          account.twoFactorSecret?.confirmedAt !== null &&
+          account.twoFactorSecret?.confirmedAt !== undefined,
         role: account.userProfile?.role ?? null,
         fullName: account.userProfile?.fullName ?? null,
         handle: account.userProfile?.handle ?? null,

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { AuthForm, FormField } from '@/components/auth-form';
+import { LoginForm } from '@/components/login-form';
 
 import type { Metadata } from 'next';
 
@@ -25,21 +25,7 @@ export default async function LoginPage({
           </p>
         ) : null}
 
-        <AuthForm
-          action="/api/auth/login"
-          submitLabel="Sign in"
-          pendingLabel="Signing in…"
-          redirectTo="/home"
-        >
-          <FormField name="email" label="Email" type="email" autoComplete="email" required />
-          <FormField
-            name="password"
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </AuthForm>
+        <LoginForm />
 
         <p className="muted">
           No account yet? <Link href="/register">Create one</Link>.
