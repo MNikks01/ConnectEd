@@ -1,5 +1,25 @@
 # @connected/types
 
+## 0.3.0
+
+### Minor Changes
+
+- 2aec30f: Add the bulk verification-decision schema and result DTO (FR-VER-009). Partial success is
+  reported per request rather than rolled back — a school approving forty people while its plan
+  allows thirty should get thirty members and a list of ten.
+- f2f28db: Add the notification-preference schema and DTOs (FR-NOTIF-006). The dispatcher has honoured
+  preferences since Sprint 2; nothing could set them until now.
+- 69df427: Add the password-reset schemas (FR-AUTH-009). Somebody who forgot their password had no way back
+  into their account at all; now there is one, with a 30-minute single-use token that revokes every
+  session when it is spent.
+- c651f0e: Add the two-factor schemas and DTOs (FR-AUTH-012): enrolment, confirmation, and the challenge a
+  login returns when a code is still owed.
+
+### Patch Changes
+
+- 839dea2: `/me` now reports whether a confirmed second factor is in place, so the settings page can render
+  the right state (FR-AUTH-012). For rendering, not for trust — every 2FA endpoint re-reads it.
+
 ## 0.2.0
 
 ### Minor Changes
