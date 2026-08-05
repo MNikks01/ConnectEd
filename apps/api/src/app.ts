@@ -17,6 +17,7 @@ import { createAuthModule } from './modules/auth/index.js';
 import { createAnalyticsModule } from './modules/analytics/index.js';
 import { createBillingModule } from './modules/billing/index.js';
 import { createMailer } from './shared/mail/index.js';
+import { createSecretBox } from './shared/auth/secret-box.js';
 import { createModerationQueueModule } from './modules/moderation/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
@@ -179,6 +180,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
         tokens,
         billing: billing.service,
         mailer: mailer ?? createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
+        secretBox: config.TWO_FACTOR_KEY ? createSecretBox(config.TWO_FACTOR_KEY) : undefined,
       }).routes,
     );
 

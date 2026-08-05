@@ -45,6 +45,11 @@ Implements `ADR-0007`.
 - **Login** → verify hash → issue tokens; **reject `SCHOOL` when `X-Client-Type: mobile`** (`SCHOOL_WEB_ONLY`).
 - **Refresh** → validate + rotate (reuse detection).
 - **Logout** → revoke refresh family; clear cookie.
+- **Two-factor (TOTP)** → **built** for school and principal accounts (FR-AUTH-012). Secret
+  encrypted at rest with `TWO_FACTOR_KEY`; enrolment inert until a first correct code; login
+  returns a five-minute single-use challenge rather than a session; ten hashed recovery codes;
+  disabling requires a current code. The implementation is checked against RFC 6238's published
+  test vectors.
 - **Password reset** → single-use, expiring token; on reset revoke all sessions. **Built**, with
   these properties asserted:
   - The response to `/auth/password/forgot` is **identical** whether the address is registered,

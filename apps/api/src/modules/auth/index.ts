@@ -15,6 +15,7 @@ import type { Logger } from '../../shared/logger/index.js';
 import type { PasswordHasher } from '../../shared/auth/password.js';
 import type { TokenService } from '../../shared/auth/tokens.js';
 import type { Mailer } from '../../shared/mail/index.js';
+import type { SecretBox } from '../../shared/auth/secret-box.js';
 import type { TrialTermsSource } from './auth.service.js';
 
 export type { AuthService, AuthSession, ClientType, CurrentAccount } from './auth.service.js';
@@ -29,6 +30,8 @@ export interface AuthModuleDeps {
   billing: TrialTermsSource;
   /** Sends the password-reset link (FR-AUTH-009). */
   mailer: Mailer;
+  /** Encrypts TOTP secrets (FR-AUTH-012). Absent when no key is configured. */
+  secretBox?: SecretBox | undefined;
 }
 
 export interface AuthModule {
@@ -44,9 +47,18 @@ export function createAuthModule({
   tokens,
   billing,
   mailer,
+  secretBox,
 }: AuthModuleDeps): AuthModule {
   const repository = createAuthRepository(db);
-  const service = createAuthService({ repository, passwords, tokens, logger, billing, mailer });
+  const service = createAuthService({
+    repository,
+    passwords,
+    tokens,
+    logger,
+    billing,
+    mailer,
+    secretBox,
+  });
 
   return {
     service,
