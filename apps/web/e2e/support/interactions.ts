@@ -18,6 +18,15 @@ export async function clickUntil(
   settled: () => Promise<void>,
   timeout = 20_000,
 ): Promise<void> {
+  /**
+   * The state as of the last attempt, captured *inside* the loop.
+   *
+   * Not afterwards: `toPass` expiring often coincides with the test's own budget expiring, and by
+   * then the page is being torn down and every query returns nothing. The first attempt at these
+   * forensics reported "(no body)" for exactly that reason.
+   */
+  let lastSeen = '(nothing recorded)';
+
   await expect(async () => {
     // Gone *or disabled* means the click landed and the UI moved on; only wait for the outcome.
     //
@@ -31,6 +40,34 @@ export async function clickUntil(
     // the remaining time either. A failure here just retries the whole callback.
     if (clickable) await button.click({ timeout: 2_000 });
 
-    await settled();
-  }).toPass({ timeout });
+    try {
+      await settled();
+    } catch (error) {
+      lastSeen = await describe(button, clickable);
+      throw error;
+    }
+  })
+    .toPass({ timeout })
+    .catch((error: unknown) => {
+      // A timeout otherwise reports the *outcome* assertion, which says what did not happen and
+      // nothing about why. Three CI failures of one test produced three identical messages and no
+      // evidence between them.
+      throw new Error(`${String(error)}\n\n${lastSeen}`);
+    });
+}
+
+/** What the page looked like on the last attempt. Never throws; a broken forensic is not a bug. */
+async function describe(button: Locator, clickable: boolean): Promise<string> {
+  const page = button.page();
+  const text = async (locator: Locator, fallback: string) =>
+    (await locator.innerText({ timeout: 1_000 }).catch(() => fallback)).replace(/\s+/g, ' ').trim();
+
+  return [
+    '── clickUntil forensics (last attempt) ────────────────────────────',
+    `  button:  clickable=${String(clickable)}`,
+    `  dialog:  ${(await text(page.getByRole('dialog'), '(none)')).slice(0, 200)}`,
+    `  alert:   ${(await text(page.getByRole('alert').first(), '(none)')).slice(0, 200)}`,
+    `  page:    ${(await text(page.locator('main').first(), '(none)')).slice(0, 400)}`,
+    '───────────────────────────────────────────────────────────────────',
+  ].join('\n');
 }
