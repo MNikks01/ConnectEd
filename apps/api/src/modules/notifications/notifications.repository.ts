@@ -34,6 +34,14 @@ export interface NotificationsRepository {
   markRead: (accountId: string, notificationId: string) => Promise<boolean>;
   markAllRead: (accountId: string) => Promise<number>;
   isCategoryEnabled: (accountId: string, category: NotificationCategory) => Promise<boolean>;
+  /** Every explicit preference this account has set. Absent means enabled. */
+  listPreferences: (
+    accountId: string,
+  ) => Promise<{ category: NotificationCategory; enabled: boolean }[]>;
+  setPreferences: (
+    accountId: string,
+    preferences: { category: NotificationCategory; enabled: boolean }[],
+  ) => Promise<void>;
 }
 
 export function createNotificationsRepository(db: Db): NotificationsRepository {
@@ -94,6 +102,28 @@ export function createNotificationsRepository(db: Db): NotificationsRepository {
     },
 
     /** Absent preference means enabled — opt-out, not opt-in (FR-NOTIF-006). */
+    listPreferences: (accountId) =>
+      db.notificationPref.findMany({
+        where: { accountId },
+        select: { category: true, enabled: true },
+      }),
+
+    setPreferences: async (accountId, preferences) => {
+      // One upsert each rather than a delete-and-recreate: a partial update must leave the
+      // categories it did not mention exactly as they were.
+      await db.$transaction(
+        preferences.map((preference) =>
+          db.notificationPref.upsert({
+            where: {
+              accountId_category: { accountId, category: preference.category },
+            },
+            update: { enabled: preference.enabled },
+            create: { accountId, category: preference.category, enabled: preference.enabled },
+          }),
+        ),
+      );
+    },
+
     isCategoryEnabled: async (accountId, category) => {
       const preference = await db.notificationPref.findUnique({
         where: { accountId_category: { accountId, category } },

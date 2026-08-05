@@ -253,3 +253,26 @@ test.describe('live delivery', () => {
     }
   });
 });
+
+test.describe('notification preferences', () => {
+  test('a member switches one off and stops being told about it', async ({ page }) => {
+    const person = await createIndividual('prefs');
+    await signIn(page, person.email);
+
+    await page.goto('/settings/notifications');
+
+    // Verification and billing are not offered, and the page says why rather than leaving the
+    // absence to be read as a bug.
+    await expect(page.getByText(/always be told about a verification decision/)).toBeVisible();
+
+    const social = page.getByLabel('Follows, connections, likes and comments');
+    await expect(social).toBeChecked();
+    await social.uncheck();
+    await page.getByRole('button', { name: 'Save preferences' }).click();
+    await expect(page.getByText('Saved.')).toBeVisible();
+
+    // It survives a reload, which is the only proof that anything was stored.
+    await page.reload();
+    await expect(page.getByLabel('Follows, connections, likes and comments')).not.toBeChecked();
+  });
+});

@@ -276,3 +276,16 @@ export async function sendMessageAction(
     [`/messages/${threadId}`, '/messages'],
   );
 }
+
+export async function updateNotificationPrefsAction(
+  preferences: { category: string; enabled: boolean }[],
+): Promise<ActionResult> {
+  return run(
+    () =>
+      callAsUser('/me/notification-prefs', {
+        method: 'PATCH',
+        body: { preferences },
+      }),
+    ['/settings/notifications', '/notifications'],
+  );
+}

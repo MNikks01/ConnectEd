@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Notification DTOs (`.docs/PRD/07-notifications.md`).
  *
@@ -47,4 +49,42 @@ export function academicPublishedPayload(payload: unknown): AcademicPublishedPay
     itemType: typeof candidate.itemType === 'string' ? candidate.itemType : 'Item',
     title: candidate.title,
   };
+}
+
+/**
+ * Which categories a person may switch off (FR-NOTIF-006).
+ *
+ * **Verification and billing are absent, deliberately.** A student who asked to join a school has
+ * to be told the answer, and the in-app notification is the only channel that exists — an opt-out
+ * there is not a preference, it is a way to never hear back. Billing is the school's contract with
+ * us. Everything else is genuinely optional.
+ */
+export const OPTIONAL_NOTIFICATION_CATEGORIES = [
+  'ACADEMIC',
+  'NOTICE',
+  'EVENT',
+  'LEAVE',
+  'SOCIAL',
+  'MESSAGE',
+] as const;
+
+export type OptionalNotificationCategory = (typeof OPTIONAL_NOTIFICATION_CATEGORIES)[number];
+
+export const updateNotificationPrefsSchema = z.object({
+  preferences: z
+    .array(
+      z.object({
+        category: z.enum(OPTIONAL_NOTIFICATION_CATEGORIES),
+        enabled: z.boolean(),
+      }),
+    )
+    .min(1)
+    .max(OPTIONAL_NOTIFICATION_CATEGORIES.length),
+});
+
+export type UpdateNotificationPrefsInput = z.infer<typeof updateNotificationPrefsSchema>;
+
+export interface NotificationPrefResponse {
+  category: OptionalNotificationCategory;
+  enabled: boolean;
 }
