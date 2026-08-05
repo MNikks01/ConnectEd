@@ -1,0 +1,31 @@
+# CodeQL configuration.
+#
+# One rule is excluded, deliberately and narrowly. Everything else runs as it does by default, and
+# the exclusion is here rather than dismissed in the GitHub UI so that it is reviewable in a pull
+# request and arguable by whoever disagrees.
+
+name: ConnectEd
+
+query-filters:
+  # `js/missing-token-validation` — "cookie middleware serving a request handler without CSRF
+  # protection", high severity, raised against `apps/api/src/app.ts`.
+  #
+  # The query looks for a recognised CSRF *token* middleware (csurf and friends). This API does not
+  # use one, and the reason is architectural rather than an oversight:
+  #
+  # - There is exactly **one** cookie: the refresh token, `httpOnly` and `SameSite=Strict`
+  #   (ADR-0007). Every other route authorizes from an `Authorization` header, which a cross-site
+  #   page cannot set without a preflight the CORS policy refuses. Those routes were never
+  #   reachable by CSRF, with or without a token.
+  # - The web app is a BFF: the browser never holds an API session cookie beyond that one. A token
+  #   round-trip would defend a surface that does not exist.
+  # - The gap `SameSite` leaves — a browser that stops enforcing it, and a compromised subdomain,
+  #   which is same-*site* but not same-*origin* — is covered by `shared/middleware/csrf.ts`: any
+  #   write presenting the refresh cookie must also carry a matching `Origin`. That control is
+  #   tested in `__tests__/csrf.test.ts`, including that it does not reach mobile clients or
+  #   bearer-authorized writes.
+  #
+  # The query cannot see an origin check, only a token library. **If this API ever grows a second
+  # cookie, or starts authorizing an ordinary route from one, delete this exclusion first.**
+  - exclude:
+      id: js/missing-token-validation
