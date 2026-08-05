@@ -7,14 +7,17 @@ desktop.
 
 ## Structure
 
-`app/` route groups: `(marketing)` (SSG/ISR, SEO), `(auth)`, `(app)` (authenticated shell) with `school/` and
+`app/` route groups: `(marketing)` (public, SEO), `(auth)`, `(app)` (authenticated shell) with `school/` and
 role dashboards (`student|parent|teacher|principal`) + `social/`. `lib/api-client.ts` (typed, uses
 `packages/types`), `lib/auth.ts`. Shared UI comes from `packages/ui`; app-specific components in `components/`.
 
 ## Rules
 
-1. **Rendering per route:** SSG/ISR for public/marketing (SEO), SSR for authenticated/personalized views, client
-   components only for interactive islands. Keep secrets server-side (never expose service tokens to the browser).
+1. **Rendering per route:** SSR everywhere, client components only for interactive islands. Nothing is
+   prerendered, and the reason is the content security policy: its nonce is minted per response, so HTML built
+   at build time hydrates nothing (`lib/security-headers.ts`). Adding `export const dynamic` is not optional on
+   a page with no dynamic data — it is what keeps the page working. Keep secrets server-side (never expose
+   service tokens to the browser).
 2. **Data:** server state via TanStack Query; forms via React Hook Form + zod. No global Redux unless justified.
 3. **Types:** consume DTOs from `packages/types`; never hand-redefine API shapes (prevents drift). No `any`.
 4. **Every feature ships all states:** Loading / Error / Empty / Success / Responsive / Accessible.

@@ -7,7 +7,12 @@
 - **Next.js App Router** with React Server Components.
 - Rendering strategy per route:
   - **SSR** for authenticated, personalized views (feeds, dashboards, academics).
-  - **SSG/ISR** for marketing/public pages (landing, school public profiles) — SEO-critical.
+  - **SSR for everything, including the marketing pages.** These were prerendered until the content
+    security policy arrived: its nonce is minted per response and HTML built once at build time cannot
+    carry one, so a prerendered page loads its markup and hydrates nothing. SEO is unaffected — a crawler
+    is served the same complete HTML — and the landing page has nothing to fetch before it can be sent.
+    Revisit if a public page ever gets expensive enough to be worth caching, which needs a way to exempt
+    it from the nonce rather than a config flag.
   - **Client components** for interactive islands (composer, message thread, notification bell).
 - Server Components fetch via a server-side API client (never expose service tokens to the browser).
 
@@ -15,7 +20,7 @@
 
 ```
 app/
-  (marketing)/            # public, SSG/ISR
+  (marketing)/            # public, server-rendered (see the rendering note)
   (auth)/                 # login, register, reset
   (app)/                  # authenticated shell
     school/               # school portal (web-only account)
