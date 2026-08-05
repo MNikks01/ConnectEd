@@ -282,3 +282,37 @@ test.describe('member roster', () => {
     await expect(page.getByText('Current class teacher')).toBeVisible();
   });
 });
+
+test.describe('bulk verification', () => {
+  test('a school approves several at once', async ({ page }) => {
+    const school = await signInAsSchool(page);
+    const created = await createClass(school, {
+      medium: 'ENGLISH',
+      level: 'CLASS_7',
+      section: 'A',
+    });
+
+    const applicants = [
+      await createIndividual('bulkone'),
+      await createIndividual('bulktwo'),
+      await createIndividual('bulkthree'),
+    ];
+    for (const applicant of applicants) {
+      await submitStudentVerification(applicant, school.accountId, created.id);
+    }
+
+    await page.goto('/school/verifications?status=PENDING');
+
+    // Selecting what is on the page, which is what the checkbox is next to. A control that
+    // silently included requests arriving while somebody read would approve people they never saw.
+    await page.getByLabel('Select all pending on this page').check();
+    await page.getByRole('button', { name: /^Approve \d+$/ }).click();
+
+    await expect(page.getByText(/\d+ decided\./)).toBeVisible();
+
+    await page.goto('/school/verifications?status=VERIFIED');
+    for (const applicant of applicants) {
+      await expect(page.getByText(applicant.fullName)).toBeVisible();
+    }
+  });
+});

@@ -48,16 +48,17 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Verification
 
-| Method | Path                                        | Auth | Purpose                                                   |
-| ------ | ------------------------------------------- | :--: | --------------------------------------------------------- |
-| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).        |
-| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                     |
-| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                           |
-| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                   |
-| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class. |
-| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                         |
-| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                              |
-| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                      |
+| Method | Path                                        | Auth | Purpose                                                      |
+| ------ | ------------------------------------------- | :--: | ------------------------------------------------------------ |
+| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).           |
+| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                        |
+| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                              |
+| POST   | `/verifications/decisions`                  |  🛡   | Decide up to 100 at once; reports each outcome (FR-VER-009). |
+| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                      |
+| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class.    |
+| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                            |
+| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                                 |
+| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                         |
 
 ## Academics
 
