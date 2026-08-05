@@ -138,7 +138,19 @@ test.describe('connections and messages', () => {
 
     await expect(page.getByText('1 unread').first()).toBeVisible();
     await page.getByRole('link', { name: 'E2E answerer' }).click();
-    await expect(page.getByText('Thanks for connecting.')).toBeVisible();
+
+    // Wait for the conversation itself, not for its text.
+    //
+    // The inbox renders each thread's last message as a preview, so "Thanks for connecting." is
+    // already on screen before this click goes anywhere — an assertion on it passes without the
+    // conversation ever being opened. `goto` below would then abort the navigation in flight, the
+    // API would never see the read, and the count would still be there. That is the whole of the
+    // flake this test showed at about one run in four (S6-13).
+    //
+    // The composer exists only on the conversation page, so waiting for it is waiting for the
+    // render that performs the read.
+    await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E2E answerer' })).toBeVisible();
 
     // Opening it is the read.
     await page.goto('/messages');
