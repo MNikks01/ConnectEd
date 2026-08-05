@@ -117,6 +117,68 @@ const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
 
+  /**
+   * How much of `X-Forwarded-For` to believe.
+   *
+   * `req.ip` is what the credential limiter and the `/rum` limiter key on, so whoever controls it
+   * controls whether those limits mean anything. Express takes it from `X-Forwarded-For` — a
+   * header any client can send — and this setting is the whole of what decides how far it trusts
+   * that.
+   *
+   * **The default is to trust nothing**, and that is a deliberate choice about which failure to
+   * have. Trusting a proxy that is not there means an attacker sends their own header and gets a
+   * fresh rate-limit bucket per request, which is a limiter that silently stops existing.
+   * Trusting nothing when a proxy *is* there means every request appears to come from the
+   * ingress, so one bucket is shared by everybody — worse service, loudly, and visibly wrong the
+   * first time somebody looks. Between a control that fails open in silence and one that fails
+   * closed in the open, this takes the second (`.docs/Security/05-review-2026-08-05.md`,
+   * finding 2).
+   *
+   * Every real deployment must therefore set this. Accepted forms, all of them Express's:
+   *
+   * - `false` — nobody is in front; `req.ip` is the socket address.
+   * - a number — how many hops to skip from the right of `X-Forwarded-For`. `1` behind a single
+   *   nginx or ingress, which is the common case.
+   * - addresses or CIDR ranges, comma-separated — trust these as proxies and nothing else. The
+   *   most precise answer where the ingress has a stable address, and the keywords `loopback`,
+   *   `linklocal` and `uniquelocal` are available.
+   * - `true` — believe the leftmost entry, whoever wrote it. Correct only where something
+   *   upstream is guaranteed to overwrite the header, and indistinguishable from a mistake when
+   *   it is not, so the API says so at boot in production rather than letting it pass unremarked.
+   */
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((value, ctx) => {
+      const raw = value.trim();
+      if (raw === 'false') return false;
+      if (raw === 'true') return true;
+      if (/^\d+$/.test(raw)) return Number(raw);
+
+      const entries = raw
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+      // Deliberately not a full IP grammar: this rejects the shapes that come from a typo or a
+      // half-written value, and leaves the exact address parsing to Express, which does it
+      // properly and throws on what it cannot read.
+      const looksLikeProxy = (entry: string) =>
+        ['loopback', 'linklocal', 'uniquelocal'].includes(entry) ||
+        /^[0-9a-fA-F.:]+(\/\d+)?$/.test(entry);
+
+      if (entries.length === 0 || !entries.every(looksLikeProxy)) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'TRUST_PROXY must be "false", "true", a hop count, or a comma-separated list of addresses, CIDR ranges, or the keywords loopback / linklocal / uniquelocal.',
+        });
+        return z.NEVER;
+      }
+
+      return entries.join(',');
+    }),
+
   /** Refresh cookies must be Secure outside local development. */
   COOKIE_SECURE: z
     .enum(['true', 'false'])
