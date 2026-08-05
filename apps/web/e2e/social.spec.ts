@@ -161,6 +161,11 @@ test.describe('safety', () => {
     await signIn(page, blocker.email);
     await page.goto(`/accounts/${blocked.accountId}`);
     await page.getByRole('button', { name: 'Follow' }).click();
+    // Wait for the follow to land before navigating. `click()` returns when the click is
+    // dispatched, not when the Server Action it starts has finished, so without this the feed
+    // below is read while the follow is still in flight — observed exactly once, and the trace
+    // showed the two requests four milliseconds apart. The test above this one already waits.
+    await expect(page.getByRole('button', { name: 'Unfollow' })).toBeVisible();
 
     await page.goto('/social');
     await expect(page.getByText('Something the blocker will stop seeing.')).toBeVisible();
