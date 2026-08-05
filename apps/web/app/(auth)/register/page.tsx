@@ -6,6 +6,14 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Create an account · GetConnected' };
 
+/**
+ * Rendered per request, for the same reason as the landing page: the content security policy's
+ * nonce is minted per response and prerendered HTML cannot carry it. Here it is not a nicety —
+ * the form below is a client component, so a page that does not hydrate is a page nobody can
+ * register on.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function RegisterPage() {
   return (
     <main className="auth-shell">

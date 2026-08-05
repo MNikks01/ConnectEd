@@ -26,7 +26,10 @@ Security is the headline reason for the rebuild. The legacy app had **no server-
 ## Baseline controls (apply everywhere)
 
 - **Transport:** HTTPS/TLS 1.2+ only; HSTS.
-- **Headers:** CSP, X-Content-Type-Options, X-Frame-Options/frame-ancestors, Referrer-Policy (via helmet).
+- **Headers:** both apps, by different means. The API sends them through `helmet()`. The web app sends
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and
+  `Cross-Origin-Opener-Policy` from `next.config.mjs`, and a nonce-based `Content-Security-Policy` from
+  `middleware.ts` — the nonce is per response, so it cannot come from static configuration.
 - **Input:** zod validation on all inputs; parameterized queries via Prisma (no string SQL).
 - **Output:** JSON only from the API; React auto-escaping on web; `dangerouslySetInnerHTML` forbidden unless
   sanitized.
