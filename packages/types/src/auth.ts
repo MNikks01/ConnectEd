@@ -156,6 +156,8 @@ export interface CurrentAccountResponse {
   emailVerified: boolean;
   /** ConnectEd staff (ADR-0017). Navigation only — the API authorizes every call independently. */
   isPlatformAdmin: boolean;
+  /** Whether a confirmed second factor is in place (FR-AUTH-012). For rendering, not for trust. */
+  twoFactorEnabled: boolean;
   role: UserRole | null;
   fullName: string | null;
   handle: string | null;

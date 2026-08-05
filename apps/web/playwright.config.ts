@@ -60,6 +60,9 @@ export default defineConfig({
         DATABASE_URL,
         // Long enough that no test races the access-token expiry, short enough to stay realistic.
         JWT_ACCESS_SECRET: 'e2e-only-secret-that-is-long-enough-32',
+        // Two-factor enrolment refuses to run without a key rather than storing secrets in the
+        // clear, so the suite has to supply one to exercise the feature at all.
+        TWO_FACTOR_KEY: 'e2e-only-two-factor-key-long-enough-32',
         LOG_LEVEL: 'warn',
         WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
         METRICS_ENABLED: 'false',
