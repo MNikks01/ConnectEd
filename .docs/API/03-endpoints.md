@@ -146,7 +146,8 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET    | `/notifications?after=`        |  🔑  | List (`unreadCount` in the body, beside `data`).                |
 | POST   | `/notifications/:id/read`      |  🔑  | Mark read.                                                      |
 | POST   | `/notifications/read-all`      |  🔑  | Mark every unread one read.                                     |
-| PATCH  | `/me/notification-prefs`       |  🔑  | Preferences.                                                    |
+| GET    | `/me/notification-prefs`       |  🔑  | Every switchable category, and your choice.                     |
+| PATCH  | `/me/notification-prefs`       |  🔑  | Partial update. Verification and billing are not switchable.    |
 | POST   | `/me/push-tokens`              |  🔑  | Register device (mobile).                                       |
 | GET    | `/plans`                       |  🔑  | Available plans.                                                |
 | GET    | `/schools/:id/subscription`    |  🛡   | The school's own plan, limits, and usage.                       |

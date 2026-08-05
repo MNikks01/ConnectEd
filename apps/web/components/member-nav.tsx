@@ -21,6 +21,7 @@ const LINKS = [
   { href: '/social', label: 'Social' },
   { href: '/messages', label: 'Messages' },
   { href: '/notifications', label: 'Notifications' },
+  { href: '/settings/notifications', label: 'Settings' },
 ];
 
 export function MemberNav({
