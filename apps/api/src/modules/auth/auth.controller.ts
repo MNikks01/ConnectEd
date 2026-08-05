@@ -28,6 +28,10 @@ export interface AuthController {
   login: RequestHandler;
   refresh: RequestHandler;
   logout: RequestHandler;
+  twoFactorLogin: RequestHandler;
+  startTwoFactor: RequestHandler;
+  confirmTwoFactor: RequestHandler;
+  disableTwoFactor: RequestHandler;
   forgotPassword: RequestHandler;
   resetPassword: RequestHandler;
   me: RequestHandler;
@@ -101,8 +105,16 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
       void (async () => {
         try {
           const clientType = clientTypeOf(req);
-          const session = await service.login(req.body as never, clientType);
-          sendSession(res, session, clientType);
+          const result = await service.login(req.body as never, clientType);
+
+          if ('twoFactorRequired' in result) {
+            // 200 rather than 401: the credentials *were* accepted. A 401 here would tell a client
+            // to re-prompt for a password, which is the wrong thing to ask for next.
+            res.status(200).json(result);
+            return;
+          }
+
+          sendSession(res, result, clientType);
         } catch (error) {
           next(error);
         }
@@ -147,6 +159,55 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
      * into a way to ask "does this person have an account here?", which for a product used by
      * children is a question strangers should not be able to put to it.
      */
+    twoFactorLogin: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const clientType = clientTypeOf(req);
+          const { challengeToken, code } = req.body as { challengeToken: string; code: string };
+          sendSession(
+            res,
+            await service.completeTwoFactorLogin(challengeToken, code, clientType),
+            clientType,
+          );
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    startTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          res.status(201).json(await service.startTwoFactorEnrolment(requireActor(req)));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    confirmTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { code } = req.body as { code: string };
+          res.status(200).json(await service.confirmTwoFactorEnrolment(requireActor(req), code));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    disableTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { code } = req.body as { code: string };
+          await service.disableTwoFactor(requireActor(req), code);
+          res.status(204).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
     forgotPassword: ((req: Request, res: Response, next) => {
       void (async () => {
         try {

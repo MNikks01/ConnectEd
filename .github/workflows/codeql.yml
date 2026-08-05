@@ -23,4 +23,7 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           language: ${{ matrix.language }}
+          # One rule is excluded, with the reasoning written out beside it. In the repository
+          # rather than dismissed in the UI, so it is reviewable and arguable.
+          config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v3

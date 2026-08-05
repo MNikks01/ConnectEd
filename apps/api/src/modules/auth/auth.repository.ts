@@ -4,6 +4,11 @@
  */
 import type { Db } from '../../shared/db/index.js';
 import type { LoginThrottle } from '../../generated/prisma/client.js';
+
+export interface TwoFactorRow {
+  secret: string;
+  confirmedAt: Date | null;
+}
 import type { AccountType, UserRole } from '../../generated/prisma/client.js';
 
 export interface AccountWithCredential {
@@ -32,6 +37,21 @@ export interface AuthRepository {
   storeRefreshToken: (input: StoreRefreshTokenInput) => Promise<void>;
   rotateRefreshToken: (input: RotateRefreshTokenInput) => Promise<void>;
   revokeFamily: (familyId: string) => Promise<void>;
+  findTwoFactor: (accountId: string) => Promise<TwoFactorRow | null>;
+  /** Replaces any unconfirmed enrolment. Re-enrolling before confirming is a retry, not a second factor. */
+  startTwoFactorEnrolment: (accountId: string, sealedSecret: string) => Promise<void>;
+  /** Confirms the enrolment and stores the hashed recovery codes, in one transaction. */
+  confirmTwoFactor: (accountId: string, codeHashes: string[]) => Promise<void>;
+  disableTwoFactor: (accountId: string) => Promise<void>;
+  /** Spends a recovery code. False when it is unknown or already used. */
+  consumeRecoveryCode: (accountId: string, codeHash: string) => Promise<boolean>;
+  createTwoFactorChallenge: (input: {
+    accountId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) => Promise<void>;
+  /** Spends a challenge and returns whose it was, or null when it is unusable. */
+  consumeTwoFactorChallenge: (tokenHash: string, now: Date) => Promise<string | null>;
   /** Reads the throttle for an address hash. Null when it has no recent failures. */
   findLoginThrottle: (emailHash: string) => Promise<LoginThrottle | null>;
   /** Records a failure and returns the resulting state, so the caller can decide the backoff. */
@@ -262,6 +282,73 @@ export function createAuthRepository(db: Db): AuthRepository {
           },
         }),
       ]);
+    },
+
+    findTwoFactor: (accountId) =>
+      db.twoFactorSecret.findUnique({
+        where: { accountId },
+        select: { secret: true, confirmedAt: true },
+      }),
+
+    startTwoFactorEnrolment: async (accountId, sealedSecret) => {
+      await db.$transaction([
+        // Any recovery codes from a previous enrolment go with it: codes that outlive the secret
+        // they belong to are a second factor nobody is tracking.
+        db.recoveryCode.deleteMany({ where: { accountId } }),
+        db.twoFactorSecret.upsert({
+          where: { accountId },
+          update: { secret: sealedSecret, confirmedAt: null },
+          create: { accountId, secret: sealedSecret },
+        }),
+      ]);
+    },
+
+    confirmTwoFactor: async (accountId, codeHashes) => {
+      await db.$transaction([
+        db.twoFactorSecret.update({ where: { accountId }, data: { confirmedAt: new Date() } }),
+        db.recoveryCode.createMany({
+          data: codeHashes.map((codeHash) => ({ accountId, codeHash })),
+        }),
+      ]);
+    },
+
+    disableTwoFactor: async (accountId) => {
+      // The codes cascade with the secret, but deleting them explicitly says so at this level
+      // rather than relying on a foreign key nobody reads.
+      await db.$transaction([
+        db.recoveryCode.deleteMany({ where: { accountId } }),
+        db.twoFactorSecret.deleteMany({ where: { accountId } }),
+      ]);
+    },
+
+    consumeRecoveryCode: async (accountId, codeHash) => {
+      // The `where` carries every condition, so two requests racing on one code cannot both win.
+      const spent = await db.recoveryCode.updateMany({
+        where: { accountId, codeHash, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      return spent.count > 0;
+    },
+
+    createTwoFactorChallenge: async ({ accountId, tokenHash, expiresAt }) => {
+      await db.twoFactorChallenge.create({ data: { accountId, tokenHash, expiresAt } });
+    },
+
+    consumeTwoFactorChallenge: async (tokenHash, now) => {
+      const spent = await db.twoFactorChallenge.updateMany({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+
+      if (spent.count === 0) return null;
+
+      const challenge = await db.twoFactorChallenge.findUniqueOrThrow({
+        where: { tokenHash },
+        select: { accountId: true },
+      });
+
+      return challenge.accountId;
     },
 
     findLoginThrottle: (emailHash) => db.loginThrottle.findUnique({ where: { emailHash } }),

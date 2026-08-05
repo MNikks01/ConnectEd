@@ -16,6 +16,10 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                                           |
 | POST   | `/auth/password/forgot` |  🔓  | Ask for a reset link. **Always 202**, registered or not.         |
 | POST   | `/auth/password/reset`  |  🔓  | Spend a link. Single use, ≤30 min, revokes every session.        |
+| POST   | `/auth/login/2fa`       |  🔓  | Second leg of a login: a challenge plus a code.                  |
+| POST   | `/me/2fa`               |  🔑  | Start enrolment. School and principal accounts only.             |
+| POST   | `/me/2fa/confirm`       |  🔑  | Confirm with a code; returns the recovery codes, once.           |
+| DELETE | `/me/2fa`               |  🔑  | Turn it off. Needs a current code, not merely a session.         |
 | POST   | `/auth/password/forgot` |  🔓  | Start reset.                                                     |
 | POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                                          |
 | POST   | `/auth/email/verify`    |  🔑  | Confirm email.                                                   |

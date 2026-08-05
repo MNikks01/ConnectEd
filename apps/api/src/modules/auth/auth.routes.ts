@@ -10,7 +10,12 @@ import rateLimit from 'express-rate-limit';
 import { authenticate } from '../../shared/middleware/authenticate.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import { createAuthController } from './auth.controller.js';
-import { forgotPasswordSchema, resetPasswordSchema } from '@connected/types';
+import {
+  confirmTwoFactorSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  twoFactorLoginSchema,
+} from '@connected/types';
 
 import {
   loginSchema,
@@ -90,6 +95,33 @@ export function authRoutes({ service, config, tokens }: AuthRoutesDeps): Router 
     credentialLimiter,
     validateBody(resetPasswordSchema),
     controller.resetPassword,
+  );
+
+  /**
+   * The second leg of a login. Behind the credential limiter like the first: it accepts a
+   * six-digit code, which is the one guessable secret in this product.
+   */
+  router.post(
+    '/auth/login/2fa',
+    credentialLimiter,
+    validateBody(twoFactorLoginSchema),
+    controller.twoFactorLogin,
+  );
+
+  // Enrolment is about the caller, so `/me/*` (`API/01-conventions.md`). Who may enrol is the
+  // service's decision, not this router's — a guard here would be a second, weaker copy of it.
+  router.post('/me/2fa', authenticate(tokens), controller.startTwoFactor);
+  router.post(
+    '/me/2fa/confirm',
+    authenticate(tokens),
+    validateBody(confirmTwoFactorSchema),
+    controller.confirmTwoFactor,
+  );
+  router.delete(
+    '/me/2fa',
+    authenticate(tokens),
+    validateBody(confirmTwoFactorSchema),
+    controller.disableTwoFactor,
   );
 
   router.get('/me', authenticate(tokens), controller.me);

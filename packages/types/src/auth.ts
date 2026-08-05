@@ -29,6 +29,47 @@ export const handleSchema = z
   .regex(/^[a-z0-9._]+$/, 'Handle may contain lowercase letters, numbers, dots, and underscores.');
 
 /**
+ * A six-digit authenticator code, or an eight-character recovery code (FR-AUTH-012).
+ *
+ * Both accepted at the same field. Somebody whose phone is in a river should not have to find a
+ * different form, and the server can tell them apart by shape.
+ */
+export const twoFactorCodeSchema = z
+  .string()
+  .trim()
+  .min(6, 'Enter the code from your authenticator.')
+  .max(16);
+
+export const confirmTwoFactorSchema = z.object({ code: twoFactorCodeSchema });
+
+export const twoFactorLoginSchema = z.object({
+  challengeToken: z.string().min(1),
+  code: twoFactorCodeSchema,
+});
+
+export interface TwoFactorEnrolmentResponse {
+  /** What the authenticator scans. Contains the secret; never log it. */
+  otpauthUri: string;
+  /** The same secret, for keying in by hand when a camera will not focus. */
+  secret: string;
+}
+
+export interface TwoFactorConfirmedResponse {
+  /** Shown once, never again. Stored hashed the moment they leave here. */
+  recoveryCodes: string[];
+}
+
+/** What a login returns when the password was right and a code is still owed. */
+export interface TwoFactorChallengeResponse {
+  twoFactorRequired: true;
+  challengeToken: string;
+  expiresInSeconds: number;
+}
+
+export type ConfirmTwoFactorInput = z.infer<typeof confirmTwoFactorSchema>;
+export type TwoFactorLoginInput = z.infer<typeof twoFactorLoginSchema>;
+
+/**
  * Asking for a reset link (FR-AUTH-009).
  *
  * An address and nothing else. The response is the same whether or not it is registered, so there

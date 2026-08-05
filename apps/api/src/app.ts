@@ -17,6 +17,9 @@ import { createAuthModule } from './modules/auth/index.js';
 import { createAnalyticsModule } from './modules/analytics/index.js';
 import { createBillingModule } from './modules/billing/index.js';
 import { createMailer } from './shared/mail/index.js';
+import { createSecretBox } from './shared/auth/secret-box.js';
+import { verifyOrigin } from './shared/middleware/csrf.js';
+import { REFRESH_COOKIE } from './modules/auth/auth.controller.js';
 import { createModerationQueueModule } from './modules/moderation/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
@@ -157,6 +160,10 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     app.use(jwksRoutes(tokens));
   }
 
+  // Defence in depth behind `SameSite=Strict`: a write that presents the refresh cookie must also
+  // come from the application's own origin. Everything authorized by a header is untouched.
+  app.use(verifyOrigin(config.WEB_ORIGIN, REFRESH_COOKIE));
+
   const api = express.Router();
 
   // Before `authenticate`: the marketing pages have no session, and their load time is exactly
@@ -179,6 +186,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
         tokens,
         billing: billing.service,
         mailer: mailer ?? createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
+        secretBox: config.TWO_FACTOR_KEY ? createSecretBox(config.TWO_FACTOR_KEY) : undefined,
       }).routes,
     );
 

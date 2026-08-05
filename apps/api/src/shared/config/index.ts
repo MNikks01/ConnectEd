@@ -146,6 +146,15 @@ const envSchema = z.object({
    */
   MAIL_TRANSPORT: z.enum(['console', 'none']).default('none'),
 
+  /**
+   * Encrypts TOTP secrets at rest (FR-AUTH-012).
+   *
+   * Optional, and its absence switches two-factor enrolment **off** rather than storing second
+   * factors in the clear. A feature that quietly degrades to plaintext credentials is worse than
+   * one that says it is unavailable.
+   */
+  TWO_FACTOR_KEY: z.string().min(32).optional(),
+
   OTEL_SERVICE_NAME: z.string().default('connected-api'),
   /** Traces are exported only when a collector endpoint is configured. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
