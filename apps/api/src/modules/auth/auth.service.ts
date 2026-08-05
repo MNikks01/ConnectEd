@@ -11,6 +11,7 @@
  */
 import { randomBytes } from 'node:crypto';
 
+import { randomFromAlphabet } from '../../shared/auth/random.js';
 import { generateTotpSecret, otpauthUri, verifyTotp } from '../../shared/auth/totp.js';
 
 import {
@@ -147,11 +148,19 @@ const TWO_FACTOR_CHALLENGE_TTL_SECONDS = 300;
 /** Ten codes, each 8 characters of Crockford-ish base32 — enough entropy, readable aloud. */
 const RECOVERY_CODE_COUNT = 10;
 
+/**
+ * Ambiguity removed rather than explained: these get written on paper and read back later, so the
+ * characters people confuse — I and 1, O and 0 — are simply absent.
+ *
+ * That leaves 31 characters, which does not divide 256, which is why this goes through
+ * `randomFromAlphabet` rather than a modulo. See that file: the obvious version made the first
+ * eight characters ⅛ more likely, in a credential that stands in for a second factor.
+ */
+const RECOVERY_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const RECOVERY_CODE_LENGTH = 8;
+
 function generateRecoveryCode(): string {
-  // Ambiguity removed rather than explained: these get written on paper and read back later.
-  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  const bytes = randomBytes(8);
-  return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join('');
+  return randomFromAlphabet(RECOVERY_CODE_LENGTH, RECOVERY_CODE_ALPHABET);
 }
 
 /**
