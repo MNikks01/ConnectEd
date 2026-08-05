@@ -6,7 +6,7 @@ Every functional requirement in this folder, and whether it is built. Written at
 nothing was left that could be built without a decision from outside engineering, so that "what is
 missing" is a list somebody can act on rather than a feeling.
 
-**Legend:** ✅ built · ⛔ blocked on a decision · 🗓 deliberately later
+**Legend:** ✅ built · ◐ half · ⛔ blocked on a decision · 🗓 deliberately later
 
 ## Accounts & authentication (`01-auth.md`)
 
@@ -75,9 +75,17 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
 
 ## The four decisions everything blocked is waiting on
 
-1. **A payment provider** — Stripe or Razorpay. Blocks FR-BILL-002, 004, 005, 006. It follows the
-   region of the pilot schools; the legacy product was India-first. The port and its fake already
-   exist, so the adapter is the only new surface.
+1. **A payment provider** — Stripe or Razorpay. Blocks FR-BILL-002, 004, 006 and the trigger half
+   of 005. It follows the region of the pilot schools; the legacy product was India-first.
+
+   **Corrected 2026-08-05:** an earlier draft of this line claimed the port and its fake already
+   existed and only an adapter was missing. They do not. `apps/api/src/modules/billing` has one
+   endpoint (`GET /schools/:id/subscription`) and no payment abstraction of any kind. What exists
+   is everything _around_ a provider — the plan catalogue, the subscription record and its states
+   including `PAST_DUE`, trial creation in the same statement as the school, and limit and feature
+   enforcement at the write. What does not exist is checkout, webhook handling, invoices, or the
+   port they would plug into. That is a module to build, not an adapter to write.
+
 2. **A mail transport** — SES, Postmark, SMTP, something. Blocks FR-AUTH-010 and FR-NOTIF-007, and
    leaves FR-AUTH-009 built-but-undeliverable.
 
@@ -90,6 +98,22 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
 3. **What the plans actually limit** — the catalogue ships provisional numbers (trial 5/200,
    standard 40/1500, premium unlimited) and schools are enforced against them today.
 4. **Branch protection** — neither branch requires a review or a passing check.
+
+## Verified, not remembered
+
+Re-checked on 2026-08-05 against `development`, by extracting every `FR-` id in this folder and
+searching the whole of `apps/api`, `apps/web` and `packages` for each one, then reading the code
+behind every id that did not appear.
+
+- **73 functional requirements. 64 built, 1 half, 8 not.**
+- Six were built but carry no `FR-` reference anywhere in the code — argon2id (003), refresh
+  rotation and reuse detection (005), logout (006), academic image attachments (ACAD-006), the
+  in-app notification list (NOTIF-003), and verification notifications (VER-007). Confirmed by
+  reading the implementations. An id in a comment is a convention, not evidence.
+- **Every P0 is built.** Everything outstanding is P1 or P2.
+
+The whole tree at that commit: lint, type-check and build green across 14 tasks; 993 API tests and
+87 end-to-end tests passing; `pnpm audit` clean with and without dev dependencies.
 
 ## What "built" is measured by
 
