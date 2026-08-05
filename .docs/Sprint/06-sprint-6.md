@@ -131,6 +131,26 @@ Worth separating in the record, because the two failures look identical from the
 one of them is a product question. The other — wrong data in the API's vitest suite, locally only —
 is untouched by this and still open.
 
+**S6-11 answered — the suite flake was the reset, not the product.** It reproduces on demand: run
+the end-to-end suite in a loop while the API suite runs. Different databases on the same Postgres,
+so no interference — only contention. Two quiet runs passed; the first overlapping run failed three
+tests.
+
+Two of the three were `resetDb`. Its TRUNCATE ran inside a Prisma interactive transaction whose
+default budget is 5000 ms, the same five seconds as the lock timeout it sets for itself. On a busy
+machine the truncate took eleven seconds _unblocked_, and the commit was then refused as expired.
+The reset rolled back, and the diagnostics written for exactly this case could never print, because
+there was no blocker to name. The transaction now gets fifteen seconds and the lock timeout stays at
+five.
+
+The third was a supertest request answered with `400 WebSockets request was expected` — a string
+that exists nowhere in this repository or its dependencies. It is in the Node binary, next to the
+V8 inspector's UUID. The request reached a debugger port: an ephemeral-port collision under load,
+not a product fault, and worth recognising on sight because it reads like one.
+
+Not claimed: that this explains every past sighting. The reports of a row created and then absent
+are a different shape, and are still open.
+
 **Measured rather than assumed, twice this sprint.** The same test was suspected of being broken by
 the Next 16.3 bump; ten runs on each version (four failures against two) said otherwise, and the
 real cause was in the test all along.

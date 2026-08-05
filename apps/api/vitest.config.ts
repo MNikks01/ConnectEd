@@ -55,7 +55,32 @@ export default defineConfig({
      * be is the truncate signature, and a populated one rules it out. Whichever it turns out to be
      * will be the first real fact this has produced.
      *
-     * If it appears again, the next thing to try is a database per test file.
+     * **Answered, S6-13 — and it was not a wrong answer at all.**
+     *
+     * It reproduces on demand: run the end-to-end suite in a loop against `connected_e2e` while
+     * this one runs against `connected_test`. Same Postgres, different databases, no interference
+     * — just contention. Two runs alone passed; the first run overlapping a full E2E loop failed
+     * three tests, and two of the three were the same thing.
+     *
+     * That thing is `resetDb`. Its TRUNCATE ran inside a Prisma interactive transaction whose
+     * default budget is 5000 ms — the same five seconds as the lock timeout it sets for itself.
+     * On a saturated machine the truncate took eleven seconds *without being blocked by anybody*,
+     * and the transaction was then refused at the commit: "A commit cannot be executed on an
+     * expired transaction". The reset rolled back. Every careful word of the lock diagnostics was
+     * unprintable in exactly the case it was written for, and it reported "no other active
+     * connection found" because there genuinely was none.
+     *
+     * `support/db.ts` now gives that transaction fifteen seconds and keeps the lock timeout at
+     * five, so a slow truncate finishes and a blocked one still says who is holding it.
+     *
+     * The third failure was a supertest request that received `400 WebSockets request was
+     * expected` — a string that appears nowhere in this repository or its dependencies. It is in
+     * the Node binary, beside the V8 inspector's UUID: the request reached a debugger port. An
+     * ephemeral-port collision under load, not a product fault. Worth knowing on sight, because
+     * the message reads like an application error and is not one.
+     *
+     * What is *not* claimed: that this explains every past sighting. The reports of a row created
+     * and then absent are not this, and if one appears again the forensics below will say so.
      */
     /**
      * Dumps the database's state when a test fails, before a rerun can destroy it (S6-11).
