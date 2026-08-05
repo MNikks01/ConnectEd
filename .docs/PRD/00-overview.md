@@ -25,6 +25,7 @@ This PRD defines **what** ConnectEd must do. The **how** lives in [`../TRD/`](..
 | Notifications          | [`07-notifications.md`](./07-notifications.md)           | In-app + push notification delivery.                                 |
 | Billing & Entitlements | [`08-billing.md`](./08-billing.md)                       | School subscriptions, plans, entitlements.                           |
 | Permissions Matrix     | [`09-permissions-matrix.md`](./09-permissions-matrix.md) | Consolidated who-can-do-what (server-enforced).                      |
+| Completeness           | [`10-completeness.md`](./10-completeness.md)             | Every requirement, and whether it is built.                          |
 
 ## Cross-cutting product rules (apply to all modules)
 
