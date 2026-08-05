@@ -45,6 +45,13 @@ Implements `ADR-0007`.
 - **Login** → verify hash → issue tokens; **reject `SCHOOL` when `X-Client-Type: mobile`** (`SCHOOL_WEB_ONLY`).
 - **Refresh** → validate + rotate (reuse detection).
 - **Logout** → revoke refresh family; clear cookie.
+- **CSRF** → two layers. The refresh cookie is `httpOnly` and `SameSite=Strict`, which stops a
+  cross-site form carrying it; and every write that _does_ present the cookie must also carry an
+  `Origin` matching `WEB_ORIGIN`. The second layer covers what the first does not: a browser that
+  stops enforcing `SameSite`, and a compromised subdomain, which is same-_site_ but not
+  same-_origin_. Requests authorized by an `Authorization` header are untouched — a cross-site page
+  cannot set that header without a preflight the CORS policy refuses — and neither are mobile
+  clients, which send no cookie and no `Origin`.
 - **Two-factor (TOTP)** → **built** for school and principal accounts (FR-AUTH-012). Secret
   encrypted at rest with `TWO_FACTOR_KEY`; enrolment inert until a first correct code; login
   returns a five-minute single-use challenge rather than a session; ten hashed recovery codes;
