@@ -149,9 +149,21 @@ describe('asking for a link', () => {
 
 describe('spending a link', () => {
   async function linkFor(email: string): Promise<string> {
-    await forgot(email);
+    const response = await forgot(email);
+
+    // The status is checked first, and it is not pedantry. This endpoint answers 202 to everything
+    // — a registered address, an unknown one, a mail transport that is on fire — because anything
+    // else is an account-enumeration oracle. So when the recorded email is missing, the reason is
+    // invisible unless something looks: a 202 means the account was not found, and anything else
+    // means the request failed outright. Observed once under load (S6-13) reporting only "no reset
+    // email was recorded", which is the one thing that was never in question.
+    expect(response.status, `setup: asking for a link failed — ${response.text}`).toBe(202);
+
     const token = sent.at(-1)?.token;
-    expect(token, 'setup: no reset email was recorded').toBeDefined();
+    expect(
+      token,
+      `setup: the request succeeded but no email was recorded, so the account for ${email} was not found`,
+    ).toBeDefined();
     return token ?? '';
   }
 
