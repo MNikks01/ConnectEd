@@ -25,7 +25,10 @@ The exact flow requested: **feature branch → PR to `development` → merge →
    commit to preserve the release boundary.
 5. Production releases go out via a **`development → main` release PR** (Changesets version/changelog).
 6. `hotfix/*` may go straight to `main` (gated) and must be back-merged to `development`.
-7. **Back-merge every release into `development`.** `changeset version` runs on the release branch,
+7. **Back-merge every release into `development` — with a merge commit, never a squash.**
+   A squash re-applies `main`'s content as a new commit without recording `main` as an ancestor,
+   so the next release conflicts on exactly the files the back-merge was meant to carry. That has
+   now happened twice: once across 176 files, and once on the version bump itself. `changeset version` runs on the release branch,
    so after the merge `main` carries the version bump and the consumed changesets and `development`
    does not. Left alone the next release re-publishes the same changelog and bumps from the same
    number — and the drift is what made an earlier release PR conflict across 176 files.
