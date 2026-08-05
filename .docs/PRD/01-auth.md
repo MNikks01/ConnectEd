@@ -1,6 +1,6 @@
 # PRD — Accounts & Authentication
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-04`
 
 Actors: all. Establishes identity, account type, role, and session.
 
@@ -22,10 +22,72 @@ Actors: all. Establishes identity, account type, role, and session.
 | FR-AUTH-006 |    P0    | Logout revokes the refresh token and clears client sessions.                                      | Subsequent refresh with revoked token → 401.                                                                          |
 | FR-AUTH-007 |    P0    | After login, the client is routed by account type/role.                                           | School → school portal (web); mobile school login → rejected; individual → user experience by role.                   |
 | FR-AUTH-008 |    P1    | Individuals can declare/switch academic role (Student/Parent/Teacher/Principal).                  | Role change creates the role profile and (if academic) a `PENDING` verification against a chosen school.              |
-| FR-AUTH-009 |    P1    | Password reset via emailed, expiring, single-use token.                                           | Token expires (≤ 30 min), single use; reset invalidates existing sessions.                                            |
+| FR-AUTH-009 |    P1    | Password reset via emailed, expiring, single-use token.                                           | **Built.** 30-minute expiry, single use, revokes every session. No mail transport yet — see below.                    |
 | FR-AUTH-010 |    P1    | Email verification on registration.                                                               | Unverified accounts have limited capability until email confirmed.                                                    |
-| FR-AUTH-011 |    P2    | Rate-limiting & brute-force protection on auth endpoints.                                         | Repeated failures throttled; lockout/backoff applied; events logged.                                                  |
-| FR-AUTH-012 |    P2    | Optional 2FA (TOTP) for school admins & principals.                                               | Enrolment + verification; recovery codes issued.                                                                      |
+| FR-AUTH-011 |    P2    | Rate-limiting & brute-force protection on auth endpoints.                                         | **Built.** Per-address exponential backoff on top of the per-IP limiter. Backoff, never lockout.                      |
+| FR-AUTH-012 |    P2    | Optional 2FA (TOTP) for school admins & principals.                                               | **Built.** Enrolment confirmed by a first correct code; ten recovery codes; secret encrypted at rest.                 |
+
+## Password reset (FR-AUTH-009)
+
+Built, and deliberately built without waiting for a mail transport — the mechanics are the
+substance, and none of them depend on how the message leaves the process:
+
+- `POST /auth/password/forgot` answers **202 with an empty body, always**. Registered, unregistered,
+  or registered-but-the-send-failed are indistinguishable. It is unauthenticated and strangers will
+  call it; anything else is a way to ask "does this person have an account here?".
+- The token is 32 random bytes and is **stored hashed**, exactly as refresh tokens are.
+- Spending it is one statement whose `where` carries every condition, so two concurrent requests
+  cannot both find it unspent. It revokes **every** session and invalidates any other outstanding
+  link for that account.
+- Reset does **not** sign the user in — that would make a stolen link a stolen session.
+- Unknown, expired, and already-spent give the **same** answer.
+
+**No transport is configured.** `MAIL_TRANSPORT` is `console` (prints the link; refuses to
+construct itself in production, because a live token in a log aggregator is a retained credential)
+or `none` (sends nothing and says so at error level). Choosing a real one is a deployment decision
+that deserves its own ADR.
+
+## Failed-login backoff (FR-AUTH-011)
+
+The per-IP limiter in front of the auth routes stops one machine hammering the API. **It does
+nothing about one account attacked from a thousand machines**, which is exactly what a
+credential-stuffing list is for. So failures are also counted per address:
+
+- Five failures buys a one-minute backoff, doubling to a fifteen-minute cap.
+- **Backoff, never lockout.** A block that does not lift is a denial of service against any account
+  whose address somebody knows, and an address is the one part of a credential that is routinely
+  public.
+- While backing off, **even the correct password is refused**. A throttle that steps aside for the
+  right password does nothing against the attack it exists for.
+- It applies **identically to addresses with no account**. Throttling only real ones would make the
+  throttle an enumeration oracle — an attacker would learn which addresses are registered by
+  noticing which ones start refusing.
+- The address is **stored hashed**; this table would otherwise become a list of everyone who has
+  ever mistyped a password here.
+- A successful login clears it, and a nightly sweep drops rows nobody is backing off any more.
+
+## Two-factor authentication (FR-AUTH-012)
+
+Offered to the accounts whose compromise reaches children's data — the school account, which holds
+the contract and the verification queue, and the principal. **Not everyone**: every enrolled account
+is one more person who can be locked out by a lost phone.
+
+- **TOTP is implemented rather than depended on.** It is HMAC-SHA1 over a counter with a documented
+  truncation — about forty lines from Node's own crypto — and RFC 6238 **publishes test vectors**,
+  so it is verified against the specification rather than against another package's behaviour. A
+  second factor is a poor place to add supply-chain surface for forty lines.
+- **The secret is encrypted at rest** (AES-256-GCM, key from `TWO_FACTOR_KEY`). A dump containing it
+  in the clear turns two-factor authentication back into one, silently, for everybody enrolled.
+- **Without a key, enrolment is unavailable rather than unprotected** — `503`, not plaintext.
+- **Enrolment does not take effect until a first correct code**, or a silently failed QR scan locks
+  somebody out of their own account.
+- Login forks: password accepted → `200` with a challenge, not a session. The challenge is
+  five-minute, single-use, and **spent whether or not the code was right**, so a stolen one is not
+  an unlimited number of guesses at six digits.
+- Ten recovery codes, shown once and stored hashed. Using one is logged at warn: a run of them is
+  either a compromise or a support problem.
+- Disabling needs a **current code**, not merely a session — otherwise a borrowed laptop removes the
+  factor that exists to make a borrowed laptop insufficient.
 
 ## Session design (summary — full detail in Security)
 

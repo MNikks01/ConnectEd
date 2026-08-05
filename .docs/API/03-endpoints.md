@@ -14,6 +14,12 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | POST   | `/auth/login`           |  🔓  | Login → access + refresh.                                        |
 | POST   | `/auth/refresh`         |  🔑  | Rotate tokens.                                                   |
 | POST   | `/auth/logout`          |  🔑  | Revoke refresh family.                                           |
+| POST   | `/auth/password/forgot` |  🔓  | Ask for a reset link. **Always 202**, registered or not.         |
+| POST   | `/auth/password/reset`  |  🔓  | Spend a link. Single use, ≤30 min, revokes every session.        |
+| POST   | `/auth/login/2fa`       |  🔓  | Second leg of a login: a challenge plus a code.                  |
+| POST   | `/me/2fa`               |  🔑  | Start enrolment. School and principal accounts only.             |
+| POST   | `/me/2fa/confirm`       |  🔑  | Confirm with a code; returns the recovery codes, once.           |
+| DELETE | `/me/2fa`               |  🔑  | Turn it off. Needs a current code, not merely a session.         |
 | POST   | `/auth/password/forgot` |  🔓  | Start reset.                                                     |
 | POST   | `/auth/password/reset`  |  🔓  | Complete reset (token).                                          |
 | POST   | `/auth/email/verify`    |  🔑  | Confirm email.                                                   |
@@ -42,16 +48,17 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Verification
 
-| Method | Path                                        | Auth | Purpose                                                   |
-| ------ | ------------------------------------------- | :--: | --------------------------------------------------------- |
-| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).        |
-| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                     |
-| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                           |
-| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                   |
-| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class. |
-| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                         |
-| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                              |
-| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                      |
+| Method | Path                                        | Auth | Purpose                                                      |
+| ------ | ------------------------------------------- | :--: | ------------------------------------------------------------ |
+| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).           |
+| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                        |
+| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                              |
+| POST   | `/verifications/decisions`                  |  🛡   | Decide up to 100 at once; reports each outcome (FR-VER-009). |
+| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                      |
+| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class.    |
+| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                            |
+| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                                 |
+| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                         |
 
 ## Academics
 
@@ -140,7 +147,8 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | GET    | `/notifications?after=`        |  🔑  | List (`unreadCount` in the body, beside `data`).                |
 | POST   | `/notifications/:id/read`      |  🔑  | Mark read.                                                      |
 | POST   | `/notifications/read-all`      |  🔑  | Mark every unread one read.                                     |
-| PATCH  | `/me/notification-prefs`       |  🔑  | Preferences.                                                    |
+| GET    | `/me/notification-prefs`       |  🔑  | Every switchable category, and your choice.                     |
+| PATCH  | `/me/notification-prefs`       |  🔑  | Partial update. Verification and billing are not switchable.    |
 | POST   | `/me/push-tokens`              |  🔑  | Register device (mobile).                                       |
 | GET    | `/plans`                       |  🔑  | Available plans.                                                |
 | GET    | `/schools/:id/subscription`    |  🛡   | The school's own plan, limits, and usage.                       |

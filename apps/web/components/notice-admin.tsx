@@ -7,6 +7,7 @@
  * un-sent, and the button sits next to nothing else that is destructive.
  */
 import { Button, Dialog, Field } from '@connected/ui';
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { deleteNoticeAction, publishNoticeAction } from '@/app/(app)/school/actions';
@@ -50,8 +51,22 @@ export function NoticeComposer({ schoolId }: { schoolId: string }) {
   );
 }
 
+/**
+ * Why `router.refresh()` as well as `revalidatePath`.
+ *
+ * The action already revalidates, and when the action's response is applied the router repaints.
+ * `notices.spec.ts:66` has failed three times in CI with the notice still listed after a
+ * successful withdrawal, and the one thing that shape needs is for that repaint not to arrive.
+ *
+ * **This is a mitigation, not a diagnosis.** It has not been reproduced locally — fifteen repeats
+ * and an eight-times CPU throttle both pass — so the honest description is: the repaint is the
+ * user-visible promise, and it now has two independent ways to happen instead of one. If the
+ * failure recurs, `clickUntil` will say what the page actually showed, which three previous
+ * failures did not.
+ */
 export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<NoticeResponse | undefined>();
 
@@ -124,6 +139,7 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
                   }
 
                   setConfirming(undefined);
+                  router.refresh();
                 });
               }}
             >

@@ -276,3 +276,63 @@ export async function sendMessageAction(
     [`/messages/${threadId}`, '/messages'],
   );
 }
+
+export async function updateNotificationPrefsAction(
+  preferences: { category: string; enabled: boolean }[],
+): Promise<ActionResult> {
+  return run(
+    () =>
+      callAsUser('/me/notification-prefs', {
+        method: 'PATCH',
+        body: { preferences },
+      }),
+    ['/settings/notifications', '/notifications'],
+  );
+}
+
+/**
+ * Two-factor enrolment (FR-AUTH-012).
+ *
+ * These carry more than `ok` back, which the shared `ActionResult` does not: the enrolment's QR
+ * URI and, once, the recovery codes. Both are secrets that exist in exactly one response, so they
+ * are threaded through rather than re-fetched — a second request for the recovery codes is a
+ * second chance for somebody else to make it.
+ */
+export interface TwoFactorStartResult extends ActionResult {
+  enrolment?: { otpauthUri: string; secret: string };
+}
+
+export interface TwoFactorConfirmResult extends ActionResult {
+  recoveryCodes?: string[];
+}
+
+export async function startTwoFactorAction(): Promise<TwoFactorStartResult> {
+  try {
+    const enrolment = await callAsUser<{ otpauthUri: string; secret: string }>('/me/2fa', {
+      method: 'POST',
+    });
+    return { ok: true, enrolment };
+  } catch (error) {
+    return { ok: false, message: apiErrorMessage(error) };
+  }
+}
+
+export async function confirmTwoFactorAction(code: string): Promise<TwoFactorConfirmResult> {
+  try {
+    const { recoveryCodes } = await callAsUser<{ recoveryCodes: string[] }>('/me/2fa/confirm', {
+      method: 'POST',
+      body: { code },
+    });
+    revalidatePath('/settings/security');
+    return { ok: true, recoveryCodes };
+  } catch (error) {
+    return { ok: false, message: apiErrorMessage(error) };
+  }
+}
+
+export async function disableTwoFactorAction(code: string): Promise<ActionResult> {
+  return run(
+    () => callAsUser('/me/2fa', { method: 'DELETE', body: { code } }),
+    ['/settings/security'],
+  );
+}

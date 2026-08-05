@@ -16,6 +16,10 @@ import { pinoHttp } from 'pino-http';
 import { createAuthModule } from './modules/auth/index.js';
 import { createAnalyticsModule } from './modules/analytics/index.js';
 import { createBillingModule } from './modules/billing/index.js';
+import { createMailer } from './shared/mail/index.js';
+import { createSecretBox } from './shared/auth/secret-box.js';
+import { verifyOrigin } from './shared/middleware/csrf.js';
+import { REFRESH_COOKIE } from './modules/auth/auth.controller.js';
 import { createModerationQueueModule } from './modules/moderation/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
@@ -38,6 +42,7 @@ import { correlationId } from './shared/middleware/correlation-id.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { notFound } from './shared/middleware/not-found.js';
 import { createMetrics, type Metrics } from './shared/observability/metrics.js';
+import type { Mailer } from './shared/mail/index.js';
 import type { Realtime } from './shared/realtime/index.js';
 
 import { noopPublisher, type EventPublisher } from './shared/events/index.js';
@@ -52,6 +57,8 @@ export interface AppDependencies {
   config: Config;
   logger: Logger;
   metrics: Metrics;
+  /** Sends the password-reset link. Injected so tests can record instead of send. */
+  mailer?: Mailer;
   /**
    * Live delivery. Optional, and absent in most tests: the REST surface is complete without it,
    * and a websocket channel that becomes load-bearing has stopped being an optimisation.
@@ -89,14 +96,25 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     db: overrides.db,
     events: overrides.events ?? noopPublisher,
     storage: overrides.storage,
+    mailer: overrides.mailer,
     realtime: overrides.realtime,
     errorMappers: overrides.errorMappers,
   };
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const { config, logger, metrics, readiness, db, events, storage, realtime, errorMappers } =
-    createDependencies(overrides);
+  const {
+    config,
+    logger,
+    metrics,
+    readiness,
+    db,
+    events,
+    storage,
+    mailer,
+    realtime,
+    errorMappers,
+  } = createDependencies(overrides);
 
   const app = express();
 
@@ -142,6 +160,10 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     app.use(jwksRoutes(tokens));
   }
 
+  // Defence in depth behind `SameSite=Strict`: a write that presents the refresh cookie must also
+  // come from the application's own origin. Everything authorized by a header is untouched.
+  app.use(verifyOrigin(config.WEB_ORIGIN, REFRESH_COOKIE));
+
   const api = express.Router();
 
   // Before `authenticate`: the marketing pages have no session, and their load time is exactly
@@ -156,7 +178,16 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     const billing = createBillingModule(db, logger);
 
     api.use(
-      createAuthModule({ db, config, logger, passwords, tokens, billing: billing.service }).routes,
+      createAuthModule({
+        db,
+        config,
+        logger,
+        passwords,
+        tokens,
+        billing: billing.service,
+        mailer: mailer ?? createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
+        secretBox: config.TWO_FACTOR_KEY ? createSecretBox(config.TWO_FACTOR_KEY) : undefined,
+      }).routes,
     );
 
     // Everything past auth requires a valid token; each module still authorizes per resource.

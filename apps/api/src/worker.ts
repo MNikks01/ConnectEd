@@ -65,6 +65,27 @@ registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: counting.queue });
  */
 const media = createMediaModule(createStorage(config, logger), logger, config.MAX_UPLOAD_BYTES, db);
 
+/**
+ * Login throttles are swept here too. They expire by time rather than by row — a stale one refuses
+ * nobody — so this is tidiness rather than correctness, and it keeps a table an attacker can add
+ * rows to from growing without bound.
+ */
+const { createAuthModule } = await import('./modules/auth/index.js');
+const { createPasswordHasher } = await import('./shared/auth/password.js');
+const { createTokenService } = await import('./shared/auth/tokens.js');
+const { createBillingModule: createBillingForWorker } = await import('./modules/billing/index.js');
+const { createMailer } = await import('./shared/mail/index.js');
+
+const auth = createAuthModule({
+  db,
+  config,
+  logger,
+  passwords: createPasswordHasher(config),
+  tokens: createTokenService(config),
+  billing: createBillingForWorker(db, logger).service,
+  mailer: createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
+});
+
 const maintenance = createMaintenanceScheduler(
   connection,
   logger,
@@ -72,9 +93,12 @@ const maintenance = createMaintenanceScheduler(
     'media:sweep-orphans': async () => {
       await media.service.sweepOrphans();
     },
+    'auth:sweep-login-throttles': async () => {
+      await auth.service.sweepLoginThrottles();
+    },
   },
   // Nightly, off the hour. An upload abandoned during the day is collected the following night.
-  { 'media:sweep-orphans': '17 3 * * *' },
+  { 'media:sweep-orphans': '17 3 * * *', 'auth:sweep-login-throttles': '41 3 * * *' },
 );
 
 await maintenance.ready;

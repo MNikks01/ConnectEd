@@ -54,6 +54,32 @@ export const verificationDecisionSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+/**
+ * Deciding several at once (FR-VER-009).
+ *
+ * Ids rather than "approve everything pending": a school looking at a filtered list and pressing a
+ * button that means *all of them* would approve the ones that arrived while they were reading.
+ * Naming each request is slower to build and impossible to get wrong.
+ */
+export const bulkVerificationDecisionSchema = z.object({
+  requestIds: z.array(z.uuid()).min(1).max(100),
+  decision: z.enum(['APPROVE', 'REJECT']),
+  note: z.string().trim().max(500).optional(),
+});
+
+export type BulkVerificationDecisionInput = z.infer<typeof bulkVerificationDecisionSchema>;
+
+/**
+ * What happened to each one.
+ *
+ * Per-request rather than a count, because the interesting outcome is partial: a school approving
+ * forty people while its plan allows thirty needs to know *which ten* did not go through.
+ */
+export interface BulkVerificationResultResponse {
+  decided: string[];
+  failed: { requestId: string; reason: string }[];
+}
+
 export type SubmitVerificationInput = z.infer<typeof submitVerificationSchema>;
 export type VerificationDecisionInput = z.infer<typeof verificationDecisionSchema>;
 

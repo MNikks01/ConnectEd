@@ -253,3 +253,67 @@ test.describe('live delivery', () => {
     }
   });
 });
+
+test.describe('notification preferences', () => {
+  test('a member switches one off and stops being told about it', async ({ page }) => {
+    const person = await createIndividual('prefs');
+    await signIn(page, person.email);
+
+    await page.goto('/settings/notifications');
+
+    // Verification and billing are not offered, and the page says why rather than leaving the
+    // absence to be read as a bug.
+    await expect(page.getByText(/always be told about a verification decision/)).toBeVisible();
+
+    const social = page.getByLabel('Follows, connections, likes and comments');
+    await expect(social).toBeChecked();
+    await social.uncheck();
+    await page.getByRole('button', { name: 'Save preferences' }).click();
+    await expect(page.getByText('Saved.')).toBeVisible();
+
+    // It survives a reload, which is the only proof that anything was stored.
+    await page.reload();
+    await expect(page.getByLabel('Follows, connections, likes and comments')).not.toBeChecked();
+  });
+});
+
+test.describe('two-factor authentication', () => {
+  test('is offered to a principal and explained to everyone else', async ({ page }) => {
+    const person = await createIndividual('nosecond');
+    await signIn(page, person.email);
+
+    await page.goto('/settings/security');
+
+    // A general user cannot enrol. They are told why rather than shown a button that would 403 —
+    // the restriction is a judgement about who needs it, and a judgement is worth explaining.
+    await expect(page.getByText(/Available to school accounts and principals/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Set up two-factor' })).toHaveCount(0);
+  });
+
+  test('a school sees the enrolment step, and nothing is on until a code confirms it', async ({
+    page,
+  }) => {
+    const school = await createSchool('secondfactor');
+    await signIn(page, school.email);
+
+    await page.goto('/settings/security');
+    await expect(page.getByRole('heading', { name: 'Two-factor is off' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Set up two-factor' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Scan this, then prove it' })).toBeVisible();
+    // The key is offered for keying in by hand, because a camera does not always focus.
+    await expect(page.getByText(/Or type this key in by hand/)).toBeVisible();
+    // And the page says plainly that nothing has changed yet.
+    await expect(page.getByText(/Nothing changes until you enter a code/)).toBeVisible();
+
+    await page.getByLabel('Code from your authenticator').fill('000000');
+    await page.getByRole('button', { name: 'Turn on two-factor' }).click();
+
+    await expect(page.getByRole('alert')).toBeVisible();
+
+    // Still off, which is the whole point of confirming.
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Two-factor is off' })).toBeVisible();
+  });
+});

@@ -199,6 +199,9 @@ model Account {
   userProfile   UserProfile?
   schoolProfile SchoolProfile?
   refreshTokens RefreshToken[]
+  passwordResets PasswordResetToken[]
+  twoFactorSecret     TwoFactorSecret?
+  twoFactorChallenges TwoFactorChallenge[]
 
   teacherProfiles      TeacherProfile[]
   children             Child[]
@@ -269,6 +272,112 @@ model RefreshToken {
   @@index([accountId])
   @@index([familyId])
   @@map("refresh_token")
+}
+
+/// A single-use, expiring password-reset token (FR-AUTH-009).
+///
+/// **The token itself is never stored** — only its SHA-256, exactly as refresh tokens are handled.
+/// A reset token is a credential that grants an account, and a database dump should not hand one
+/// over; hashing means a leaked row buys nothing.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  /// Set the moment it is spent. Single use is enforced on this column, not by deleting the row:
+  /// a spent token that is presented again should be *recognised* as spent rather than looking
+  /// like one that never existed.
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("password_reset_token")
+}
+
+/// Failed-login throttling, per address (FR-AUTH-011).
+///
+/// **Keyed on a hash of the email, and kept whether or not an account exists.** Throttling only
+/// real addresses would make the throttle itself an account-enumeration oracle: an attacker would
+/// learn which addresses are registered by noticing which ones start refusing.
+///
+/// The IP-based limiter in front of the auth routes is a different control. It stops one machine
+/// hammering the API; it does nothing about one account attacked from a thousand machines, which
+/// is what a credential-stuffing list is for.
+model LoginThrottle {
+  /// SHA-256 of the lowercased address. The address itself is not stored: this table would
+  /// otherwise become a list of everyone who has ever mistyped a password here.
+  emailHash    String    @id @map("email_hash")
+  failedCount  Int       @default(0) @map("failed_count")
+  /// When the backoff expires. Never null-and-permanent — a lockout that does not lift is a
+  /// denial of service against any account whose address somebody knows.
+  blockedUntil DateTime? @map("blocked_until")
+  lastFailedAt DateTime  @default(now()) @map("last_failed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  /// The sweep reads this; nothing else does.
+  @@index([lastFailedAt])
+  @@map("login_throttle")
+}
+
+/// TOTP enrolment for the accounts that hold a school's contract and its verification queue
+/// (FR-AUTH-012).
+///
+/// **The secret is encrypted at rest**, not merely stored. A TOTP secret is the whole of the
+/// second factor: a database dump containing it in the clear turns two-factor authentication back
+/// into one. The key lives in configuration and never in this table, so a dump alone is not
+/// enough.
+model TwoFactorSecret {
+  accountId String @id @map("account_id") @db.Uuid
+  /// AES-256-GCM, as `iv:tag:ciphertext` in base64url.
+  secret    String
+  /// Null until a first correct code proves the authenticator actually has the secret. An
+  /// enrolment that is trusted before that locks people out of their own accounts when the QR
+  /// scan silently failed.
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  account       Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recoveryCodes RecoveryCode[]
+
+  @@map("two_factor_secret")
+}
+
+/// One-time codes for when the phone is lost. Stored hashed, like every other credential here.
+model RecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  secret TwoFactorSecret @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("recovery_code")
+}
+
+/// The gap between "your password was right" and "and so was your code".
+///
+/// Short-lived and single-use. It is not a session and grants nothing: presenting one only earns
+/// the right to be asked for a code.
+model TwoFactorChallenge {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("two_factor_challenge")
 }
 
 model UserProfile {

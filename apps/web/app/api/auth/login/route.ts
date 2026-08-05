@@ -7,7 +7,11 @@
 import { loginSchema } from '@connected/types';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { callAuthEndpoint, respondWithApiError, respondWithSession } from '@/lib/bff';
+import {
+  callAuthEndpointAllowingChallenge,
+  respondWithApiError,
+  respondWithSession,
+} from '@/lib/bff';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = loginSchema.safeParse(await request.json().catch(() => undefined));
@@ -31,13 +35,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const tokens = await callAuthEndpoint(
+    const result = await callAuthEndpointAllowingChallenge(
       '/auth/login',
       parsed.data,
       request.headers.get('x-correlation-id') ?? undefined,
     );
 
-    return respondWithSession(tokens);
+    if ('twoFactorRequired' in result) {
+      // Passed to the browser rather than kept in a server-side session: it is a bearer for one
+      // more request, five minutes long and single-use, and holding it here would mean inventing
+      // a session store for the gap between a password and a code.
+      return NextResponse.json(result, { status: 200, headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    return respondWithSession(result);
   } catch (error) {
     return respondWithApiError(error);
   }

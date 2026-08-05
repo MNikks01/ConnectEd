@@ -24,7 +24,39 @@ export async function callAuthEndpoint(
   body: unknown,
   correlationId?: string,
 ): Promise<SessionTokens> {
+  const result = await callAuthEndpointAllowingChallenge(path, body, correlationId);
+
+  if ('twoFactorRequired' in result) {
+    // Only `/auth/login` can answer this way, and its route handles it before reaching here.
+    throw new Error('The API asked for a second factor on an endpoint that cannot present one.');
+  }
+
+  return result;
+}
+
+/**
+ * As above, but admits the other thing a login can return: a challenge instead of a session.
+ *
+ * Two functions rather than one with a wider type, because exactly one caller can receive a
+ * challenge and every other one would have to handle a case that cannot happen.
+ */
+export async function callAuthEndpointAllowingChallenge(
+  path: string,
+  body: unknown,
+  correlationId?: string,
+): Promise<SessionTokens | { twoFactorRequired: true; challengeToken: string }> {
   const response = await fetchWithCookies(path, body, correlationId);
+
+  const challenge = response.body as unknown as {
+    twoFactorRequired?: boolean;
+    challengeToken?: string;
+  };
+
+  if (challenge.twoFactorRequired && challenge.challengeToken) {
+    // No cookie was set, and none should have been: the password was right and that is all.
+    return { twoFactorRequired: true, challengeToken: challenge.challengeToken };
+  }
+
   const refreshToken = readSetCookie(response.headers, API_REFRESH_COOKIE);
 
   if (!refreshToken) {

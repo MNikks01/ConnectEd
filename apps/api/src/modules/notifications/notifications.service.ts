@@ -13,6 +13,9 @@ import { toPage } from '../../shared/http/pagination.js';
 
 import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import type { Logger } from '../../shared/logger/index.js';
+import { OPTIONAL_NOTIFICATION_CATEGORIES } from '@connected/types';
+
+import type { NotificationPrefResponse, UpdateNotificationPrefsInput } from '@connected/types';
 import type { NotificationCategory, Prisma } from '../../generated/prisma/client.js';
 import type { NotificationResponse } from '@connected/types';
 
@@ -26,6 +29,13 @@ export interface NotificationsService {
   ) => Promise<Page<NotificationView> & { unreadCount: number }>;
   markRead: (actor: Actor, notificationId: string) => Promise<void>;
   markAllRead: (actor: Actor) => Promise<{ updated: number }>;
+  /** FR-NOTIF-006. Every switchable category, with what this account has chosen. */
+  preferences: (actor: Actor) => Promise<NotificationPrefResponse[]>;
+  /** FR-NOTIF-006. Partial: categories not mentioned are left exactly as they were. */
+  updatePreferences: (
+    actor: Actor,
+    input: UpdateNotificationPrefsInput,
+  ) => Promise<NotificationPrefResponse[]>;
   /** Queue consumer entry point. */
   handleEvent: (event: DomainEvent) => Promise<void>;
 }
@@ -140,6 +150,38 @@ export function createNotificationsService({
      * FR-NOTIF-001. Unknown event types are ignored rather than throwing: a handler that fails on
      * an event it does not care about would retry forever and eventually dead-letter it.
      */
+    preferences: async (actor) => {
+      const set = new Map(
+        (await repository.listPreferences(actor.accountId)).map((row) => [
+          row.category,
+          row.enabled,
+        ]),
+      );
+
+      // Every switchable category is returned, not only the ones with a row. A settings page that
+      // renders what it is given must not be missing the switches nobody has touched yet.
+      return OPTIONAL_NOTIFICATION_CATEGORIES.map((category) => ({
+        category,
+        enabled: set.get(category) ?? true,
+      }));
+    },
+
+    updatePreferences: async (actor, input) => {
+      await repository.setPreferences(actor.accountId, input.preferences);
+
+      const set = new Map(
+        (await repository.listPreferences(actor.accountId)).map((row) => [
+          row.category,
+          row.enabled,
+        ]),
+      );
+
+      return OPTIONAL_NOTIFICATION_CATEGORIES.map((category) => ({
+        category,
+        enabled: set.get(category) ?? true,
+      }));
+    },
+
     handleEvent: async (event) => {
       switch (event.type) {
         case 'verification.submitted':

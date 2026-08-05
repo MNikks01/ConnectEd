@@ -28,6 +28,12 @@ export interface AuthController {
   login: RequestHandler;
   refresh: RequestHandler;
   logout: RequestHandler;
+  twoFactorLogin: RequestHandler;
+  startTwoFactor: RequestHandler;
+  confirmTwoFactor: RequestHandler;
+  disableTwoFactor: RequestHandler;
+  forgotPassword: RequestHandler;
+  resetPassword: RequestHandler;
   me: RequestHandler;
 }
 
@@ -99,8 +105,16 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
       void (async () => {
         try {
           const clientType = clientTypeOf(req);
-          const session = await service.login(req.body as never, clientType);
-          sendSession(res, session, clientType);
+          const result = await service.login(req.body as never, clientType);
+
+          if ('twoFactorRequired' in result) {
+            // 200 rather than 401: the credentials *were* accepted. A 401 here would tell a client
+            // to re-prompt for a password, which is the wrong thing to ask for next.
+            res.status(200).json(result);
+            return;
+          }
+
+          sendSession(res, result, clientType);
         } catch (error) {
           next(error);
         }
@@ -131,6 +145,87 @@ export function createAuthController({ service, config }: AuthControllerDeps): A
         try {
           await service.logout(refreshTokenFrom(req));
           res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+          res.status(204).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    /**
+     * 202 whatever happened, and nothing in the body.
+     *
+     * Registered, not registered, mail sent, mail failed — one answer. Anything else turns this
+     * into a way to ask "does this person have an account here?", which for a product used by
+     * children is a question strangers should not be able to put to it.
+     */
+    twoFactorLogin: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const clientType = clientTypeOf(req);
+          const { challengeToken, code } = req.body as { challengeToken: string; code: string };
+          sendSession(
+            res,
+            await service.completeTwoFactorLogin(challengeToken, code, clientType),
+            clientType,
+          );
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    startTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          res.status(201).json(await service.startTwoFactorEnrolment(requireActor(req)));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    confirmTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { code } = req.body as { code: string };
+          res.status(200).json(await service.confirmTwoFactorEnrolment(requireActor(req), code));
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    disableTwoFactor: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { code } = req.body as { code: string };
+          await service.disableTwoFactor(requireActor(req), code);
+          res.status(204).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    forgotPassword: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          await service.requestPasswordReset((req.body as { email: string }).email);
+          res.status(202).end();
+        } catch (error) {
+          next(error);
+        }
+      })();
+    }) satisfies RequestHandler,
+
+    resetPassword: ((req: Request, res: Response, next) => {
+      void (async () => {
+        try {
+          const { token, password } = req.body as { token: string; password: string };
+          await service.resetPassword(token, password);
+          // 204 and no session. Signing them straight in would be convenient and would mean a
+          // stolen link is a stolen session; making them log in proves they know the new password.
           res.status(204).end();
         } catch (error) {
           next(error);

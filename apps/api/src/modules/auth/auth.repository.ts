@@ -3,6 +3,12 @@
  * rule 1) — the service depends on this interface, not on the client.
  */
 import type { Db } from '../../shared/db/index.js';
+import type { LoginThrottle } from '../../generated/prisma/client.js';
+
+export interface TwoFactorRow {
+  secret: string;
+  confirmedAt: Date | null;
+}
 import type { AccountType, UserRole } from '../../generated/prisma/client.js';
 
 export interface AccountWithCredential {
@@ -31,6 +37,50 @@ export interface AuthRepository {
   storeRefreshToken: (input: StoreRefreshTokenInput) => Promise<void>;
   rotateRefreshToken: (input: RotateRefreshTokenInput) => Promise<void>;
   revokeFamily: (familyId: string) => Promise<void>;
+  findTwoFactor: (accountId: string) => Promise<TwoFactorRow | null>;
+  /** Replaces any unconfirmed enrolment. Re-enrolling before confirming is a retry, not a second factor. */
+  startTwoFactorEnrolment: (accountId: string, sealedSecret: string) => Promise<void>;
+  /** Confirms the enrolment and stores the hashed recovery codes, in one transaction. */
+  confirmTwoFactor: (accountId: string, codeHashes: string[]) => Promise<void>;
+  disableTwoFactor: (accountId: string) => Promise<void>;
+  /** Spends a recovery code. False when it is unknown or already used. */
+  consumeRecoveryCode: (accountId: string, codeHash: string) => Promise<boolean>;
+  createTwoFactorChallenge: (input: {
+    accountId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) => Promise<void>;
+  /** Spends a challenge and returns whose it was, or null when it is unusable. */
+  consumeTwoFactorChallenge: (tokenHash: string, now: Date) => Promise<string | null>;
+  /** Reads the throttle for an address hash. Null when it has no recent failures. */
+  findLoginThrottle: (emailHash: string) => Promise<LoginThrottle | null>;
+  /** Records a failure and returns the resulting state, so the caller can decide the backoff. */
+  recordLoginFailure: (emailHash: string, blockedUntil: Date | null) => Promise<LoginThrottle>;
+  /** Forgets an address's failures. Called on every success. */
+  clearLoginThrottle: (emailHash: string) => Promise<void>;
+  /** Housekeeping: drops rows nothing is throttling any more. Returns how many. */
+  sweepLoginThrottles: (before: Date) => Promise<number>;
+  /** The account behind an address, or null. Never distinguishes "no account" from anything else. */
+  findAccountIdByEmail: (email: string) => Promise<string | null>;
+  createPasswordResetToken: (input: {
+    accountId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) => Promise<void>;
+  /**
+   * Spends a reset token and applies the new password, in one transaction: the token is marked
+   * used, every other outstanding token for that account is invalidated, the credential is
+   * replaced, and every refresh-token family is revoked.
+   *
+   * Returns false when the token was unknown, expired, or already spent — the caller cannot tell
+   * which, and neither can the person holding it.
+   */
+  consumePasswordResetToken: (input: {
+    tokenHash: string;
+    passwordHash: string;
+    algo: string;
+    now: Date;
+  }) => Promise<boolean>;
   findActorAccount: (accountId: string) => Promise<ActorAccount | null>;
 }
 
@@ -91,6 +141,7 @@ export interface ActorAccount {
   status: string;
   emailVerifiedAt: Date | null;
   isPlatformAdmin: boolean;
+  twoFactorEnabled: boolean;
   role: UserRole | null;
   fullName: string | null;
   handle: string | null;
@@ -234,6 +285,146 @@ export function createAuthRepository(db: Db): AuthRepository {
       ]);
     },
 
+    findTwoFactor: (accountId) =>
+      db.twoFactorSecret.findUnique({
+        where: { accountId },
+        select: { secret: true, confirmedAt: true },
+      }),
+
+    startTwoFactorEnrolment: async (accountId, sealedSecret) => {
+      await db.$transaction([
+        // Any recovery codes from a previous enrolment go with it: codes that outlive the secret
+        // they belong to are a second factor nobody is tracking.
+        db.recoveryCode.deleteMany({ where: { accountId } }),
+        db.twoFactorSecret.upsert({
+          where: { accountId },
+          update: { secret: sealedSecret, confirmedAt: null },
+          create: { accountId, secret: sealedSecret },
+        }),
+      ]);
+    },
+
+    confirmTwoFactor: async (accountId, codeHashes) => {
+      await db.$transaction([
+        db.twoFactorSecret.update({ where: { accountId }, data: { confirmedAt: new Date() } }),
+        db.recoveryCode.createMany({
+          data: codeHashes.map((codeHash) => ({ accountId, codeHash })),
+        }),
+      ]);
+    },
+
+    disableTwoFactor: async (accountId) => {
+      // The codes cascade with the secret, but deleting them explicitly says so at this level
+      // rather than relying on a foreign key nobody reads.
+      await db.$transaction([
+        db.recoveryCode.deleteMany({ where: { accountId } }),
+        db.twoFactorSecret.deleteMany({ where: { accountId } }),
+      ]);
+    },
+
+    consumeRecoveryCode: async (accountId, codeHash) => {
+      // The `where` carries every condition, so two requests racing on one code cannot both win.
+      const spent = await db.recoveryCode.updateMany({
+        where: { accountId, codeHash, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      return spent.count > 0;
+    },
+
+    createTwoFactorChallenge: async ({ accountId, tokenHash, expiresAt }) => {
+      await db.twoFactorChallenge.create({ data: { accountId, tokenHash, expiresAt } });
+    },
+
+    consumeTwoFactorChallenge: async (tokenHash, now) => {
+      const spent = await db.twoFactorChallenge.updateMany({
+        where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+
+      if (spent.count === 0) return null;
+
+      const challenge = await db.twoFactorChallenge.findUniqueOrThrow({
+        where: { tokenHash },
+        select: { accountId: true },
+      });
+
+      return challenge.accountId;
+    },
+
+    findLoginThrottle: (emailHash) => db.loginThrottle.findUnique({ where: { emailHash } }),
+
+    recordLoginFailure: (emailHash, blockedUntil) =>
+      db.loginThrottle.upsert({
+        where: { emailHash },
+        // `increment` rather than read-then-write: two failed attempts arriving together should
+        // count as two, and this is the one path an attacker controls the rate of.
+        update: {
+          failedCount: { increment: 1 },
+          lastFailedAt: new Date(),
+          ...(blockedUntil ? { blockedUntil } : {}),
+        },
+        create: { emailHash, failedCount: 1, ...(blockedUntil ? { blockedUntil } : {}) },
+      }),
+
+    clearLoginThrottle: async (emailHash) => {
+      await db.loginThrottle.deleteMany({ where: { emailHash } });
+    },
+
+    sweepLoginThrottles: async (before) => {
+      const result = await db.loginThrottle.deleteMany({ where: { lastFailedAt: { lt: before } } });
+      return result.count;
+    },
+
+    findAccountIdByEmail: async (email) => {
+      const account = await db.account.findUnique({ where: { email }, select: { id: true } });
+      return account?.id ?? null;
+    },
+
+    createPasswordResetToken: async ({ accountId, tokenHash, expiresAt }) => {
+      await db.passwordResetToken.create({ data: { accountId, tokenHash, expiresAt } });
+    },
+
+    consumePasswordResetToken: async ({ tokenHash, passwordHash, algo, now }) => {
+      return db.$transaction(async (tx) => {
+        // The `where` carries every condition, so the update itself is the check: two requests
+        // racing with the same token cannot both find it unspent, because only one `updateMany`
+        // can match a row whose `usedAt` is still null.
+        const spent = await tx.passwordResetToken.updateMany({
+          where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+          data: { usedAt: now },
+        });
+
+        if (spent.count === 0) return false;
+
+        const token = await tx.passwordResetToken.findUniqueOrThrow({
+          where: { tokenHash },
+          select: { accountId: true },
+        });
+
+        // Any other link that was in flight — an impatient second request, or a first one an
+        // attacker intercepted — dies with this one.
+        await tx.passwordResetToken.updateMany({
+          where: { accountId: token.accountId, usedAt: null },
+          data: { usedAt: now },
+        });
+
+        await tx.credential.update({
+          where: { accountId: token.accountId },
+          data: { passwordHash, algo },
+        });
+
+        // Every session, everywhere. Somebody resetting a password may be doing it *because*
+        // someone else is in their account, and leaving that session alive defeats the point.
+        await tx.refreshToken.updateMany({
+          where: { accountId: token.accountId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+
+        return true;
+      });
+    },
+
     revokeFamily: async (familyId: string) => {
       await db.refreshToken.updateMany({
         where: { familyId, revokedAt: null },
@@ -251,6 +442,7 @@ export function createAuthRepository(db: Db): AuthRepository {
           status: true,
           emailVerifiedAt: true,
           isPlatformAdmin: true,
+          twoFactorSecret: { select: { confirmedAt: true } },
           userProfile: { select: { role: true, fullName: true, handle: true } },
           schoolProfile: { select: { name: true } },
         },
@@ -265,6 +457,10 @@ export function createAuthRepository(db: Db): AuthRepository {
         status: account.status,
         emailVerifiedAt: account.emailVerifiedAt,
         isPlatformAdmin: account.isPlatformAdmin,
+        // An *unconfirmed* enrolment is not two-factor: it exists, and it protects nothing yet.
+        twoFactorEnabled:
+          account.twoFactorSecret?.confirmedAt !== null &&
+          account.twoFactorSecret?.confirmedAt !== undefined,
         role: account.userProfile?.role ?? null,
         fullName: account.userProfile?.fullName ?? null,
         handle: account.userProfile?.handle ?? null,

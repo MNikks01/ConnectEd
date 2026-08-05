@@ -11,6 +11,13 @@ import { authenticate } from '../../shared/middleware/authenticate.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import { createAuthController } from './auth.controller.js';
 import {
+  confirmTwoFactorSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  twoFactorLoginSchema,
+} from '@connected/types';
+
+import {
   loginSchema,
   refreshSchema,
   registerIndividualSchema,
@@ -67,6 +74,55 @@ export function authRoutes({ service, config, tokens }: AuthRoutesDeps): Router 
   // Refresh and logout carry no access token: the refresh token *is* the credential.
   router.post('/auth/refresh', credentialLimiter, validateBody(refreshSchema), controller.refresh);
   router.post('/auth/logout', validateBody(refreshSchema), controller.logout);
+
+  /**
+   * Both behind the credential limiter, and for different reasons.
+   *
+   * `forgot` is an unauthenticated endpoint that sends mail to an address a stranger chose: without
+   * a limit it is a way to have this product deliver unwanted email at volume. `reset` accepts a
+   * secret, so it is a guessing surface — though a 256-bit token means the limit is defence in
+   * depth rather than the thing standing between an attacker and an account.
+   */
+  router.post(
+    '/auth/password/forgot',
+    credentialLimiter,
+    validateBody(forgotPasswordSchema),
+    controller.forgotPassword,
+  );
+
+  router.post(
+    '/auth/password/reset',
+    credentialLimiter,
+    validateBody(resetPasswordSchema),
+    controller.resetPassword,
+  );
+
+  /**
+   * The second leg of a login. Behind the credential limiter like the first: it accepts a
+   * six-digit code, which is the one guessable secret in this product.
+   */
+  router.post(
+    '/auth/login/2fa',
+    credentialLimiter,
+    validateBody(twoFactorLoginSchema),
+    controller.twoFactorLogin,
+  );
+
+  // Enrolment is about the caller, so `/me/*` (`API/01-conventions.md`). Who may enrol is the
+  // service's decision, not this router's — a guard here would be a second, weaker copy of it.
+  router.post('/me/2fa', authenticate(tokens), controller.startTwoFactor);
+  router.post(
+    '/me/2fa/confirm',
+    authenticate(tokens),
+    validateBody(confirmTwoFactorSchema),
+    controller.confirmTwoFactor,
+  );
+  router.delete(
+    '/me/2fa',
+    authenticate(tokens),
+    validateBody(confirmTwoFactorSchema),
+    controller.disableTwoFactor,
+  );
 
   router.get('/me', authenticate(tokens), controller.me);
 

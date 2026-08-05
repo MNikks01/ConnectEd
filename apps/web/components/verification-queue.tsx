@@ -4,7 +4,7 @@ import { Badge, Button, Dialog, Table, verificationTone } from '@connected/ui';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
-import { decideVerificationAction } from '@/app/(app)/school/actions';
+import { decideVerificationAction, decideVerificationsAction } from '@/app/(app)/school/actions';
 
 import type { VerificationRequestResponse } from '@connected/types';
 
@@ -25,6 +25,52 @@ export function VerificationQueue({
    * is told no and has to reapply — and it is one click away from approving in the same row.
    */
   const [confirming, setConfirming] = useState<VerificationRequestResponse | undefined>();
+
+  /**
+   * Selection for deciding several at once (FR-VER-009). A school at the start of term has a
+   * hundred students waiting, and one click each is the sort of thing that makes people stop.
+   */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [summary, setSummary] = useState<string | undefined>();
+
+  const selectable = requests.filter((request) => request.status === 'PENDING');
+
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSummary(undefined);
+  }
+
+  function decideSelected(decision: 'APPROVE' | 'REJECT') {
+    setError(undefined);
+    setSummary(undefined);
+
+    startTransition(async () => {
+      const result = await decideVerificationsAction([...selected], decision);
+
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+
+      setSelected(new Set());
+
+      // Reported rather than assumed. A school that approved thirty of forty is told about the
+      // ten, with the reason the server gave for each.
+      const failed = result.failed ?? [];
+      setSummary(
+        failed.length === 0
+          ? `${String(result.decided ?? 0)} decided.`
+          : `${String(result.decided ?? 0)} decided. ${String(failed.length)} could not be: ${failed
+              .map((row) => row.reason)
+              .join(' ')}`,
+      );
+    });
+  }
 
   function decide(request: VerificationRequestResponse, decision: 'APPROVE' | 'REJECT') {
     setBusyId(request.id);
@@ -61,10 +107,79 @@ export function VerificationQueue({
         </p>
       ) : null}
 
+      {summary ? <p role="status">{summary}</p> : null}
+
+      {selectable.length > 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            gap: 'var(--ui-space-3)',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <label style={{ display: 'inline-flex', gap: 'var(--ui-space-2)', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={selected.size === selectable.length && selectable.length > 0}
+              onChange={(event) => {
+                // Selects what is *on this page*, which is what the checkbox is next to. A control
+                // that silently included requests arriving while somebody read would approve people
+                // they never saw.
+                setSelected(
+                  event.target.checked ? new Set(selectable.map((row) => row.id)) : new Set(),
+                );
+                setSummary(undefined);
+              }}
+            />
+            <span>Select all pending on this page</span>
+          </label>
+
+          {selected.size > 0 ? (
+            <>
+              <Button
+                size="sm"
+                loading={pending}
+                onClick={() => {
+                  decideSelected('APPROVE');
+                }}
+              >
+                Approve {selected.size}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={pending}
+                onClick={() => {
+                  decideSelected('REJECT');
+                }}
+              >
+                Reject {selected.size}
+              </Button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       <Table
         caption={`${status.charAt(0)}${status.slice(1).toLowerCase()} verification requests`}
         captionVisible={false}
         columns={[
+          {
+            key: 'select',
+            header: '',
+            render: (request: VerificationRequestResponse) =>
+              request.status === 'PENDING' ? (
+                <input
+                  type="checkbox"
+                  checked={selected.has(request.id)}
+                  onChange={() => {
+                    toggle(request.id);
+                  }}
+                  aria-label={`Select ${request.requesterName ?? 'this request'}`}
+                />
+              ) : null,
+          },
           {
             key: 'requester',
             header: 'Requester',
