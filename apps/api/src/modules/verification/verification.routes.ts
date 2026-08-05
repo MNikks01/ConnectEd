@@ -4,7 +4,11 @@
  * All authorization is the service's — only it can see whose school a request belongs to.
  */
 import { Router } from 'express';
-import { submitVerificationSchema, verificationDecisionSchema } from '@connected/types';
+import {
+  bulkVerificationDecisionSchema,
+  submitVerificationSchema,
+  verificationDecisionSchema,
+} from '@connected/types';
 
 import { parsePageRequest } from '../../shared/http/pagination.js';
 import { uuidParam } from '../../shared/http/params.js';
@@ -78,6 +82,21 @@ export function verificationRoutes(service: VerificationService): ExpressRouter 
             parsePageRequest(req.query),
           ),
         );
+    }),
+  );
+
+  /**
+   * Before `/verifications/:id/decision`, because `decisions` would otherwise be matched as an id
+   * and rejected by `uuidParam` with a message about a malformed identifier.
+   */
+  router.post(
+    '/verifications/decisions',
+    validateBody(bulkVerificationDecisionSchema),
+    handler(async (req, res) => {
+      // 200 rather than 207: partial success is the ordinary case here, not an exception, and the
+      // body says which ones went through. A status code nobody's client library handles is worse
+      // than a body everybody's does.
+      res.status(200).json(await service.decideMany(requireActor(req), req.body as never));
     }),
   );
 

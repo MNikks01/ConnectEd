@@ -241,3 +241,34 @@ export async function reviewFeedbackAction(
     ['/school/complaints'],
   );
 }
+
+export interface BulkDecisionResult extends ActionResult {
+  decided?: number;
+  failed?: { requestId: string; reason: string }[];
+}
+
+/**
+ * Deciding several verification requests at once (FR-VER-009).
+ *
+ * Returns the counts rather than `ok` alone, because the interesting outcome is partial: a school
+ * that approved thirty of forty needs to see the ten, and a plain success would say the opposite
+ * of what happened.
+ */
+export async function decideVerificationsAction(
+  requestIds: string[],
+  decision: 'APPROVE' | 'REJECT',
+): Promise<BulkDecisionResult> {
+  try {
+    const result = await callAsUser<{
+      decided: string[];
+      failed: { requestId: string; reason: string }[];
+    }>('/verifications/decisions', { method: 'POST', body: { requestIds, decision } });
+
+    revalidatePath('/school/verifications');
+    revalidatePath('/school/members');
+
+    return { ok: true, decided: result.decided.length, failed: result.failed };
+  } catch (error) {
+    return { ok: false, message: apiErrorMessage(error) };
+  }
+}

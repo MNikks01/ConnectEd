@@ -18,9 +18,18 @@ import { assertIsSchool } from '../../shared/authz/index.js';
 import { toPage } from '../../shared/http/pagination.js';
 
 import type { Page, PageRequest } from '../../shared/http/pagination.js';
-import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/errors/index.js';
+import {
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '../../shared/errors/index.js';
 
 import type { VerificationRepository, VerificationRequestRow } from './verification.repository.js';
+import type {
+  BulkVerificationDecisionInput,
+  BulkVerificationResultResponse,
+} from '@connected/types';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
@@ -54,6 +63,18 @@ export interface VerificationService {
     requestId: string,
     input: VerificationDecisionInput,
   ) => Promise<VerificationRequestResponse>;
+  /**
+   * FR-VER-009. Decides several, one at a time, and reports each outcome.
+   *
+   * **Not one transaction.** A school approving forty people while its plan allows thirty should
+   * end up with thirty more members and a list of ten that did not fit — not zero members and an
+   * error. Each decision is already transactional on its own; wrapping the batch would make one
+   * refusal undo thirty-nine successes.
+   */
+  decideMany: (
+    actor: Actor,
+    input: BulkVerificationDecisionInput,
+  ) => Promise<BulkVerificationResultResponse>;
   revokeMember: (actor: Actor, schoolId: string, accountId: string) => Promise<void>;
   listMembers: (actor: Actor, schoolId: string) => Promise<SchoolMemberResponse[]>;
   /**
@@ -92,7 +113,10 @@ export function createVerificationService({
   events,
   entitlements,
 }: VerificationServiceDeps): VerificationService {
-  return {
+  // Named so `decideMany` can reuse `decide` rather than restating its authorization, its
+  // entitlement check, and its event. A batch that took a shortcut past any of those would be a
+  // second, weaker copy of the rule.
+  const service: VerificationService = {
     submit: async (actor, input) => {
       // A school is the institution, not a member of one. Blocking here is what makes
       // self-approval structurally impossible rather than a check someone must remember.
@@ -182,6 +206,38 @@ export function createVerificationService({
       const paged = toPage(rows, page.limit);
 
       return { data: paged.data.map(toResponse), nextCursor: paged.nextCursor };
+    },
+
+    decideMany: async (actor, input) => {
+      const decided: string[] = [];
+      const failed: { requestId: string; reason: string }[] = [];
+
+      // Sequential on purpose. These contend on the same membership rows and the same entitlement
+      // count; running them together would make "did this school have room?" depend on scheduling.
+      for (const requestId of input.requestIds) {
+        try {
+          await service.decide(actor, requestId, {
+            decision: input.decision,
+            ...(input.note ? { note: input.note } : {}),
+          });
+          decided.push(requestId);
+        } catch (error) {
+          // The message a single decision would have given, kept per request. A school needs to
+          // know *which* ones did not go through, and why, rather than that something failed.
+          failed.push({
+            requestId,
+            reason:
+              error instanceof AppError ? error.message : 'That request could not be decided.',
+          });
+        }
+      }
+
+      logger.info(
+        { decided: decided.length, failed: failed.length, decision: input.decision },
+        'Bulk verification decided',
+      );
+
+      return { decided, failed };
     },
 
     decide: async (actor, requestId, input) => {
@@ -331,6 +387,8 @@ export function createVerificationService({
       }));
     },
   };
+
+  return service;
 }
 
 /** `payload` is jsonb, so it arrives as `unknown` and has to be narrowed rather than trusted. */
