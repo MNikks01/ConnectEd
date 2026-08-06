@@ -2,8 +2,10 @@
  * Complaint and suggestion persistence. **The only file in this pair that touches Prisma.**
  */
 import { BOUNDED_LIST_CAP } from '../../shared/http/pagination.js';
+import { recordEvent } from '../../shared/outbox/index.js';
 
 import type { Db } from '../../shared/db/index.js';
+import type { PublishableEvent } from '../../shared/events/index.js';
 import type { FeedbackKind, FeedbackStatus } from '../../generated/prisma/client.js';
 
 export interface FeedbackRow {
@@ -29,11 +31,14 @@ export interface FeedbackRepository {
   findById: (id: string) => Promise<FeedbackRow | null>;
   listForSchool: (schoolId: string, status: FeedbackStatus | undefined) => Promise<FeedbackRow[]>;
   listForAuthor: (accountId: string) => Promise<FeedbackRow[]>;
-  review: (input: {
-    id: string;
-    status: FeedbackStatus;
-    reviewedBy: string;
-  }) => Promise<FeedbackRow>;
+  review: (
+    input: {
+      id: string;
+      status: FeedbackStatus;
+      reviewedBy: string;
+    },
+    toEvent: (row: FeedbackRow) => PublishableEvent,
+  ) => Promise<FeedbackRow>;
 }
 
 const SELECT = {
@@ -107,13 +112,20 @@ export function createFeedbackRepository(db: Db): FeedbackRepository {
       return rows.map(toRow);
     },
 
-    review: async ({ id, status, reviewedBy }) =>
-      toRow(
-        await db.feedback.update({
-          where: { id },
-          data: { status, reviewedBy, reviewedAt: new Date() },
-          select: SELECT,
-        }),
-      ),
+    review: async ({ id, status, reviewedBy }, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const reviewed = toRow(
+          await tx.feedback.update({
+            where: { id },
+            data: { status, reviewedBy, reviewedAt: new Date() },
+            select: SELECT,
+          }),
+        );
+
+        await recordEvent(tx, toEvent(reviewed));
+
+        return reviewed;
+      });
+    },
   };
 }

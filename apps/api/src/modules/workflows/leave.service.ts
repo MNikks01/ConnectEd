@@ -25,7 +25,6 @@ import {
 import type { LeaveRepository, LeaveRow } from './leave.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { LeaveStatus } from '../../generated/prisma/client.js';
 import { classDisplayName } from '@connected/types';
@@ -68,7 +67,6 @@ export interface LeaveService {
 export interface LeaveServiceDeps {
   repository: LeaveRepository;
   db: Db;
-  events: EventPublisher;
   logger: Logger;
 }
 
@@ -82,12 +80,7 @@ function fromCalendarDate(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-export function createLeaveService({
-  repository,
-  db,
-  events,
-  logger,
-}: LeaveServiceDeps): LeaveService {
+export function createLeaveService({ repository, db, logger }: LeaveServiceDeps): LeaveService {
   function toResponse(row: LeaveRow): LeaveApplicationResponse {
     return {
       id: row.id,
@@ -230,7 +223,17 @@ export function createLeaveService({
       }
 
       const status: LeaveStatus = input.decision === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED';
-      const decided = await repository.decide({ id: leaveId, status, decidedBy: actor.accountId });
+      const decided = await repository.decide(
+        { id: leaveId, status, decidedBy: actor.accountId },
+        (row) => ({
+          type: 'leave.decided',
+          leaveId,
+          applicantAccountId: row.applicantAccountId,
+          schoolId: row.schoolId,
+          kind: row.kind,
+          status,
+        }),
+      );
 
       if (!decided) {
         // Already decided. 409 rather than a silent overwrite: the second approver needs to know
@@ -251,15 +254,6 @@ export function createLeaveService({
             ...(input.note ? { note: input.note } : {}),
           },
         },
-      });
-
-      await events.publish({
-        type: 'leave.decided',
-        leaveId,
-        applicantAccountId: decided.applicantAccountId,
-        schoolId: decided.schoolId,
-        kind: decided.kind,
-        status,
       });
 
       logger.info({ leaveId, status, accountId: actor.accountId }, 'Leave decided');

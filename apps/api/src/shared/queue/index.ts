@@ -13,24 +13,26 @@
 import { Queue, Worker, type ConnectionOptions, type Processor } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import {
-  envelope,
-  type DomainEvent,
-  type EventPublisher,
-  type PublishableEvent,
-} from '../events/index.js';
+import type { DomainEvent } from '../events/index.js';
 
 import type { Logger } from '../logger/index.js';
 
 export const EVENTS_QUEUE = 'domain-events';
 
 /**
- * How long a publish may take before it is abandoned. Short: this runs on the request path, after
- * the work the caller asked for has already been committed.
+ * How long an enqueue may take before it is abandoned.
+ *
+ * This is the lesson from the bug that produced `queue.test.ts`: with Redis unreachable,
+ * `queue.add` does **not** reject. ioredis queues the command while disconnected and waits for a
+ * reconnection that may never come. Unbounded, the caller hangs forever.
+ *
+ * It no longer runs on the request path — the outbox relay is the only caller (ADR-0019) — but
+ * the hazard is the same one and worse in its new home: an unbounded add would hang a relay pass,
+ * and with it the relay's shutdown.
  */
 const PUBLISH_TIMEOUT_MS = 2000;
 
-async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+export async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
 
   try {
@@ -57,13 +59,21 @@ export function createRedisConnection(url: string): Redis {
 
 export interface QueueBundle {
   queue: Queue;
-  publisher: EventPublisher;
+  /**
+   * Hands one event to the queue, bounded, and **throws if it did not get there**.
+   *
+   * The publisher this replaced swallowed the failure, because it ran after a transaction the
+   * caller had already committed and failing them would have reported an error for something that
+   * succeeded. Its price was the event. The relay has no such constraint: nobody is waiting, and a
+   * throw is how the outbox row stays put for the next pass.
+   */
+  enqueue: (event: DomainEvent) => Promise<void>;
   close: () => Promise<void>;
   /** Readiness probe target — a queue that cannot reach Redis is not ready to serve. */
   ping: () => Promise<void>;
 }
 
-export function createEventQueue(connection: Redis, logger: Logger): QueueBundle {
+export function createEventQueue(connection: Redis): QueueBundle {
   const queue = new Queue(EVENTS_QUEUE, {
     connection: connection as unknown as ConnectionOptions,
     defaultJobOptions: {
@@ -75,28 +85,14 @@ export function createEventQueue(connection: Redis, logger: Logger): QueueBundle
     },
   });
 
-  const publisher: EventPublisher = {
-    publish: async (event: PublishableEvent) => {
-      const full = envelope(event);
-
-      try {
-        // Bounded on purpose. ioredis queues commands while disconnected rather than rejecting
-        // them, so `queue.add` against an unreachable Redis does not fail — it waits for a
-        // reconnection that may never come, and the HTTP request hangs until the client times
-        // out. A caller who has already committed their transaction must not be held up by the
-        // queue at all, so a slow publish is treated exactly like a failed one.
-        await withTimeout(queue.add(full.type, full, { jobId: full.eventId }), PUBLISH_TIMEOUT_MS);
-      } catch (error) {
-        // The domain change already committed; failing the caller now would report an error for
-        // something that succeeded. The event is lost, which is why this logs at error level.
-        logger.error({ err: error, type: full.type }, 'Failed to publish domain event');
-      }
-    },
+  const enqueue = async (event: DomainEvent): Promise<void> => {
+    // A slow add is treated exactly like a failed one — see PUBLISH_TIMEOUT_MS.
+    await withTimeout(queue.add(event.type, event, { jobId: event.eventId }), PUBLISH_TIMEOUT_MS);
   };
 
   return {
     queue,
-    publisher,
+    enqueue,
     ping: async () => {
       await connection.ping();
     },

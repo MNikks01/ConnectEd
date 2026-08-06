@@ -15,7 +15,6 @@ import { createAcademicsModule } from '../modules/academics/index.js';
 import { createOutboxRepository, createRelay } from '../shared/outbox/index.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 
 import type { SchoolFixture } from './support/db.js';
@@ -30,7 +29,7 @@ const logger = createLogger({ ...config, LOG_LEVEL: 'silent' });
 
 /** Publishes one academic item as the seeded teacher, which is the shortest path to an event. */
 async function publishSomething(title = 'Fractions'): Promise<string> {
-  const academics = createAcademicsModule({ db, events: recordingPublisher(), logger });
+  const academics = createAcademicsModule({ db, logger });
 
   const item = await academics.service.publish(
     { accountId: fixture.teacherAccountId, accountType: 'INDIVIDUAL', role: 'TEACHER' },

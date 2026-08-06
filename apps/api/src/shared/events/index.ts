@@ -7,11 +7,13 @@
  * - **Every event carries an `eventId`.** Delivery is at-least-once, so a consumer will sometimes
  *   see the same event twice; the id is what lets it be idempotent
  *   (`.docs/PRD/07-notifications.md`).
- * - **Publishing never throws into the caller.** A verification decision must not fail because
- *   Redis is unreachable — the decision is the transaction, the notification is a consequence of
- *   it. A failure here is logged and the event is dropped.
- * - **The publisher is an interface**, so a service can be tested with a recording fake and does
- *   not need Redis to assert "this emitted the right event".
+ * - **An event is written in the transaction that produced it** (ADR-0019). There is no publisher
+ *   any more: a service does not hand an event to a queue, it records one alongside its write and
+ *   a relay does the handing over. What a test asserts on is therefore the row, not a fake.
+ *
+ *   The interface that used to live here — `publish`, which never threw and dropped the event on
+ *   failure — was the right shape for the wrong problem. It protected the caller from Redis by
+ *   sacrificing the notification, because by the time it ran the transaction had already closed.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -117,33 +119,11 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 
 export type PublishableEvent = DistributiveOmit<DomainEvent, 'eventId' | 'occurredAt'>;
 
-export interface EventPublisher {
-  publish: (event: PublishableEvent) => Promise<void>;
-}
-
 /** Adds the envelope fields every event needs. */
 export function envelope(event: PublishableEvent): DomainEvent {
   return {
     ...event,
     eventId: randomUUID(),
     occurredAt: new Date().toISOString(),
-  };
-}
-
-/** Used where events are irrelevant — unit tests of unrelated logic, and apps built without Redis. */
-export const noopPublisher: EventPublisher = {
-  publish: () => Promise.resolve(),
-};
-
-/** Records what was published, for tests that assert on emissions without a queue. */
-export function recordingPublisher(): EventPublisher & { published: DomainEvent[] } {
-  const published: DomainEvent[] = [];
-
-  return {
-    published,
-    publish: (event) => {
-      published.push(envelope(event));
-      return Promise.resolve();
-    },
   };
 }

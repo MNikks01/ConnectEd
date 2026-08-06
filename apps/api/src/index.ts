@@ -46,7 +46,7 @@ const db = createDb({
 // BullMQ needs its own connection: a blocking worker command would otherwise stall every other
 // Redis call sharing the socket.
 const queueConnection = createRedisConnection(config.REDIS_URL);
-const events = createEventQueue(queueConnection, logger);
+const events = createEventQueue(queueConnection);
 
 // Dependencies register their own readiness probes here, at the composition root.
 const readiness = new ReadinessRegistry();
@@ -90,7 +90,6 @@ const app = createApp({
   metrics,
   readiness,
   db,
-  events: events.publisher,
   storage,
   realtime,
 });
@@ -100,12 +99,7 @@ const app = createApp({
  * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
  */
 const { createVerificationModule } = await import('./modules/verification/index.js');
-const verificationForWorker = createVerificationModule(
-  db,
-  logger,
-  events.publisher,
-  billing.service,
-);
+const verificationForWorker = createVerificationModule(db, logger, billing.service);
 const notifications = createNotificationsModule(db, logger, verificationForWorker.service);
 const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)
@@ -132,9 +126,7 @@ const outbox = createOutboxRepository(db);
 const relay = config.RUN_WORKER_IN_PROCESS
   ? createRelay({
       repository: outbox,
-      enqueue: async (event) => {
-        await events.queue.add(event.type, event, { jobId: event.eventId });
-      },
+      enqueue: events.enqueue,
       logger,
     })
   : undefined;

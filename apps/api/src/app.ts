@@ -45,8 +45,6 @@ import { createMetrics, type Metrics } from './shared/observability/metrics.js';
 import type { Mailer } from './shared/mail/index.js';
 import type { Realtime } from './shared/realtime/index.js';
 
-import { noopPublisher, type EventPublisher } from './shared/events/index.js';
-
 import type { Db } from './shared/db/index.js';
 import type { Storage } from './shared/storage/index.js';
 import type { ErrorMapper } from './shared/errors/mapping.js';
@@ -70,11 +68,6 @@ export interface AppDependencies {
    * Routes that need persistence are simply not mounted when it is absent.
    */
   db?: Db | undefined;
-  /**
-   * Where domain events go. Defaults to a no-op so an app can be built without Redis — tests and
-   * the health-only configuration both rely on that.
-   */
-  events?: EventPublisher;
   /** Object storage. Optional so an app can be built without MinIO; media routes are then absent. */
   storage?: Storage | undefined;
   /** Mappers for foreign error types; zod and malformed JSON are covered by default. */
@@ -94,7 +87,6 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
     metrics: overrides.metrics ?? createMetrics(),
     readiness: overrides.readiness ?? new ReadinessRegistry(),
     db: overrides.db,
-    events: overrides.events ?? noopPublisher,
     storage: overrides.storage,
     mailer: overrides.mailer,
     realtime: overrides.realtime,
@@ -103,18 +95,8 @@ export function createDependencies(overrides: Partial<AppDependencies> = {}): Ap
 }
 
 export function createApp(overrides: Partial<AppDependencies> = {}): Express {
-  const {
-    config,
-    logger,
-    metrics,
-    readiness,
-    db,
-    events,
-    storage,
-    mailer,
-    realtime,
-    errorMappers,
-  } = createDependencies(overrides);
+  const { config, logger, metrics, readiness, db, storage, mailer, realtime, errorMappers } =
+    createDependencies(overrides);
 
   const app = express();
 
@@ -204,12 +186,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     // Everything past auth requires a valid token; each module still authorizes per resource.
     // Verification owns membership, and institution needs to ask it whether an account is a
     // verified teacher — so it is constructed first and its service passed in as a narrow port.
-    const verification = createVerificationModule(
-      db,
-      logger,
-      events ?? noopPublisher,
-      billing.service,
-    );
+    const verification = createVerificationModule(db, logger, billing.service);
     const institution = createInstitutionModule(db, verification.service, billing.service);
     // Notifications resolves class recipients through verification, which owns membership.
     const notifications = createNotificationsModule(db, logger, verification.service);
@@ -222,13 +199,12 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
     const academics = createAcademicsModule({
       db,
       storage,
-      events: events ?? noopPublisher,
       logger,
       // So an attached image stops looking like an abandoned upload.
       media: media?.service,
     });
 
-    const workflows = createWorkflowsModule({ db, events: events ?? noopPublisher, logger });
+    const workflows = createWorkflowsModule({ db, logger });
     const social = createSocialModule({
       db,
       config,

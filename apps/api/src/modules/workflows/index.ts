@@ -11,7 +11,6 @@ import { leaveRoutes } from './leave.routes.js';
 import { createLeaveService } from './leave.service.js';
 
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { FeedbackService } from './feedback.service.js';
 import type { LeaveService } from './leave.service.js';
@@ -25,22 +24,16 @@ export interface WorkflowsModule {
   feedback: FeedbackService;
 }
 
-export function createWorkflowsModule(deps: {
-  db: Db;
-  events: EventPublisher;
-  logger: Logger;
-}): WorkflowsModule {
+export function createWorkflowsModule(deps: { db: Db; logger: Logger }): WorkflowsModule {
   const leave = createLeaveService({
     repository: createLeaveRepository(deps.db),
     db: deps.db,
-    events: deps.events,
     logger: deps.logger,
   });
 
   const feedback = createFeedbackService({
     repository: createFeedbackRepository(deps.db),
     db: deps.db,
-    events: deps.events,
     logger: deps.logger,
   });
 
