@@ -43,12 +43,24 @@ not a sprint. If mobile is chosen anyway, the ungated half below is unaffected.
 
 **Ungated — starts regardless:**
 
-| #    | Item                                                            | Owner            | Est. | DoD                                                                                                                                                                             |
-| ---- | --------------------------------------------------------------- | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S7-1 | **Transactional outbox** for domain events                      | backend          | L    | Event row written in the _same transaction_ as the domain change; a relay drains it; a failed publish is retried, not dropped; sabotage test proves a lost publish is recovered |
-| S7-2 | Retire the "publish and hope" path and its error log            | backend          | S    | `shared/queue` no longer swallows a failure; the only remaining loss path is documented or gone                                                                                 |
-| S7-3 | Audit the release path for cases never exercised (retro **A3**) | devops           | M    | Each release-path check named, with the case it has never run against, and either a test or a written accepted risk                                                             |
-| S7-4 | Close out `docs/close-sprint-2` (retro **A5**)                  | technical-writer | S    | Merged or deleted with a reason; nothing unmerged left dangling from 2026-08-01                                                                                                 |
+| #     | Item                                                            | Owner            | Est. | DoD                                                                                                                                                                             |
+| ----- | --------------------------------------------------------------- | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S7-1  | **Transactional outbox** for domain events                      | backend          | L    | Event row written in the _same transaction_ as the domain change; a relay drains it; a failed publish is retried, not dropped; sabotage test proves a lost publish is recovered |
+| S7-2  | Retire the "publish and hope" path and its error log            | backend          | S    | `shared/queue` no longer swallows a failure; the only remaining loss path is documented or gone                                                                                 |
+| S7-3  | Audit the release path for cases never exercised (retro **A3**) | devops           | M    | Each release-path check named, with the case it has never run against, and either a test or a written accepted risk                                                             |
+| S7-4  | Close out `docs/close-sprint-2` (retro **A5**)                  | technical-writer | S    | Merged or deleted with a reason; nothing unmerged left dangling from 2026-08-01                                                                                                 |
+| S7-17 | **Start `worker.ts` in CI** — it has never been started at all  | devops           | M    | A run with `RUN_WORKER_IN_PROCESS=false` and the worker as a second process; an event published by the API is delivered by it. Deleting a line from `worker.ts` fails it        |
+
+**S7-17 came out of S7-3 and is the reason that audit was worth doing.**
+`RUN_WORKER_IN_PROCESS` appears in no workflow and no test configuration, so it is always its
+default and every test runs the worker in-process. `apps/api/src/worker.ts` has therefore **never
+been started by anything** — not by `verify`, not by `e2e`. It is the deployment the product is
+meant to use when fan-out is heavy, and since ADR-0019 it is where the outbox relay lives in that
+mode: relay wiring shipped into that file on 2026-08-06 and no test has executed a line of it.
+
+A boot smoke test is the cheap version and would catch a typo. It would not catch the thing worth
+catching, which is the relay running in one process while the API writes outbox rows in another —
+so the DoD above asks for the real shape. See `../CI-CD/03-release-path-audit.md` finding 5.
 
 **Gated on S7-0c, if the gradebook:**
 
