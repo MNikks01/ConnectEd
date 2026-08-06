@@ -57,6 +57,11 @@ Implements `ADR-0007`.
   returns a five-minute single-use challenge rather than a session; ten hashed recovery codes;
   disabling requires a current code. The implementation is checked against RFC 6238's published
   test vectors.
+  Recovery codes come from `shared/auth/random.ts`, which uses **rejection sampling** rather than a
+  modulo. `byte % 31` over 256 byte values gives the first eight characters of the alphabet nine
+  byte values each and the rest eight — an eighth more likely — in a credential that stands in for
+  the second factor. CodeQL caught it (`js/biased-cryptographic-random`); a chi-square test now
+  keeps it caught.
 - **Password reset** → single-use, expiring token; on reset revoke all sessions. **Built**, with
   these properties asserted:
   - The response to `/auth/password/forgot` is **identical** whether the address is registered,

@@ -1,10 +1,16 @@
 /**
- * The class timetable as a member sees it (FR-ACAD-020).
+ * The class timetable as a member sees it (FR-ACAD-020, FR-ACAD-021).
  *
  * Its own page rather than a panel on the feed: a timetable is looked up deliberately, and an
  * image the size of a wall chart would push the day's homework below the fold.
+ *
+ * Two shapes reach this page — a photograph of the sheet on the wall, or a structured week — and
+ * which one arrives is the school's choice, version by version. The page renders whichever it got
+ * and never asks the reader to care.
  */
 import { Card, PageHeader } from '@connected/ui';
+
+import { TimetableGrid } from '@/components/timetable-grid';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
@@ -48,7 +54,9 @@ export default async function TimetablePage({ params }: { params: Promise<{ id: 
         {...(timetable ? { description: `Version ${timetable.version}` } : {})}
       />
 
-      {timetable?.imageUrl ? (
+      {timetable?.kind === 'STRUCTURED' ? (
+        <TimetableGrid periods={timetable.periods} />
+      ) : timetable?.imageUrl ? (
         <figure style={{ margin: 0 }}>
           {/* A signed URL that expires — `next/image` would proxy and cache it. */}
           <img

@@ -115,7 +115,45 @@ the repository would have stopped a bad one.
 
 ## Review notes
 
-_Filled at sprint review._
+**S6-13, unplanned — one of the two flakes turned out not to be one.** `social.spec.ts`'s
+`connections and messages` failed at roughly one run in four, and had been read as another sighting
+of the long-running flake in S5-12/S6-11 — an action that returns 200 and is absent from the read
+after it.
+
+It was not that. It was a test asserting on text that two different pages both show. The inbox
+renders each thread's last message as a preview, so the assertion meant to prove the conversation
+had opened was already satisfied by the list behind it; the `goto` that followed then cancelled the
+navigation before the page rendered, and rendering that page **is** the read (FR-SOC-021). The API
+never saw it. Thirty runs green after waiting for the composer instead, against four failures in ten
+before.
+
+Worth separating in the record, because the two failures look identical from the outside and only
+one of them is a product question. The other — wrong data in the API's vitest suite, locally only —
+is untouched by this and still open.
+
+**S6-11 answered — the suite flake was the reset, not the product.** It reproduces on demand: run
+the end-to-end suite in a loop while the API suite runs. Different databases on the same Postgres,
+so no interference — only contention. Two quiet runs passed; the first overlapping run failed three
+tests.
+
+Two of the three were `resetDb`. Its TRUNCATE ran inside a Prisma interactive transaction whose
+default budget is 5000 ms, the same five seconds as the lock timeout it sets for itself. On a busy
+machine the truncate took eleven seconds _unblocked_, and the commit was then refused as expired.
+The reset rolled back, and the diagnostics written for exactly this case could never print, because
+there was no blocker to name. The transaction now gets fifteen seconds and the lock timeout stays at
+five.
+
+The third was a supertest request answered with `400 WebSockets request was expected` — a string
+that exists nowhere in this repository or its dependencies. It is in the Node binary, next to the
+V8 inspector's UUID. The request reached a debugger port: an ephemeral-port collision under load,
+not a product fault, and worth recognising on sight because it reads like one.
+
+Not claimed: that this explains every past sighting. The reports of a row created and then absent
+are a different shape, and are still open.
+
+**Measured rather than assumed, twice this sprint.** The same test was suspected of being broken by
+the Next 16.3 bump; ten runs on each version (four failures against two) said otherwise, and the
+real cause was in the test all along.
 
 ## Retro
 

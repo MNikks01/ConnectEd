@@ -138,7 +138,19 @@ test.describe('connections and messages', () => {
 
     await expect(page.getByText('1 unread').first()).toBeVisible();
     await page.getByRole('link', { name: 'E2E answerer' }).click();
-    await expect(page.getByText('Thanks for connecting.')).toBeVisible();
+
+    // Wait for the conversation itself, not for its text.
+    //
+    // The inbox renders each thread's last message as a preview, so "Thanks for connecting." is
+    // already on screen before this click goes anywhere — an assertion on it passes without the
+    // conversation ever being opened. `goto` below would then abort the navigation in flight, the
+    // API would never see the read, and the count would still be there. That is the whole of the
+    // flake this test showed at about one run in four (S6-13).
+    //
+    // The composer exists only on the conversation page, so waiting for it is waiting for the
+    // render that performs the read.
+    await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E2E answerer' })).toBeVisible();
 
     // Opening it is the read.
     await page.goto('/messages');
@@ -161,6 +173,11 @@ test.describe('safety', () => {
     await signIn(page, blocker.email);
     await page.goto(`/accounts/${blocked.accountId}`);
     await page.getByRole('button', { name: 'Follow' }).click();
+    // Wait for the follow to land before navigating. `click()` returns when the click is
+    // dispatched, not when the Server Action it starts has finished, so without this the feed
+    // below is read while the follow is still in flight — observed exactly once, and the trace
+    // showed the two requests four milliseconds apart. The test above this one already waits.
+    await expect(page.getByRole('button', { name: 'Unfollow' })).toBeVisible();
 
     await page.goto('/social');
     await expect(page.getByText('Something the blocker will stop seeing.')).toBeVisible();

@@ -69,14 +69,15 @@ Added while implementing the schema, for columns the tables above list without n
 
 ## Academic content
 
-| Table               | Key columns                                                                                                                             |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `academic_item`     | `id`, `type (AcademicItemType)`, `class_id FK`, `subject_id FK`, `author_account_id FK`, `title`, `body`, `image_key?`, `due_at?`       |
-| `notice`            | `id`, `school_id FK`, `author_account_id FK`, `title`, `body`                                                                           |
-| `event`             | `id`, `school_id FK`, `title`, `body`, `event_at`                                                                                       |
-| `timetable`         | `id`, `class_id FK`, `image_key`, `version`                                                                                             |
-| `syllabus_progress` | `id`, `subject_id FK`, `topic`, `percent`, `updated_by`                                                                                 |
-| `read_receipt`      | `id`, `subject_type (notice/academic_item/...)`, `subject_id`, `account_id FK`, `read_at`, UNIQUE(`subject_type,subject_id,account_id`) |
+| Table               | Key columns                                                                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `academic_item`     | `id`, `type (AcademicItemType)`, `class_id FK`, `subject_id FK`, `author_account_id FK`, `title`, `body`, `image_key?`, `due_at?`                                       |
+| `notice`            | `id`, `school_id FK`, `author_account_id FK`, `title`, `body`                                                                                                           |
+| `event`             | `id`, `school_id FK`, `title`, `body`, `event_at`                                                                                                                       |
+| `timetable`         | `id`, `class_id FK`, `image_key?`, `version` — a version is an image **or** a week of periods, never both                                                               |
+| `timetable_period`  | `id`, `timetable_id FK`, `day`, `starts_at`, `ends_at`, `subject_id? FK`, `label?` — times are `HH:MM` strings, not `time`, so a timetable cannot shift with a timezone |
+| `syllabus_progress` | `id`, `subject_id FK`, `topic`, `percent`, `updated_by`                                                                                                                 |
+| `read_receipt`      | `id`, `subject_type (notice/academic_item/...)`, `subject_id`, `account_id FK`, `read_at`, UNIQUE(`subject_type,subject_id,account_id`)                                 |
 
 ## Workflows
 

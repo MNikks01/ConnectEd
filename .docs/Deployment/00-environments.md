@@ -36,7 +36,11 @@ flowchart TB
   API1 -. metrics/logs/traces .-> Observability
 ```
 
-- **API**: stateless, ≥2 replicas behind a load balancer, autoscaled on CPU/RPS.
+- **API**: stateless, ≥2 replicas behind a load balancer, autoscaled on CPU/RPS. **`TRUST_PROXY` must be
+  set to match this diagram** — the hop count, or the load balancer's addresses. It defaults to trusting
+  nothing, which is safe but makes every request look like it came from the balancer, so the IP-keyed
+  limiters share one bucket across all callers. The opposite mistake is worse and quieter: trusting a proxy
+  that is not there lets a caller choose their own `req.ip` (`.docs/Security/05-review-2026-08-05.md`).
 - **Web**: Next.js (Node server for SSR or platform edge). Static/ISR assets via CDN.
 - **DB**: managed Postgres, primary + read replica, automated backups + PITR.
 - **Redis**: managed/HA for cache + queue.

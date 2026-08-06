@@ -1,9 +1,18 @@
 /**
- * Public landing page. Static by default — no session, no personalization, so it prerenders and
- * stays SEO-friendly (`.docs/Architecture/03-frontend-architecture.md`).
+ * Public landing page. No session and no personalization, so it was prerendered at build time
+ * (`.docs/Architecture/03-frontend-architecture.md`).
+ *
+ * It is now rendered per request instead, and the reason is the content security policy: the nonce
+ * that permits Next's own scripts is minted per response, and HTML built once at build time cannot
+ * carry it. A prerendered page under this policy loads its markup and then hydrates nothing.
+ *
+ * What that costs here is the prerender, not the SEO — a crawler is served the same complete HTML
+ * either way, and this page has nothing to fetch before it can be sent.
  */
 import { Card } from '@connected/ui';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default function LandingPage() {
   return (

@@ -118,9 +118,20 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
 
   const app = express();
 
-  // Behind a load balancer / ingress: trust the proxy so req.ip and rate limiting see the
-  // real client address rather than the hop in front of us.
-  app.set('trust proxy', true);
+  // How much of `X-Forwarded-For` to believe — the whole of what decides whether `req.ip`, and so
+  // every IP-keyed rate limit, means anything. Configured rather than assumed, and defaulting to
+  // trusting nothing; the reasoning is on `TRUST_PROXY` in the config schema.
+  app.set('trust proxy', config.TRUST_PROXY);
+
+  if (config.TRUST_PROXY === true && config.NODE_ENV === 'production') {
+    // Not fatal — there are deployments where an upstream really does overwrite the header — but
+    // it is also exactly what a forgotten setting looks like, and the cost of being wrong is a
+    // login limiter that quietly stops limiting anything.
+    logger.warn(
+      'TRUST_PROXY is "true", so req.ip is whatever X-Forwarded-For says. Set it to the number of proxies in front of this server, or to their addresses, unless something upstream is guaranteed to overwrite that header.',
+    );
+  }
+
   app.disable('x-powered-by');
 
   app.use(helmet());

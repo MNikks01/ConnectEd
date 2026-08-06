@@ -36,6 +36,12 @@ providers (external).
 - **Parent accessing a non-child** → `assertParentOfVerifiedChild`.
 - **Teacher publishing outside allocation** → `assertTeacherAllocatedToSubject`.
 - **Minor safety** → social features moderated (report/block); content soft-deleted for review.
+- **Clickjacking the school portal** → `frame-ancestors 'none'` plus `X-Frame-Options: DENY` on every web
+  response. The portal is worth framing precisely because so much of it is one click: approving a member,
+  withdrawing a notice from every family, removing content from the moderation queue. Nothing in the product
+  is meant to be embedded anywhere, so the policy is a flat refusal rather than an allow-list. **This stops
+  being true** the day something here is meant to be embedded — a public school profile in a district site,
+  say — and that day it needs an allow-list, not a removal.
 
 ## Cross-site request forgery
 

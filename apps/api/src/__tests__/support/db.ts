@@ -26,6 +26,33 @@ let client: PrismaClient | undefined;
  */
 const APPLICATION_NAME = `connected-vitest-${String(process.pid)}`;
 
+/**
+ * What this suite is allowed to point at.
+ *
+ * `vitest.config.ts` reads `process.env.DATABASE_URL ?? <connected_test>`, and so does
+ * `playwright.config.ts` with its own default. One exported variable therefore collapses three
+ * databases into one — and since every case here begins by TRUNCATEing every table, the database
+ * that gets collapsed onto is emptied. `connected` is a developer's own data.
+ *
+ * Nothing has been lost to this. The point is that nothing could survive it if it happened, and it
+ * takes one `export` in one shell to happen. A name check costs nothing and makes the mistake
+ * unable to run at all.
+ */
+const TEST_DATABASE = /_test$/;
+
+function assertTruncatable(url: URL): void {
+  const name = decodeURIComponent(url.pathname.replace(/^\//, ''));
+
+  if (!TEST_DATABASE.test(name)) {
+    throw new Error(
+      `Refusing to run integration tests against "${name}". Every case here TRUNCATEs every ` +
+        `table, so this suite may only point at a database whose name ends in "_test" — ` +
+        `"connected_test" by default. DATABASE_URL is currently set to something else, which is ` +
+        `usually an \`export\` left over in the shell.`,
+    );
+  }
+}
+
 export function testDb(): Db {
   const connectionString = process.env.DATABASE_URL;
 
@@ -34,6 +61,7 @@ export function testDb(): Db {
   }
 
   const url = new URL(connectionString);
+  assertTruncatable(url);
   url.searchParams.set('application_name', APPLICATION_NAME);
 
   client ??= new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString() }) });
@@ -62,7 +90,22 @@ export async function closeTestDb(): Promise<void> {
  *
  * Five seconds is far longer than the truncate needs and far shorter than the test timeout, so the
  * suite now fails with a sentence naming the blocker instead of a symptom several steps away.
+ *
+ * **And for a while it could not — S6-13.** Prisma's own interactive-transaction timeout defaults
+ * to 5000 ms, the same five seconds as the lock timeout below. Whichever expired first, the error
+ * that surfaced was Prisma's: *"A commit cannot be executed on an expired transaction"*, naming a
+ * commit nobody was waiting on, and by the time the blocker query ran the blocker had finished, so
+ * the diagnostics reported "no other active connection found". The one message written for exactly
+ * this case was the one message it could never print.
+ *
+ * The transaction is now given far longer than the lock it is waiting for, so the lock timeout is
+ * what fires and the failure names what held it. Wide enough, too, that a truncate merely *slow*
+ * because the machine is busy — an end-to-end run against another database on the same Postgres
+ * will do it — finishes rather than failing a test about something else entirely. Still inside the
+ * 20s hook timeout, so a genuine deadlock is caught here rather than by vitest.
  */
+export const TRUNCATE_LOCK_TIMEOUT_MS = 5_000;
+export const TRUNCATE_TRANSACTION_TIMEOUT_MS = 15_000;
 export async function resetDb(): Promise<void> {
   const db = testDb();
 
@@ -80,10 +123,15 @@ export async function resetDb(): Promise<void> {
   try {
     // One transaction so `SET LOCAL` and the TRUNCATE are guaranteed the same connection; with a
     // pool, two separate statements need not be.
-    await db.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '5s'`);
-      await tx.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
-    });
+    await db.$transaction(
+      async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = ${String(TRUNCATE_LOCK_TIMEOUT_MS)}`);
+        await tx.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
+      },
+      // Longer than the lock timeout on purpose — see the note above. Equal timeouts race, and
+      // Prisma's wins with a message about the wrong thing.
+      { timeout: TRUNCATE_TRANSACTION_TIMEOUT_MS, maxWait: TRUNCATE_TRANSACTION_TIMEOUT_MS },
+    );
   } catch (error) {
     throw new Error(`resetDb could not truncate: ${await describeBlockers(error)}`);
   }
