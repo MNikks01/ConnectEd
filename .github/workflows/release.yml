@@ -28,16 +28,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      # Aggregates changesets → version bumps + CHANGELOG, opens/updates the "Version Packages" PR,
-      # or publishes when that PR merges.
-      - name: Create Release PR or publish
-        uses: changesets/action@v1
-        with:
-          version: pnpm version-packages
-          publish: pnpm release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # A release that leaves no mark is one nobody can find later. Until this step existed the
       # repository had no tags at all: nothing distinguished the commit that went to production
       # from the forty-odd that were merged the same week.
@@ -86,6 +76,26 @@ jobs:
           # The tag is the durable record; the Release is the readable one. `--generate-notes`
           # lists every PR in the range, which is what someone asking "when did that ship?" wants.
           gh release create "$tag" --title "$tag" --generate-notes --verify-tag
+
+      # Aggregates changesets → version bumps + CHANGELOG, opens/updates the "Version Packages" PR,
+      # or publishes when that PR merges.
+      #
+      # **Deliberately last**, and it used to be first. It has failed once — 2026-08-04, "GitHub
+      # Actions is not permitted to create or approve pull requests" — and everything after a failed
+      # step is skipped. Tagging was downstream of that. The two never coincided, because the tag
+      # step did not exist yet, but a release shipping untagged because *bookkeeping* failed is not
+      # a trade anyone would choose. See `.docs/CI-CD/03-release-path-audit.md`.
+      #
+      # Neither of its jobs can currently do anything: every package here is private, so `publish`
+      # has nothing to publish, and `version` only fires if a changeset reaches `main`, which the
+      # release-branch flow prevents.
+      - name: Create Release PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Placeholder deploy steps — wire to the real target (K8s/PaaS) when infra lands.
       # - name: Build & push images (api, web, worker)  # infrastructure/docker
