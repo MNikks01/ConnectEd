@@ -202,6 +202,42 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
  * attach that fails leaves an unreferenced object in the bucket. Collecting those is a known gap
  * carried from S2-0a rather than something this action can fix alone.
  */
+/**
+ * Publishing a structured week (FR-ACAD-021).
+ *
+ * The draft arrives as JSON in one field rather than as indexed form fields, because a week is a
+ * list of objects and reassembling `periods[3][startsAt]` on this side is more code and more ways
+ * to be wrong than one `JSON.parse`.
+ *
+ * Nothing here validates the week beyond it being a non-empty array. Overlaps, unknown subjects,
+ * backwards periods and everything else are the API's to refuse — this is a browser, and a check
+ * here would be a second opinion that can be skipped by anyone who wants to.
+ */
+export async function publishTimetableAction(
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = formData.get('periods');
+
+  let periods: unknown;
+  try {
+    periods = JSON.parse(typeof raw === 'string' ? raw : '[]');
+  } catch {
+    return { ok: false, message: 'That timetable could not be read. Try adding the periods again.' };
+  }
+
+  if (!Array.isArray(periods) || periods.length === 0) {
+    return { ok: false, message: 'Add at least one period before publishing.' };
+  }
+
+  return run(async () => {
+    await callAsUser(`/classes/${classId}/timetable`, {
+      method: 'POST',
+      body: { periods },
+    });
+  }, [`/school/classes/${classId}`, `/classes/${classId}`, `/classes/${classId}/timetable`]);
+}
+
 export async function uploadTimetableAction(
   classId: string,
   formData: FormData,

@@ -49,9 +49,16 @@ export function TimetablePanel({
             {new Date(timetable.createdAt).toLocaleDateString('en-GB')}
           </figcaption>
         </figure>
+      ) : timetable?.kind === 'STRUCTURED' ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Version {timetable.version} is a structured week of {timetable.periods.length}{' '}
+          {timetable.periods.length === 1 ? 'period' : 'periods'}, published{' '}
+          {new Date(timetable.createdAt).toLocaleDateString('en-GB')}. Uploading an image below
+          replaces it with version {timetable.version + 1}; the week stays readable in the history.
+        </p>
       ) : (
         <p className="muted" style={{ margin: 0 }}>
-          No timetable yet. Members of this class see nothing until one is uploaded.
+          No timetable yet. Members of this class see nothing until one is published.
         </p>
       )}
 

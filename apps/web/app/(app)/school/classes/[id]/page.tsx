@@ -7,6 +7,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { ClassTeacherForm } from '@/components/class-teacher-form';
 import { SubjectPanel } from '@/components/subject-panel';
+import { TimetableEditor } from '@/components/timetable-editor';
 import { TimetablePanel } from '@/components/timetable-panel';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
@@ -93,7 +94,18 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
 
         <Card as="section">
           <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Timetable</h2>
+          {/*
+            Two ways to publish the same thing, side by side, because they suit different schools
+            rather than different stages. A photograph of the sheet on the wall is thirty seconds
+            of work; a structured week takes longer and is the only one the server can check for
+            clashes. Whichever is published becomes the next version.
+          */}
           <TimetablePanel classId={id} timetable={timetable} />
+
+          <h3 style={{ fontSize: 'var(--ui-text-base)', marginBottom: 'var(--ui-space-2)' }}>
+            Or build the week
+          </h3>
+          <TimetableEditor classId={id} subjects={subjects} />
         </Card>
       </div>
     </>

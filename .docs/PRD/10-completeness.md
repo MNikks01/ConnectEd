@@ -42,9 +42,12 @@ reported per request.
 
 ## Academics (`04-academics.md`)
 
-FR-ACAD-001 … 006, 010 … 012, 020, 030, 031 ✅. **FR-ACAD-021** (P2, structured timetable) is 🗓:
-the PRD itself says "v1 accepts image upload; structured later", so building it now would be
-overtaking the plan rather than completing it.
+FR-ACAD-001 … 006, 010 … 012, 020, 021, 030, 031 ✅. **FR-ACAD-021** (structured timetable) landed
+as a _second representation_ rather than a replacement — FR-ACAD-020 asks for "image/structured",
+and a school that photographs the sheet on the wall is not doing it wrong. Both kinds share one
+version history, so a school can switch either way and last term's is still readable. What the
+structured form adds is the only thing a photograph cannot: the server refuses overlapping periods
+and subjects belonging to another class.
 
 ## Workflows (`05-workflows.md`)
 
