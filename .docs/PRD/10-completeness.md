@@ -1,6 +1,6 @@
 # PRD — Completeness
 
-`Status: Accepted` · `Last updated: 2026-08-05`
+`Status: Accepted` · `Last updated: 2026-08-06`
 
 Every functional requirement in this folder, and whether it is built. Written at the point where
 nothing was left that could be built without a decision from outside engineering, so that "what is
@@ -81,7 +81,7 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
 | FR-BILL-005 | P1  | ⛔  | Dunning — needs the provider                             |
 | FR-BILL-006 | P2  | ⛔  | Invoices come from the provider                          |
 
-## The four decisions everything blocked is waiting on
+## The decisions everything blocked is waiting on
 
 1. **A payment provider** — Stripe or Razorpay. Blocks FR-BILL-002, 004, 006 and the trigger half
    of 005. It follows the region of the pilot schools; the legacy product was India-first.
@@ -105,7 +105,33 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
 
 3. **What the plans actually limit** — the catalogue ships provisional numbers (trial 5/200,
    standard 40/1500, premium unlimited) and schools are enforced against them today.
-4. **Branch protection** — neither branch requires a review or a passing check.
+4. ~~**Branch protection**~~ — **resolved 2026-08-06.** Both branches now require a pull request and
+   five passing checks, and refuse force pushes and deletions. No approving review is required, and
+   that is deliberate: GitHub does not let anyone approve their own pull request and the repository
+   has one collaborator, so requiring one would route every merge through the admin override. The
+   requirement is set to zero approvals rather than removed, which keeps the pull request itself
+   mandatory. Add the approval the day a second person can give it.
+
+## A gap that is not a requirement
+
+Nothing in the PRD asks for this, which is exactly why it is written down here — it has already been
+forgotten once.
+
+**A domain event whose publish fails is lost.** `apps/api/src/shared/queue/index.ts` catches a
+failed or timed-out `queue.add` and logs at error level, deliberately: the domain change has
+already committed, and failing the caller then would report an error for something that succeeded.
+The consequence is narrow but real — a homework post is created, its notification fan-out never
+happens, and the only trace is a log line. There is no outbox table in the schema.
+
+A **transactional outbox** is the standard fix: write the event in the same transaction as the
+domain change, and let a relay drain it. It is worth building when a missed notification becomes a
+support call rather than a log line, and not before — but the decision should be made deliberately
+rather than by forgetting.
+
+Audited against `development` on 2026-08-06. Four other gaps carried in earlier notes turned out to
+be **closed** and are recorded here so they are not re-reported: access tokens are Ed25519 with a
+published JWKS (ADR-0014), cursor pagination is in fifteen repositories, all five dashboards have
+metrics behind them, and the notification list and preferences UI both exist.
 
 ## Verified, not remembered
 
