@@ -112,26 +112,42 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
    requirement is set to zero approvals rather than removed, which keeps the pull request itself
    mandatory. Add the approval the day a second person can give it.
 
-## A gap that is not a requirement
+## Gaps that are not requirements
 
-Nothing in the PRD asks for this, which is exactly why it is written down here — it has already been
-forgotten once.
+Nothing in the PRD asks for these, which is exactly why they are written down here — the first one
+had already been forgotten once.
 
-**A domain event whose publish fails is lost.** `apps/api/src/shared/queue/index.ts` catches a
-failed or timed-out `queue.add` and logs at error level, deliberately: the domain change has
-already committed, and failing the caller then would report an error for something that succeeded.
-The consequence is narrow but real — a homework post is created, its notification fan-out never
-happens, and the only trace is a log line. There is no outbox table in the schema.
+### ✅ A domain event whose publish fails is lost — **fixed 2026-08-06**
 
-A **transactional outbox** is the standard fix: write the event in the same transaction as the
-domain change, and let a relay drain it. It is worth building when a missed notification becomes a
-support call rather than a log line, and not before — but the decision should be made deliberately
-rather than by forgetting.
+`shared/queue` used to catch a failed or timed-out `queue.add` and log at error level. That was
+deliberate and half-right: the domain change had already committed, and failing the caller then
+would have reported an error for something that succeeded. The price was the event. A homework post
+was created, its fan-out never happened, and the only trace was a log line.
 
-Audited against `development` on 2026-08-06. Four other gaps carried in earlier notes turned out to
-be **closed** and are recorded here so they are not re-reported: access tokens are Ed25519 with a
-published JWKS (ADR-0014), cursor pagination is in fifteen repositories, all five dashboards have
-metrics behind them, and the notification list and preferences UI both exist.
+Closed by the **transactional outbox** (ADR-0019, S7-1 and S7-2). All eight domain events are now
+written in the same transaction as the change that produced them, and a relay hands them to the
+queue afterwards; a failed handoff leaves the row for the next pass. The publisher was deleted
+rather than deprecated, so there is no longer a code path that can drop an event.
+
+What it does **not** do, since an outbox invites the assumption: delivery is still at-least-once and
+consumers are still idempotent on `eventId`, and BullMQ still owns retries, backoff and the
+dead-letter set.
+
+The number to watch is `outbox_events_unpublished`. A stopped relay produces an _empty_ queue, which
+is indistinguishable from a quiet afternoon — the pile is only visible if something counts it.
+
+### The relay is a process that must be running
+
+The new failure mode, stated plainly because it did not exist before. Events are no longer lost, but
+they are not delivered either while the relay is down; they accumulate. That is a far better failure
+— it is recoverable and it is visible — but it is a failure, and the gauge above is what makes it
+one somebody can see.
+
+### Four gaps that were never real
+
+Audited against `development` on 2026-08-06 and recorded so they are not re-reported: access tokens
+are Ed25519 with a published JWKS (ADR-0014), cursor pagination is in fifteen repositories, all five
+dashboards have metrics behind them, and the notification list and preferences UI both exist.
 
 ## Verified, not remembered
 
@@ -148,6 +164,10 @@ behind every id that did not appear.
 
 The whole tree at that commit: lint, type-check and build green across 14 tasks; 993 API tests and
 87 end-to-end tests passing; `pnpm audit` clean with and without dev dependencies.
+
+**Since, on 2026-08-06:** 1038 API tests. The requirement count is unchanged — FR-INST-007 and
+FR-ACAD-021 moved from question to built, and the outbox added no requirement because the PRD never
+asked for one. That is the point of the section above it.
 
 ## What "built" is measured by
 
