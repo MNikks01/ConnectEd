@@ -1,5 +1,11 @@
 # @connected/types
 
+## 0.4.0
+
+### Minor Changes
+
+- ddd083f: Adds the structured timetable to the contract (FR-ACAD-021): `uploadTimetableSchema` now takes either an `imageKey` or a set of `periods`, and `TimetableResponse` gains `kind` and `periods`.
+
 ## 0.3.0
 
 ### Minor Changes
