@@ -25,10 +25,10 @@ Homework/assignments/projects, notices, events, timetable, syllabus coverage. Al
 
 ## Timetable
 
-| ID          | Priority | Requirement                                       | Acceptance criteria                                                       |
-| ----------- | :------: | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| FR-ACAD-020 |    P0    | School uploads a **timetable** per class.         | Timetable (image/structured) stored per class; verified members can view. |
-| FR-ACAD-021 |    P2    | Structured timetable (periods) rather than image. | **Roadmap** — v1 accepts image upload; structured later.                  |
+| ID          | Priority | Requirement                                          | Acceptance criteria                                                                                                                                 |
+| ----------- | :------: | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-ACAD-020 |    P0    | School uploads a **timetable** per class.            | Timetable (image/structured) stored per class; verified members can view.                                                                           |
+| FR-ACAD-021 |    P2    | Structured timetable (periods) **as well as** image. | A week of periods, each a subject of this class or a label; the server refuses overlaps and foreign subjects. Both kinds share one version history. |
 
 ## Syllabus coverage
 

@@ -195,11 +195,11 @@ model Account {
   updatedAt       DateTime      @updatedAt @map("updated_at")
   deletedAt       DateTime?     @map("deleted_at")
 
-  credential    Credential?
-  userProfile   UserProfile?
-  schoolProfile SchoolProfile?
-  refreshTokens RefreshToken[]
-  passwordResets PasswordResetToken[]
+  credential          Credential?
+  userProfile         UserProfile?
+  schoolProfile       SchoolProfile?
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordResetToken[]
   twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
 
@@ -230,7 +230,7 @@ model Account {
   blocksReceived       Block[]               @relation("Blocked")
   reportsMade          Report[]              @relation("Reporter")
 
-  reportsReviewed Report[]              @relation("ReportReviewer")
+  reportsReviewed Report[] @relation("ReportReviewer")
 
   @@index([type])
   // Partial-index-shaped in intent: the queue's authorization check is the only reader, and there
@@ -331,9 +331,9 @@ model LoginThrottle {
 /// into one. The key lives in configuration and never in this table, so a dump alone is not
 /// enough.
 model TwoFactorSecret {
-  accountId String @id @map("account_id") @db.Uuid
+  accountId   String    @id @map("account_id") @db.Uuid
   /// AES-256-GCM, as `iv:tag:ciphertext` in base64url.
-  secret    String
+  secret      String
   /// Null until a first correct code proves the authenticator actually has the secret. An
   /// enrolment that is trusted before that locks people out of their own accounts when the QR
   /// scan silently failed.
@@ -341,7 +341,7 @@ model TwoFactorSecret {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  account       Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
   recoveryCodes RecoveryCode[]
 
   @@map("two_factor_secret")
@@ -366,12 +366,12 @@ model RecoveryCode {
 /// Short-lived and single-use. It is not a session and grants nothing: presenting one only earns
 /// the right to be asked for a code.
 model TwoFactorChallenge {
-  id        String   @id @default(uuid()) @db.Uuid
-  accountId String   @map("account_id") @db.Uuid
-  tokenHash String   @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -483,6 +483,7 @@ model Subject {
   allocations      SubjectAllocation[]
   academicItems    AcademicItem[]
   syllabusProgress SyllabusProgress[]
+  timetablePeriods TimetablePeriod[]
 
   @@unique([classId, name])
   @@index([classId])
@@ -688,19 +689,59 @@ model Event {
   @@map("event")
 }
 
+/// A day a timetable period can fall on. Seven, not five: a six-day week with a half-day Saturday
+/// is ordinary in the schools this product is built for.
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
 model Timetable {
   id        String   @id @default(uuid()) @db.Uuid
   classId   String   @map("class_id") @db.Uuid
-  imageKey  String   @map("image_key")
+  /// Null for a structured version (FR-ACAD-021). A version is one or the other, never both —
+  /// enforced in the service, because "exactly one of these two columns" is not a constraint
+  /// Prisma can express and a CHECK would be reverted by the next `migrate dev`.
+  imageKey  String?  @map("image_key")
   version   Int      @default(1)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class   Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  periods TimetablePeriod[]
 
   @@unique([classId, version])
   @@index([classId])
   @@map("timetable")
+}
+
+/// One period of a structured timetable.
+///
+/// Times are `HH:MM` strings rather than `time` or `DateTime`, deliberately. A period starts at
+/// nine in the morning wherever the school is; giving it a timezone is how a timetable ends up
+/// shifting by an hour twice a year. Zero-padded, so they compare as their own times.
+model TimetablePeriod {
+  id          String  @id @default(uuid()) @db.Uuid
+  timetableId String  @map("timetable_id") @db.Uuid
+  day         Weekday
+  startsAt    String  @map("starts_at")
+  endsAt      String  @map("ends_at")
+  /// A subject of this class, or null when the period is a break, an assembly or games.
+  subjectId   String? @map("subject_id") @db.Uuid
+  /// The name for a period that is not a subject. Exactly one of this and `subjectId` is set.
+  label       String?
+
+  timetable Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  subject   Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([timetableId])
+  @@index([subjectId])
+  @@map("timetable_period")
 }
 
 model SyllabusProgress {

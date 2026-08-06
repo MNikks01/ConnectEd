@@ -2,18 +2,46 @@
  * Timetable persistence. **The only file in this pair that touches Prisma.**
  */
 import type { Db } from '../../shared/db/index.js';
+import type { Weekday } from '@connected/types';
+
+export interface TimetablePeriodRow {
+  id: string;
+  day: Weekday;
+  startsAt: string;
+  endsAt: string;
+  subjectId: string | null;
+  subject: { name: string } | null;
+  label: string | null;
+}
 
 export interface TimetableRow {
   id: string;
   classId: string;
-  imageKey: string;
+  imageKey: string | null;
   version: number;
   createdAt: Date;
+  periods: TimetablePeriodRow[];
+}
+
+/** What one version is made of. Exactly one of these is present; the service enforces that. */
+export interface TimetableContent {
+  imageKey?: string | undefined;
+  periods?:
+    | {
+        day: Weekday;
+        startsAt: string;
+        endsAt: string;
+        subjectId?: string | undefined;
+        label?: string | undefined;
+      }[]
+    | undefined;
 }
 
 export interface TimetableRepository {
   /** Stores a new version. Returns the row, whose `version` is one past the previous latest. */
-  add: (input: { classId: string; imageKey: string }) => Promise<TimetableRow>;
+  add: (input: { classId: string } & TimetableContent) => Promise<TimetableRow>;
+  /** The subject ids of a class, for checking that a period names one of them. */
+  subjectIdsOf: (classId: string) => Promise<string[]>;
   findLatest: (classId: string) => Promise<TimetableRow | null>;
   /** Every version, newest first. Bounded by the `@@unique([classId, version])` history. */
   listVersions: (classId: string, limit: number) => Promise<TimetableRow[]>;
@@ -25,10 +53,29 @@ const SELECT = {
   imageKey: true,
   version: true,
   createdAt: true,
-} as const;
+  periods: {
+    select: {
+      id: true,
+      day: true,
+      startsAt: true,
+      endsAt: true,
+      subjectId: true,
+      label: true,
+      subject: { select: { name: true } },
+    },
+    // Ordered here rather than in the service: a grid is read far more often than it is written,
+    // and Postgres sorts `HH:MM` strings correctly because they are zero-padded.
+    orderBy: [{ day: 'asc' as const }, { startsAt: 'asc' as const }],
+  },
+};
 
 export function createTimetableRepository(db: Db): TimetableRepository {
   return {
+    subjectIdsOf: async (classId) =>
+      (await db.subject.findMany({ where: { classId }, select: { id: true } })).map(
+        (row) => row.id,
+      ),
+
     /**
      * The version is `max + 1`, read and written in one transaction.
      *
@@ -37,7 +84,7 @@ export function createTimetableRepository(db: Db): TimetableRepository {
      * job rather than a bug: the loser retries and lands on the next number, instead of two rows
      * quietly claiming to be version 3.
      */
-    add: async ({ classId, imageKey }) => {
+    add: async ({ classId, imageKey, periods }) => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           return await db.$transaction(async (tx) => {
@@ -48,7 +95,26 @@ export function createTimetableRepository(db: Db): TimetableRepository {
             });
 
             return tx.timetable.create({
-              data: { classId, imageKey, version: (latest?.version ?? 0) + 1 },
+              data: {
+                classId,
+                imageKey: imageKey ?? null,
+                version: (latest?.version ?? 0) + 1,
+                // Written with the version, in the same transaction: a timetable that exists for
+                // even a moment without its periods is one a parent can read as empty.
+                ...(periods
+                  ? {
+                      periods: {
+                        create: periods.map((period) => ({
+                          day: period.day,
+                          startsAt: period.startsAt,
+                          endsAt: period.endsAt,
+                          subjectId: period.subjectId ?? null,
+                          label: period.label ?? null,
+                        })),
+                      },
+                    }
+                  : {}),
+              },
               select: SELECT,
             });
           });
