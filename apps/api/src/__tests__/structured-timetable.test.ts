@@ -328,8 +328,8 @@ describe('who may do what', () => {
   it('refuses an unauthenticated caller', async () => {
     await publish(aMonday());
 
-    expect(
-      (await request(app).get(`/api/v1/classes/${fixture.classAId}/timetable`)).status,
-    ).toBe(401);
+    expect((await request(app).get(`/api/v1/classes/${fixture.classAId}/timetable`)).status).toBe(
+      401,
+    );
   });
 });

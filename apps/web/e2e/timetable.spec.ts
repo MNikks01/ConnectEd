@@ -131,7 +131,9 @@ test.describe('timetable', () => {
     await page.getByRole('button', { name: 'Add period' }).click();
 
     // Second: a break, which is why a period is allowed not to be a subject at all.
-    await page.getByLabel('Subject', { exact: true }).selectOption({ label: 'Something else (break, assembly…)' });
+    await page
+      .getByLabel('Subject', { exact: true })
+      .selectOption({ label: 'Something else (break, assembly…)' });
     await page.getByLabel('Period name').fill('Break');
     await page.getByLabel('Ends').fill('10:00');
     await page.getByRole('button', { name: 'Add period' }).click();

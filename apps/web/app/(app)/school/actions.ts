@@ -223,7 +223,10 @@ export async function publishTimetableAction(
   try {
     periods = JSON.parse(typeof raw === 'string' ? raw : '[]');
   } catch {
-    return { ok: false, message: 'That timetable could not be read. Try adding the periods again.' };
+    return {
+      ok: false,
+      message: 'That timetable could not be read. Try adding the periods again.',
+    };
   }
 
   if (!Array.isArray(periods) || periods.length === 0) {

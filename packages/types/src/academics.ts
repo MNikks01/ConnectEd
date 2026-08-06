@@ -83,9 +83,7 @@ export type Weekday = (typeof WEEKDAYS)[number];
  * timetable shifts by an hour twice a year. Zero-padding also makes the strings sort and compare
  * as their own times, which is how overlap is checked.
  */
-const timeOfDay = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a 24-hour time like 09:30.');
+const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a 24-hour time like 09:30.');
 
 /**
  * One period. Either a subject or a label — a timetable has assemblies, breaks and games in it,
