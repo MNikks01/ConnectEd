@@ -259,7 +259,26 @@ is being written after the fact rather than at a ceremony.
 | #   | Action                                                                                                                                    | Proposed owner   | By                |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
 | A1  | **Decide S6-0a** (Stripe or Razorpay) or explicitly drop billing from Sprint 7's goal. A third carry should be a decision, not a default. | product          | Sprint 7 planning |
-| A2  | Require a passing check and one review on `main` and `development`.                                                                       | devops           | Sprint 7 planning |
+| A2  | ✅ **Done 2026-08-06** — checks required on both branches; the review half deliberately not, see below.                                   | devops           | —                 |
 | A3  | Audit the remaining release-path tooling for cases it has never run against — the ones found this sprint were all found by accident.      | devops           | Sprint 7          |
 | A4  | Write the retro at the ceremony rather than reconstructing it, starting with Sprint 7.                                                    | whole team       | Sprint 7 retro    |
 | A5  | Close out the `docs/close-sprint-2` branch — it still holds an unmerged Sprint 2 close-out commit from 2026-08-01.                        | technical-writer | Sprint 7          |
+
+**A2, and the half of it that was not done.** Both branches now require a pull request, five passing
+checks (`verify`, `e2e`, `observability-config`, `changeset-check`, `analyze`), and refuse force
+pushes and deletions. Administrators keep a bypass.
+
+**No approving review is required, and that is deliberate.** GitHub does not let anyone approve
+their own pull request, and this repository has one collaborator — so requiring an approval would
+have meant every merge, including a production release, going through the admin override. A rule
+that is bypassed every time teaches people that the overrides are routine, which is worse than not
+having the rule. The requirement is set to **zero approvals rather than removed**, which keeps the
+pull request itself mandatory: deleting the review rule outright would have re-legalised pushing
+straight to `main`, which is rule 1 of the git-flow doc and the oldest rule here.
+
+Add the approval back the day a second person can give it. Until then this action is complete in the
+part that was load-bearing — nothing red can merge, and nothing merges without a PR.
+
+Verified rather than assumed: a probe PR into each branch reported `MERGEABLE` with
+`mergeStateStatus: BLOCKED`, and `changeset-check` reported `skipping` on the `main` probe — which
+matters, because a required check that never reports would otherwise deadlock every release PR.
