@@ -20,8 +20,10 @@ import {
 import {
   createMetrics,
   registerDbPoolMetrics,
+  registerOutboxDepthMetric,
   registerQueueDepthMetrics,
 } from './shared/observability/metrics.js';
+import { createOutboxRepository, createRelay } from './shared/outbox/index.js';
 import { createMediaModule } from './modules/media/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
 import { createStorage } from './shared/storage/index.js';
@@ -58,6 +60,30 @@ const countingConnection = createRedisConnection(config.REDIS_URL);
 const counting = createEventQueue(countingConnection, logger);
 
 registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: counting.queue });
+
+/**
+ * The outbox relay (ADR-0019). It lives in the worker rather than the API for the same reason the
+ * sweeps do: it is periodic, nobody is waiting on its response, and a request thread should not be
+ * competing with it.
+ *
+ * It reuses the counting connection's `Queue` to enqueue. That connection is not blocked on
+ * `BRPOPLPUSH` the way the worker's is, so an `add` here is not sitting behind a long poll.
+ */
+const outbox = createOutboxRepository(db);
+
+const relay = createRelay({
+  repository: outbox,
+  // Unlike the old publisher, this throws — the relay needs to know it failed so the row stays.
+  enqueue: async (event) => {
+    await counting.queue.add(event.type, event, { jobId: event.eventId });
+  },
+  logger,
+});
+
+registerOutboxDepthMetric(metrics.registry, outbox);
+
+relay.start();
+logger.info('Outbox relay started');
 
 /**
  * Housekeeping. The orphan sweep lives here rather than in the API: it is slow, periodic, and
@@ -140,6 +166,10 @@ async function shutdown(signal: string): Promise<void> {
 
   // Close the worker first so in-flight jobs finish before the connections go.
   await worker.close();
+  // Before `counting` and the database, both of which the relay is holding mid-pass. Stopping it
+  // waits for the current pass, so an event already claimed is either handed over or left
+  // unpublished for the next process — never marked published without reaching the queue.
+  await relay.stop();
   await maintenance.close();
   metricsServer?.close();
   await counting.close();

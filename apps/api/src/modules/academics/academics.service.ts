@@ -68,7 +68,12 @@ export interface AcademicsServiceDeps {
   repository: AcademicsRepository;
   db: Db;
   storage?: Storage | undefined;
-  events: EventPublisher;
+  /**
+   * Still accepted, still unused here. This module's one event now goes through the outbox
+   * (ADR-0019) — the dependency stays until every module has moved, so that the composition root
+   * changes once rather than eight times. S7-2 removes it.
+   */
+  events?: EventPublisher | undefined;
   logger: Logger;
   media?: MediaClaims | undefined;
 }
@@ -77,7 +82,6 @@ export function createAcademicsService({
   repository,
   db,
   storage,
-  events,
   logger,
   media,
 }: AcademicsServiceDeps): AcademicsService {
@@ -137,16 +141,28 @@ export function createAcademicsService({
 
       await assertTeacherAllocatedToSubject(db, actor, input.subjectId);
 
-      const item = await repository.create({
-        type: input.type,
-        classId,
-        subjectId: input.subjectId,
-        authorAccountId: actor.accountId,
-        title: input.title,
-        body: input.body,
-        ...(input.imageKey ? { imageKey: input.imageKey } : {}),
-        ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
-      });
+      // The item and its event commit together (ADR-0019). The relay hands the event to the queue
+      // afterwards; recipients are resolved by the consumer, not here.
+      const item = await repository.create(
+        {
+          type: input.type,
+          classId,
+          subjectId: input.subjectId,
+          authorAccountId: actor.accountId,
+          title: input.title,
+          body: input.body,
+          ...(input.imageKey ? { imageKey: input.imageKey } : {}),
+          ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
+        },
+        (created) => ({
+          type: 'academic.published',
+          itemId: created.id,
+          classId,
+          itemType: created.type,
+          title: created.title,
+          authorAccountId: actor.accountId,
+        }),
+      );
 
       // The key now has a row pointing at it, so the orphan sweep must leave it alone.
       // The key now has a row pointing at it, so the orphan sweep must leave it alone.
@@ -156,16 +172,6 @@ export function createAcademicsService({
         { itemId: item.id, classId, subjectId: input.subjectId, type: input.type },
         'Academic item published',
       );
-
-      // After the write commits. Recipients are resolved by the consumer, not here.
-      await events.publish({
-        type: 'academic.published',
-        itemId: item.id,
-        classId,
-        itemType: item.type,
-        title: item.title,
-        authorAccountId: actor.accountId,
-      });
 
       return toResponse(item, { read: true, readCount: 0 });
     },

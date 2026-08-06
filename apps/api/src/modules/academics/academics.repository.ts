@@ -2,9 +2,11 @@
  * Academic content persistence. **The only file in this module that touches Prisma.**
  */
 import { CURSOR_ORDER, cursorFilter, takeFor } from '../../shared/http/pagination.js';
+import { recordEvent } from '../../shared/outbox/index.js';
 
 import type { PageRequest } from '../../shared/http/pagination.js';
 import type { Db } from '../../shared/db/index.js';
+import type { PublishableEvent } from '../../shared/events/index.js';
 import type { AcademicItemType, ReadReceiptSubject } from '../../generated/prisma/client.js';
 
 export interface AcademicItemRow {
@@ -23,16 +25,27 @@ export interface AcademicItemRow {
 }
 
 export interface AcademicsRepository {
-  create: (input: {
-    type: AcademicItemType;
-    classId: string;
-    subjectId: string;
-    authorAccountId: string;
-    title: string;
-    body: string;
-    imageKey?: string | undefined;
-    dueAt?: Date | undefined;
-  }) => Promise<AcademicItemRow>;
+  /**
+   * Creates the item and records its event in **one transaction** (ADR-0019).
+   *
+   * `toEvent` is a callback rather than an argument because the event carries the new row's id,
+   * which does not exist until the insert has run — and the whole point is that both land inside
+   * the same transaction or neither does. A service that built the event afterwards would be back
+   * to a write that has committed and an event that may never exist.
+   */
+  create: (
+    input: {
+      type: AcademicItemType;
+      classId: string;
+      subjectId: string;
+      authorAccountId: string;
+      title: string;
+      body: string;
+      imageKey?: string | undefined;
+      dueAt?: Date | undefined;
+    },
+    toEvent: (row: AcademicItemRow) => PublishableEvent,
+  ) => Promise<AcademicItemRow>;
   findById: (id: string) => Promise<AcademicItemRow | null>;
   listForClass: (classId: string, page: PageRequest) => Promise<AcademicItemRow[]>;
   update: (
@@ -97,21 +110,27 @@ const SUBJECT_TYPE: ReadReceiptSubject = 'ACADEMIC_ITEM';
 
 export function createAcademicsRepository(db: Db): AcademicsRepository {
   return {
-    create: async (input) => {
-      const row = await db.academicItem.create({
-        data: {
-          type: input.type,
-          classId: input.classId,
-          subjectId: input.subjectId,
-          authorAccountId: input.authorAccountId,
-          title: input.title,
-          body: input.body,
-          ...(input.imageKey ? { imageKey: input.imageKey } : {}),
-          ...(input.dueAt ? { dueAt: input.dueAt } : {}),
-        },
-        select: ITEM_SELECT,
+    create: async (input, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const row = await tx.academicItem.create({
+          data: {
+            type: input.type,
+            classId: input.classId,
+            subjectId: input.subjectId,
+            authorAccountId: input.authorAccountId,
+            title: input.title,
+            body: input.body,
+            ...(input.imageKey ? { imageKey: input.imageKey } : {}),
+            ...(input.dueAt ? { dueAt: input.dueAt } : {}),
+          },
+          select: ITEM_SELECT,
+        });
+
+        const item = toRow(row);
+        await recordEvent(tx, toEvent(item));
+
+        return item;
       });
-      return toRow(row);
     },
 
     findById: async (id) => {
