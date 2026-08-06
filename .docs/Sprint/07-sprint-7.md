@@ -43,13 +43,28 @@ not a sprint. If mobile is chosen anyway, the ungated half below is unaffected.
 
 **Ungated — starts regardless:**
 
-| #     | Item                                                            | Owner            | Est. | DoD                                                                                                                                                                             |
-| ----- | --------------------------------------------------------------- | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S7-1  | **Transactional outbox** for domain events                      | backend          | L    | Event row written in the _same transaction_ as the domain change; a relay drains it; a failed publish is retried, not dropped; sabotage test proves a lost publish is recovered |
-| S7-2  | Retire the "publish and hope" path and its error log            | backend          | S    | `shared/queue` no longer swallows a failure; the only remaining loss path is documented or gone                                                                                 |
-| S7-3  | Audit the release path for cases never exercised (retro **A3**) | devops           | M    | Each release-path check named, with the case it has never run against, and either a test or a written accepted risk                                                             |
-| S7-4  | Close out `docs/close-sprint-2` (retro **A5**)                  | technical-writer | S    | Merged or deleted with a reason; nothing unmerged left dangling from 2026-08-01                                                                                                 |
-| S7-17 | **Start `worker.ts` in CI** — it has never been started at all  | devops           | M    | A run with `RUN_WORKER_IN_PROCESS=false` and the worker as a second process; an event published by the API is delivered by it. Deleting a line from `worker.ts` fails it        |
+| #     | Item                                                                              | Owner            | Est. | DoD                                                                                                                                                                             |
+| ----- | --------------------------------------------------------------------------------- | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S7-1  | **Transactional outbox** for domain events                                        | backend          | L    | Event row written in the _same transaction_ as the domain change; a relay drains it; a failed publish is retried, not dropped; sabotage test proves a lost publish is recovered |
+| S7-2  | Retire the "publish and hope" path and its error log                              | backend          | S    | `shared/queue` no longer swallows a failure; the only remaining loss path is documented or gone                                                                                 |
+| S7-3  | Audit the release path for cases never exercised (retro **A3**)                   | devops           | M    | Each release-path check named, with the case it has never run against, and either a test or a written accepted risk                                                             |
+| S7-4  | ✅ **Done 2026-08-06** — `docs/close-sprint-2` deleted, not merged (retro **A5**) | technical-writer | S    | Nothing unmerged was ever in it — see below                                                                                                                                     |
+| S7-17 | **Start `worker.ts` in CI** — it has never been started at all                    | devops           | M    | A run with `RUN_WORKER_IN_PROCESS=false` and the worker as a second process; an event published by the API is delivered by it. Deleting a line from `worker.ts` fails it        |
+
+**S7-4 closed by deletion, and the reason is worth more than the branch was.**
+`docs/close-sprint-2` was the source branch of PR #27, squash-merged on 2026-08-01. Its content was
+already on `development` in full: the Sprint 2 doc had **zero** lines the branch did not, and the
+Sprint 3 doc differed only in being the older, emptier version. Merging it would have deleted 31,265
+lines — everything built in the five days since.
+
+It looked like dangling work because **a squash merge does not record the branch as merged.** Git
+sees its commit as unreachable from `development`, so `git branch --merged` omits it and "1 commit
+ahead" is literally true. That is the same squash-versus-ancestry mechanic the git-flow doc warns
+about for back-merges, turning up somewhere nobody was looking for it.
+
+The lesson is cheap and general: **"unmerged" is a statement about ancestry, not about content.**
+Diff before concluding that a stale branch holds work. This one was described as holding an unmerged
+close-out for five days, and never held anything.
 
 **S7-17 came out of S7-3 and is the reason that audit was worth doing.**
 `RUN_WORKER_IN_PROCESS` appears in no workflow and no test configuration, so it is always its
