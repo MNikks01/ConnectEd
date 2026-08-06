@@ -1,6 +1,6 @@
 # Sprint 6 — Finishing commercialisation, and the console
 
-`Status: Planned` · `Last updated: 2026-08-06` · Duration: 2 weeks
+`Status: Done (partial — see review)` · `Last updated: 2026-08-06` · Duration: 2 weeks
 
 Goal: the half of Phase 5 that did not ship, plus the console the product has needed since it
 started collecting reports. This is a **proposal for planning** — adjust the split before
@@ -200,4 +200,66 @@ formatted by anything else.
 
 ## Retro
 
-_Filled at retro._
+**Drafted from the record, not from the room.** Every retro section in this repository has been an
+empty placeholder for six sprints, so this is a first pass assembled from what the commits, PRs and
+review notes actually show — the facts are checked, the team's account of them is not here yet.
+Amend it at the ceremony; the actions in particular need owners who have agreed to them.
+
+### Went well
+
+**Planning around a missing decision worked, and it is now the second time.** The sprint was split
+deliberately into what needed S6-0a and what did not. S6-0a never arrived, so the second half _was_
+the sprint — the console, analytics, the security work and both remaining requirements shipped
+without it. A plan that assumes the decision arrives would have produced a sprint of waiting.
+
+**The console closed the product's oldest unkept promise.** S6-0c was decided as a platform-admin
+role (ADR-0017), and S6-5 and S6-6 shipped on it: reports children file are now read by somebody,
+which the product had promised since Sprint 4 and nothing had delivered.
+
+**A security review that produced fixes rather than a document.** The whole-repository pass at 0.3.0
+was followed in the same sprint by the four findings it raised — recovery-code bias, the missing web
+security headers, `X-Forwarded-For` trusted on sight, and the advisories the Next bump cleared.
+
+**Measured rather than assumed, repeatedly.** Both flakes were settled by experiment, not argument:
+ten runs on each Next version (four failures against two) killed the theory that 16.3 broke the
+test, and running the suites concurrently in a loop reproduced the reset failure on demand. One of
+the two turned out not to be a flake at all.
+
+**The PRD has no undecided requirements left.** FR-INST-007 and FR-ACAD-021 were the last two written
+as questions. What remains is four external blockers — a payment provider and a mail transport —
+and things the PRD itself scheduled later.
+
+### Didn't go well
+
+**S6-0a is carried for a third sprint.** It was S5-0a before it was S6-0a. Checkout, webhooks and
+dunning _are_ the provider integration; the port-and-fake trick that saved Sprint 5 has nothing left
+to abstract. This is the single largest piece of the roadmap not moving, and it is not an
+engineering problem.
+
+**Branch protection, sixth sprint running.** Neither branch requires a review or a passing check. In
+this sprint alone a production release and six PRs were merged with one pair of eyes on them.
+
+**Three separate pieces of tooling had never been exercised on the path they were written for.**
+`changeset-check` had never met a back-merge; the release-tag annotation had never met a release
+branch carrying a later fix; `lint-staged` formats what is staged and nothing formats what skipped
+it. Each surfaced at the moment it was most expensive to think about — mid-release. A check can sit
+green for a long time and still have never run against the case it will one day block.
+
+**A merge went through without `verify` green.** Cancelling a stuck CI run while an auto-merge gate
+was armed made the cancelled jobs drop out of the check list; the gate saw the two remaining checks
+passing and merged. The content was a markdown file and post-merge CI on `development` was green, so
+nothing broke — but the guarantee was not the one that had been described. Cancel the gate before
+cancelling the run.
+
+**Review and retro sections have been empty since Sprint 0.** This is the first one written, and it
+is being written after the fact rather than at a ceremony.
+
+### Actions — owners proposed, not agreed
+
+| #   | Action                                                                                                                                    | Proposed owner   | By                |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
+| A1  | **Decide S6-0a** (Stripe or Razorpay) or explicitly drop billing from Sprint 7's goal. A third carry should be a decision, not a default. | product          | Sprint 7 planning |
+| A2  | Require a passing check and one review on `main` and `development`.                                                                       | devops           | Sprint 7 planning |
+| A3  | Audit the remaining release-path tooling for cases it has never run against — the ones found this sprint were all found by accident.      | devops           | Sprint 7          |
+| A4  | Write the retro at the ceremony rather than reconstructing it, starting with Sprint 7.                                                    | whole team       | Sprint 7 retro    |
+| A5  | Close out the `docs/close-sprint-2` branch — it still holds an unmerged Sprint 2 close-out commit from 2026-08-01.                        | technical-writer | Sprint 7          |
