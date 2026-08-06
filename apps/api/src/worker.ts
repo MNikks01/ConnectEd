@@ -57,7 +57,7 @@ const worker = createEventWorker(
  * report a number from whenever the block last cleared.
  */
 const countingConnection = createRedisConnection(config.REDIS_URL);
-const counting = createEventQueue(countingConnection, logger);
+const counting = createEventQueue(countingConnection);
 
 registerQueueDepthMetrics(metrics.registry, { [EVENTS_QUEUE]: counting.queue });
 
@@ -73,10 +73,8 @@ const outbox = createOutboxRepository(db);
 
 const relay = createRelay({
   repository: outbox,
-  // Unlike the old publisher, this throws — the relay needs to know it failed so the row stays.
-  enqueue: async (event) => {
-    await counting.queue.add(event.type, event, { jobId: event.eventId });
-  },
+  // Bounded and throwing, both deliberately — see `QueueBundle.enqueue`.
+  enqueue: counting.enqueue,
   logger,
 });
 

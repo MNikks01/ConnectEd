@@ -23,7 +23,6 @@ import { toPage } from '../../shared/http/pagination.js';
 import type { AcademicItemRow, AcademicsRepository } from './academics.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
@@ -68,12 +67,6 @@ export interface AcademicsServiceDeps {
   repository: AcademicsRepository;
   db: Db;
   storage?: Storage | undefined;
-  /**
-   * Still accepted, still unused here. This module's one event now goes through the outbox
-   * (ADR-0019) — the dependency stays until every module has moved, so that the composition root
-   * changes once rather than eight times. S7-2 removes it.
-   */
-  events?: EventPublisher | undefined;
   logger: Logger;
   media?: MediaClaims | undefined;
 }

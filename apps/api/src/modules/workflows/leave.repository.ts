@@ -2,8 +2,10 @@
  * Leave persistence. **The only file in this module that touches Prisma.**
  */
 import { BOUNDED_LIST_CAP } from '../../shared/http/pagination.js';
+import { recordEvent } from '../../shared/outbox/index.js';
 
 import type { Db } from '../../shared/db/index.js';
+import type { PublishableEvent } from '../../shared/events/index.js';
 import type { LeaveKind, LeaveStatus } from '../../generated/prisma/client.js';
 
 export interface LeaveRow {
@@ -48,11 +50,14 @@ export interface LeaveRepository {
    * decided — the `status: 'RECEIVED'` in the filter is the guard, so two approvers racing produce
    * one decision and one miss rather than a silent overwrite.
    */
-  decide: (input: {
-    id: string;
-    status: LeaveStatus;
-    decidedBy: string;
-  }) => Promise<LeaveRow | null>;
+  decide: (
+    input: {
+      id: string;
+      status: LeaveStatus;
+      decidedBy: string;
+    },
+    toEvent: (row: LeaveRow) => PublishableEvent,
+  ) => Promise<LeaveRow | null>;
 }
 
 const SELECT = {
@@ -155,16 +160,26 @@ export function createLeaveRepository(db: Db): LeaveRepository {
       return rows.map(toRow);
     },
 
-    decide: async ({ id, status, decidedBy }) => {
-      const { count } = await db.leaveApplication.updateMany({
-        where: { id, status: 'RECEIVED' },
-        data: { status, decidedBy, decidedAt: new Date() },
+    decide: async ({ id, status, decidedBy }, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const { count } = await tx.leaveApplication.updateMany({
+          where: { id, status: 'RECEIVED' },
+          data: { status, decidedBy, decidedAt: new Date() },
+        });
+
+        // The loser of a race gets no row and no event — which is the point of recording the
+        // event here rather than after the call. A caller that published on its own could
+        // announce a decision that the `status: 'RECEIVED'` guard had just refused.
+        if (count === 0) return null;
+
+        const row = await tx.leaveApplication.findUnique({ where: { id }, select: SELECT });
+        if (!row) return null;
+
+        const decided = toRow(row);
+        await recordEvent(tx, toEvent(decided));
+
+        return decided;
       });
-
-      if (count === 0) return null;
-
-      const row = await db.leaveApplication.findUnique({ where: { id }, select: SELECT });
-      return row ? toRow(row) : null;
     },
   };
 }

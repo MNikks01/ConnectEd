@@ -14,7 +14,6 @@ import { createNotificationsModule } from '../modules/notifications/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 import { bodyAs } from './support/body.js';
 
@@ -276,14 +275,12 @@ describe('POST /notifications/:id/read', () => {
 
 describe('verification emits the events', () => {
   it('publishes verification.decided when a school approves', async () => {
-    const events = recordingPublisher();
     const { createVerificationModule } = await import('../modules/verification/index.js');
     const { createBillingModule } = await import('../modules/billing/index.js');
     // The real guard rather than a fake, so this construction cannot drift from the app's.
     const verification = createVerificationModule(
       db,
       logger,
-      events,
       createBillingModule(db, logger).service,
     );
 
@@ -313,7 +310,10 @@ describe('verification emits the events', () => {
       { decision: 'APPROVE' },
     );
 
-    const types = events.published.map((event) => event.type);
+    // Both events are rows now, and both are unpublished until the relay runs (ADR-0019).
+    const types = (await db.outboxEvent.findMany({ select: { type: true } })).map(
+      (row) => row.type,
+    );
     expect(types).toContain('verification.submitted');
     expect(types).toContain('verification.decided');
   });

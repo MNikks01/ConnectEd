@@ -22,7 +22,6 @@ import { BOUNDED_LIST_CAP, toPage } from '../../shared/http/pagination.js';
 import type { EventRow, NoticeRow, NoticesRepository } from './notices.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Page, PageRequest } from '../../shared/http/pagination.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
@@ -64,7 +63,6 @@ export interface NoticesService {
 export interface NoticesServiceDeps {
   repository: NoticesRepository;
   db: Db;
-  events: EventPublisher;
   logger: Logger;
   /** Injected so the clock can be fixed in tests; `listEvents` splits past from upcoming. */
   now?: (() => Date) | undefined;
@@ -73,7 +71,6 @@ export interface NoticesServiceDeps {
 export function createNoticesService({
   repository,
   db,
-  events,
   logger,
   now = () => new Date(),
 }: NoticesServiceDeps): NoticesService {
@@ -123,22 +120,24 @@ export function createNoticesService({
     publishNotice: async (actor, schoolId, input) => {
       await assertMayPublishNotice(db, actor, schoolId);
 
-      const notice = await repository.createNotice({
-        schoolId,
-        authorAccountId: actor.accountId,
-        title: input.title,
-        body: input.body,
-      });
+      // The notice and its event commit together (ADR-0019).
+      const notice = await repository.createNotice(
+        {
+          schoolId,
+          authorAccountId: actor.accountId,
+          title: input.title,
+          body: input.body,
+        },
+        (created) => ({
+          type: 'notice.published',
+          noticeId: created.id,
+          schoolId,
+          title: created.title,
+          authorAccountId: actor.accountId,
+        }),
+      );
 
       logger.info({ noticeId: notice.id, schoolId }, 'Notice published');
-
-      await events.publish({
-        type: 'notice.published',
-        noticeId: notice.id,
-        schoolId,
-        title: notice.title,
-        authorAccountId: actor.accountId,
-      });
 
       return toNoticeResponse(notice, { read: true, readCount: 0 });
     },
@@ -216,22 +215,23 @@ export function createNoticesService({
     createEvent: async (actor, schoolId, input) => {
       assertIsSchool(actor, schoolId);
 
-      const created = await repository.createEvent({
-        schoolId,
-        title: input.title,
-        body: input.body,
-        eventAt: new Date(input.eventAt),
-      });
+      const created = await repository.createEvent(
+        {
+          schoolId,
+          title: input.title,
+          body: input.body,
+          eventAt: new Date(input.eventAt),
+        },
+        (row) => ({
+          type: 'event.published',
+          eventEntityId: row.id,
+          schoolId,
+          title: row.title,
+          eventAt: row.eventAt.toISOString(),
+        }),
+      );
 
       logger.info({ eventId: created.id, schoolId }, 'Event created');
-
-      await events.publish({
-        type: 'event.published',
-        eventEntityId: created.id,
-        schoolId,
-        title: created.title,
-        eventAt: created.eventAt.toISOString(),
-      });
 
       return toEventResponse(created);
     },

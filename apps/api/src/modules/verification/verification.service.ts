@@ -31,7 +31,6 @@ import type {
   BulkVerificationResultResponse,
 } from '@connected/types';
 import type { Actor } from '../../shared/authz/actor.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type {
   MyMembershipResponse,
@@ -103,14 +102,12 @@ export interface VerificationServiceDeps {
   repository: VerificationRepository;
   logger: Logger;
   /** Side effects travel as domain events, so this module never calls notifications directly. */
-  events: EventPublisher;
   entitlements: EntitlementGuard;
 }
 
 export function createVerificationService({
   repository,
   logger,
-  events,
   entitlements,
 }: VerificationServiceDeps): VerificationService {
   // Named so `decideMany` can reuse `decide` rather than restating its authorization, its
@@ -164,29 +161,30 @@ export function createVerificationService({
         subjectIds = [...new Set(input.subjectIds)];
       }
 
-      const created = await repository.createRequest({
-        requesterAccountId: actor.accountId,
-        schoolId: input.schoolId,
-        role: input.role,
-        classId,
-        childId,
-        ...(subjectIds.length > 0 ? { payload: { subjectIds } } : {}),
-      });
+      // The request and the event announcing it commit together (ADR-0019): a notification about
+      // something that did not happen is worse than a missing one, and now neither can occur.
+      const created = await repository.createRequest(
+        {
+          requesterAccountId: actor.accountId,
+          schoolId: input.schoolId,
+          role: input.role,
+          classId,
+          childId,
+          ...(subjectIds.length > 0 ? { payload: { subjectIds } } : {}),
+        },
+        (row) => ({
+          type: 'verification.submitted',
+          requestId: row.id,
+          requesterAccountId: actor.accountId,
+          schoolId: input.schoolId,
+          role: input.role,
+        }),
+      );
 
       logger.info(
         { accountId: actor.accountId, schoolId: input.schoolId, role: input.role },
         'Verification requested',
       );
-
-      // Published after the write commits: a notification about something that did not happen is
-      // worse than a missing one.
-      await events.publish({
-        type: 'verification.submitted',
-        requestId: created.id,
-        requesterAccountId: actor.accountId,
-        schoolId: input.schoolId,
-        role: input.role,
-      });
 
       return toResponse(created);
     },
@@ -257,19 +255,41 @@ export function createVerificationService({
         // out of seats must still be able to clear its queue.
         await entitlements.assertWithinLimit(request.schoolId, 'members');
 
-        await repository.approve({
-          requestId,
-          actorAccountId: actor.accountId,
-          requesterAccountId: request.requesterAccountId,
-          schoolId: request.schoolId,
-          role: request.role,
-          classId: request.classId,
-          childId: request.childId,
-          subjectIds: subjectIdsFrom(request.payload),
-          note: input.note,
-        });
+        await repository.approve(
+          {
+            requestId,
+            actorAccountId: actor.accountId,
+            requesterAccountId: request.requesterAccountId,
+            schoolId: request.schoolId,
+            role: request.role,
+            classId: request.classId,
+            childId: request.childId,
+            subjectIds: subjectIdsFrom(request.payload),
+            note: input.note,
+          },
+          // The status is the branch, not a value read back afterwards — which is the point:
+          // the event and the decision are now the same transaction (ADR-0019).
+          {
+            type: 'verification.decided',
+            requestId,
+            requesterAccountId: request.requesterAccountId,
+            schoolId: request.schoolId,
+            role: request.role,
+            status: 'VERIFIED',
+          },
+        );
       } else {
-        await repository.reject({ requestId, actorAccountId: actor.accountId, note: input.note });
+        await repository.reject(
+          { requestId, actorAccountId: actor.accountId, note: input.note },
+          {
+            type: 'verification.decided',
+            requestId,
+            requesterAccountId: request.requesterAccountId,
+            schoolId: request.schoolId,
+            role: request.role,
+            status: 'REJECTED',
+          },
+        );
       }
 
       logger.info(
@@ -285,15 +305,6 @@ export function createVerificationService({
       const updated = await repository.findById(requestId);
       if (!updated) throw new NotFoundError();
 
-      await events.publish({
-        type: 'verification.decided',
-        requestId,
-        requesterAccountId: request.requesterAccountId,
-        schoolId: request.schoolId,
-        role: request.role,
-        status: updated.status,
-      });
-
       return toResponse(updated);
     },
 
@@ -301,19 +312,20 @@ export function createVerificationService({
     revokeMember: async (actor, schoolId, accountId) => {
       assertIsSchool(actor, schoolId);
 
-      const revoked = await repository.revokeMembership({
-        accountId,
-        schoolId,
-        actorAccountId: actor.accountId,
-      });
+      const revoked = await repository.revokeMembership(
+        {
+          accountId,
+          schoolId,
+          actorAccountId: actor.accountId,
+        },
+        { type: 'membership.revoked', accountId, schoolId },
+      );
 
       if (revoked === 0) {
         throw new NotFoundError('That account is not a verified member of this school.');
       }
 
       logger.info({ schoolId, accountId, revoked }, 'Membership revoked');
-
-      await events.publish({ type: 'membership.revoked', accountId, schoolId });
     },
 
     /** The roster (FR-INST-005) — the school's own list of who it has verified. */

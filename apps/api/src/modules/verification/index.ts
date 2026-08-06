@@ -10,7 +10,6 @@ import { createVerificationService } from './verification.service.js';
 
 import type { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { EntitlementGuard, VerificationService } from './verification.service.js';
 
@@ -24,13 +23,11 @@ export interface VerificationModule {
 export function createVerificationModule(
   db: Db,
   logger: Logger,
-  events: EventPublisher,
   entitlements: EntitlementGuard,
 ): VerificationModule {
   const service = createVerificationService({
     repository: createVerificationRepository(db),
     logger,
-    events,
     entitlements,
   });
 

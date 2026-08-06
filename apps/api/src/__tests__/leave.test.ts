@@ -16,7 +16,6 @@ import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 import { bodyAs } from './support/body.js';
 
@@ -502,9 +501,8 @@ describe('notification on decision (FR-WF-005)', () => {
   beforeEach(allocateClassTeacherToChildClass);
 
   it('publishes a leave.decided event', async () => {
-    const events = recordingPublisher();
     const { createWorkflowsModule } = await import('../modules/workflows/index.js');
-    const workflows = createWorkflowsModule({ db, events, logger });
+    const workflows = createWorkflowsModule({ db, logger });
 
     const leave = await givenChildLeave();
 
@@ -514,16 +512,13 @@ describe('notification on decision (FR-WF-005)', () => {
       { decision: 'ACCEPT' },
     );
 
-    expect(events.published.map((event) => event.type)).toContain('leave.decided');
+    const recorded = await db.outboxEvent.findMany({ where: { type: 'leave.decided' } });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.publishedAt).toBeNull();
   });
 
   it('notifies the applicant, and nobody else', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({

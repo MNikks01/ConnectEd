@@ -16,7 +16,6 @@ import { createTokenService } from '../shared/auth/tokens.js';
 import { membershipScopeKey } from '../shared/db/membership-scope.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 import { bodyAs } from './support/body.js';
 
@@ -395,9 +394,8 @@ describe('edit and delete (FR-ACAD-005)', () => {
 
 describe('notifications on publish (FR-ACAD-004)', () => {
   it('records academic.published in the outbox, in the same transaction as the write', async () => {
-    const events = recordingPublisher();
     const { createAcademicsModule } = await import('../modules/academics/index.js');
-    const academics = createAcademicsModule({ db, events, logger });
+    const academics = createAcademicsModule({ db, logger });
 
     const item = await academics.service.publish(
       { accountId: fixture.teacherAccountId, accountType: 'INDIVIDUAL', role: 'TEACHER' },
@@ -405,9 +403,7 @@ describe('notifications on publish (FR-ACAD-004)', () => {
       { type: 'HOMEWORK', subjectId: fixture.mathsSubjectId, title: 'T', body: 'B' },
     );
 
-    // Not through the publisher any more (ADR-0019) — the row is the emission.
-    expect(events.published).toHaveLength(0);
-
+    // Not through a publisher any more (ADR-0019) — the row *is* the emission.
     const recorded = await db.outboxEvent.findFirst({
       where: { type: 'academic.published' },
       orderBy: { createdAt: 'desc' },
@@ -419,12 +415,7 @@ describe('notifications on publish (FR-ACAD-004)', () => {
   });
 
   it('fans out to every verified member of the class except the author', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({
@@ -450,12 +441,7 @@ describe('notifications on publish (FR-ACAD-004)', () => {
   });
 
   it('is idempotent across a redelivered event', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     const event = {

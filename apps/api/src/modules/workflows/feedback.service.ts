@@ -21,7 +21,6 @@ import { ForbiddenError, NotFoundError } from '../../shared/errors/index.js';
 import type { FeedbackRepository, FeedbackRow } from './feedback.repository.js';
 import type { Actor } from '../../shared/authz/actor.js';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { FeedbackStatus, UserRole } from '../../generated/prisma/client.js';
 import type { FeedbackResponse, ReviewFeedbackInput, SubmitFeedbackInput } from '@connected/types';
@@ -44,7 +43,6 @@ export interface FeedbackService {
 export interface FeedbackServiceDeps {
   repository: FeedbackRepository;
   db: Db;
-  events: EventPublisher;
   logger: Logger;
 }
 
@@ -54,7 +52,6 @@ const MAY_SUBMIT: UserRole[] = ['PARENT', 'TEACHER', 'PRINCIPAL'];
 export function createFeedbackService({
   repository,
   db,
-  events,
   logger,
 }: FeedbackServiceDeps): FeedbackService {
   function toResponse(row: FeedbackRow): FeedbackResponse {
@@ -163,11 +160,22 @@ export function createFeedbackService({
 
       await assertMayReview(actor, existing.schoolId);
 
-      const reviewed = await repository.review({
-        id: feedbackId,
-        status: input.status,
-        reviewedBy: actor.accountId,
-      });
+      // FR-WF-012: the person who raised it hears that something happened. The event commits
+      // with the review (ADR-0019).
+      const reviewed = await repository.review(
+        {
+          id: feedbackId,
+          status: input.status,
+          reviewedBy: actor.accountId,
+        },
+        (row) => ({
+          type: 'feedback.reviewed',
+          feedbackId,
+          authorAccountId: row.authorAccountId,
+          schoolId: row.schoolId,
+          status: input.status,
+        }),
+      );
 
       await db.auditLog.create({
         data: {
@@ -177,15 +185,6 @@ export function createFeedbackService({
           entityId: feedbackId,
           metadata: { kind: reviewed.kind, authorAccountId: reviewed.authorAccountId },
         },
-      });
-
-      // FR-WF-012: the person who raised it hears that something happened.
-      await events.publish({
-        type: 'feedback.reviewed',
-        feedbackId,
-        authorAccountId: reviewed.authorAccountId,
-        schoolId: reviewed.schoolId,
-        status: input.status,
       });
 
       logger.info({ feedbackId, status: input.status }, 'Feedback reviewed');

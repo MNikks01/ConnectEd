@@ -16,7 +16,6 @@ import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 import { bodyAs } from './support/body.js';
 
@@ -328,9 +327,8 @@ describe('GET /me/feedback — following what you raised', () => {
 
 describe('notification on review (FR-WF-012)', () => {
   it('publishes a feedback.reviewed event', async () => {
-    const events = recordingPublisher();
     const { createWorkflowsModule } = await import('../modules/workflows/index.js');
-    const workflows = createWorkflowsModule({ db, events, logger });
+    const workflows = createWorkflowsModule({ db, logger });
 
     const feedback = await givenFeedback(await asParent());
 
@@ -340,16 +338,13 @@ describe('notification on review (FR-WF-012)', () => {
       { status: 'RESOLVED' },
     );
 
-    expect(events.published.map((event) => event.type)).toContain('feedback.reviewed');
+    const recorded = await db.outboxEvent.findMany({ where: { type: 'feedback.reviewed' } });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.publishedAt).toBeNull();
   });
 
   it('notifies the author, and nobody else', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({

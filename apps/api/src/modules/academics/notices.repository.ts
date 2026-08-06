@@ -2,9 +2,11 @@
  * Notice and event persistence. **The only file in this pair that touches Prisma.**
  */
 import { CURSOR_ORDER, cursorFilter, takeFor } from '../../shared/http/pagination.js';
+import { recordEvent } from '../../shared/outbox/index.js';
 
 import type { PageRequest } from '../../shared/http/pagination.js';
 import type { Db } from '../../shared/db/index.js';
+import type { PublishableEvent } from '../../shared/events/index.js';
 import type { ReadReceiptSubject } from '../../generated/prisma/client.js';
 
 export interface NoticeRow {
@@ -27,12 +29,16 @@ export interface EventRow {
 }
 
 export interface NoticesRepository {
-  createNotice: (input: {
-    schoolId: string;
-    authorAccountId: string;
-    title: string;
-    body: string;
-  }) => Promise<NoticeRow>;
+  /** Notice and event commit together — see `AcademicsRepository.create` and ADR-0019. */
+  createNotice: (
+    input: {
+      schoolId: string;
+      authorAccountId: string;
+      title: string;
+      body: string;
+    },
+    toEvent: (row: NoticeRow) => PublishableEvent,
+  ) => Promise<NoticeRow>;
   findNotice: (id: string) => Promise<NoticeRow | null>;
   listNotices: (schoolId: string, page: PageRequest) => Promise<NoticeRow[]>;
   updateNotice: (id: string, data: { title?: string; body?: string }) => Promise<NoticeRow>;
@@ -41,12 +47,15 @@ export interface NoticesRepository {
   readNoticeIds: (noticeIds: string[], accountId: string) => Promise<Set<string>>;
   noticeReadCounts: (noticeIds: string[]) => Promise<Map<string, number>>;
 
-  createEvent: (input: {
-    schoolId: string;
-    title: string;
-    body: string;
-    eventAt: Date;
-  }) => Promise<EventRow>;
+  createEvent: (
+    input: {
+      schoolId: string;
+      title: string;
+      body: string;
+      eventAt: Date;
+    },
+    toEvent: (row: EventRow) => PublishableEvent,
+  ) => Promise<EventRow>;
   findEvent: (id: string) => Promise<EventRow | null>;
   /**
    * Chronological by `eventAt` (FR-ACAD-011), which is *not* the cursor's sort key. Events are
@@ -116,9 +125,15 @@ const SUBJECT_TYPE: ReadReceiptSubject = 'NOTICE';
 
 export function createNoticesRepository(db: Db): NoticesRepository {
   return {
-    createNotice: async (input) => {
-      const row = await db.notice.create({ data: input, select: NOTICE_SELECT });
-      return toNotice(row);
+    createNotice: async (input, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const row = await tx.notice.create({ data: input, select: NOTICE_SELECT });
+        const notice = toNotice(row);
+
+        await recordEvent(tx, toEvent(notice));
+
+        return notice;
+      });
     },
 
     findNotice: async (id) => {
@@ -186,7 +201,15 @@ export function createNoticesRepository(db: Db): NoticesRepository {
       return new Map(rows.map((row) => [row.subjectId, row._count.subjectId]));
     },
 
-    createEvent: async (input) => db.event.create({ data: input, select: EVENT_SELECT }),
+    createEvent: async (input, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const row = await tx.event.create({ data: input, select: EVENT_SELECT });
+
+        await recordEvent(tx, toEvent(row));
+
+        return row;
+      });
+    },
 
     findEvent: async (id) =>
       db.event.findFirst({ where: { id, deletedAt: null }, select: EVENT_SELECT }),

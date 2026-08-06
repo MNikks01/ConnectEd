@@ -76,7 +76,6 @@ function notifications() {
   const verification = createVerificationModule(
     db,
     logger,
-    { publish: () => Promise.resolve() },
     createBillingModule(db, logger).service,
   );
   return createNotificationsModule(db, logger, verification.service);
