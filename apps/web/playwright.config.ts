@@ -15,6 +15,11 @@ import { defineConfig, devices } from '@playwright/test';
 const API_PORT = 4810;
 const WEB_PORT = 3810;
 /**
+ * The standalone worker's metrics port, and the only thing it listens on — which is what makes it
+ * usable as a readiness signal for `webServer` below.
+ */
+const WORKER_METRICS_PORT = 4811;
+/**
  * A database of its own, deliberately not `connected_test`. The API's vitest suite TRUNCATEs that
  * one between cases; sharing it means an end-to-end run and a unit run can delete each other's
  * data, producing failures that look like product bugs and vanish on retry.
@@ -66,12 +71,54 @@ export default defineConfig({
         LOG_LEVEL: 'warn',
         WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
         METRICS_ENABLED: 'false',
+        /**
+         * **The deployment this suite is meant to prove.** With the worker in-process — the
+         * default, and what every test ran under until S7-17 — `worker.ts` was never started by
+         * anything, in any suite. It is the deployment the product uses when fan-out is heavy,
+         * and since ADR-0019 it is where the outbox relay lives.
+         *
+         * Set to `false`, the API writes outbox rows and hands nothing to the queue; a *separate
+         * process* drains them and fans out. `class-feed.spec.ts` — "published work reaches the
+         * student's notification list" — therefore stops proving that fan-out works and starts
+         * proving that it works across two processes, which is the only arrangement where the two
+         * halves of ADR-0019 are actually apart.
+         */
+        RUN_WORKER_IN_PROCESS: 'false',
         // The suite registers far more accounts than a person would; see the config comment.
         RATE_LIMIT_ENABLED: 'false',
         REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
         // Required by config, so the API refuses to boot without them. MinIO runs alongside the
         // suite; uploads are not exercised end to end yet, but the server must start as it would
         // in production rather than in a reduced configuration.
+        S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+        S3_BUCKET: process.env.S3_BUCKET ?? 'connected-e2e',
+        S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'minioadmin',
+        S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? 'minioadmin',
+      },
+    },
+    /**
+     * The worker, as its own process. It serves nothing but `/metrics`, which is why that port is
+     * the readiness check: a worker that has not bound it has not finished booting, and Playwright
+     * would otherwise start the suite against a queue nobody is consuming.
+     */
+    {
+      command: 'node dist/worker.js',
+      cwd: '../api',
+      port: WORKER_METRICS_PORT,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: {
+        NODE_ENV: 'development',
+        DATABASE_URL,
+        JWT_ACCESS_SECRET: 'e2e-only-secret-that-is-long-enough-32',
+        TWO_FACTOR_KEY: 'e2e-only-two-factor-key-long-enough-32',
+        LOG_LEVEL: 'warn',
+        WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
+        // Its only listener, and the readiness signal above.
+        METRICS_ENABLED: 'true',
+        WORKER_METRICS_PORT: String(WORKER_METRICS_PORT),
+        REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
         S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
         S3_BUCKET: process.env.S3_BUCKET ?? 'connected-e2e',
         S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'minioadmin',

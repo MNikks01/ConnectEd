@@ -22,7 +22,7 @@ rather than reasoning about the YAML.
 | 2   | `changesets/action` (publish)    | Anything — nothing here is publishable                | Accepted risk |
 | 3   | `changesets/action` (version PR) | Its own success — it has failed the one time it fired | Accepted risk |
 | 4   | Required status checks           | A renamed job                                         | Accepted risk |
-| 5   | `e2e` / `verify`                 | `RUN_WORKER_IN_PROCESS=false` — the split deployment  | **Gap**       |
+| 5   | `e2e` / `verify`                 | `RUN_WORKER_IN_PROCESS=false` — the split deployment  | **Closed**    |
 | 6   | Tag `.2` suffix loop             | — exercised on 2026-08-04                             | Covered       |
 | 7   | `contains(…, 'release/')`        | A hotfix, and a hand-edited merge title               | Accepted risk |
 | 8   | Husky `pre-commit`               | A commit made with `--no-verify`                      | Accepted risk |
@@ -83,10 +83,22 @@ anything**. Not by `verify`, not by `e2e`. It is the deployment the product is m
 fan-out is heavy, and as of ADR-0019 it is also where the outbox relay lives in that mode. A typo in
 that file would be found in production.
 
-**Left open deliberately, and named as a gap rather than an accepted risk.** The cheap version is a
-smoke test that boots `worker.ts` against Postgres and Redis and asserts it reaches its metrics
-port; the honest version is an end-to-end run with `RUN_WORKER_IN_PROCESS=false` and the worker as a
-second process. The second is what the deployment actually is. Neither is in this sprint.
+**Closed by S7-17 on 2026-08-06, and it found a bug on its first run.**
+
+The whole end-to-end suite now runs with `RUN_WORKER_IN_PROCESS=false` and the worker as a second
+process. That was a configuration change rather than a new test: `class-feed.spec.ts` already
+asserted that published work reaches a student's notification list, and it simply stopped proving
+fan-out and started proving fan-out _across two processes_.
+
+It failed immediately. `worker.ts` constructed its notifications module without an audience —
+`createNotificationsModule(db, logger)` — and the audience parameter is optional, so it type-checked.
+Without it nothing can resolve class recipients, so **every class fan-out in the split deployment
+reached nobody**: homework, notices, events. Only notifications naming a recipient directly, such as
+a verification decision, ever arrived. The process had shipped that way, and the bug was invisible
+because no test had ever started it.
+
+That is the case for auditing a check by what it has never run against, made concretely: the gap was
+not theoretical for a single day.
 
 ### 6. The `.2` suffix loop — covered
 
