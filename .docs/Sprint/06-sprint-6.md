@@ -1,6 +1,6 @@
 # Sprint 6 — Finishing commercialisation, and the console
 
-`Status: Planned` · `Last updated: 2026-08-04` · Duration: 2 weeks
+`Status: Planned` · `Last updated: 2026-08-06` · Duration: 2 weeks
 
 Goal: the half of Phase 5 that did not ship, plus the console the product has needed since it
 started collecting reports. This is a **proposal for planning** — adjust the split before
@@ -154,6 +154,49 @@ are a different shape, and are still open.
 **Measured rather than assumed, twice this sprint.** The same test was suspected of being broken by
 the Next 16.3 bump; ten runs on each version (four failures against two) said otherwise, and the
 real cause was in the test all along.
+
+**S6-14 and S6-15, unplanned — the last two requirements the PRD had left as questions.**
+FR-INST-007 asked "multiple principals? (default: one)" and is now decided as multi (ADR-0018). The
+code already permitted it and always had: every principal check asks whether _this_ caller holds
+that membership, never how many others do. What was missing was the decision and the proof, not the
+capability. FR-ACAD-021 landed the structured timetable as a **second representation** rather than a
+replacement — a school that photographs the sheet on the wall is not doing it wrong, and both kinds
+share one version history, so last term's stays readable either way. What the structure adds is the
+one thing an image cannot: the server refuses overlapping periods and subjects belonging to another
+class.
+
+**0.4.0 shipped as `release/2026-08-06`.** Ten commits, and security is the theme — a
+whole-repository review at 0.3.0 and the four findings it closed (recovery-code modulo bias, the
+missing web security headers, `X-Forwarded-For` believed on sight, and the Next bump that cleared
+the last five advisories), plus the two requirements above and the two flake fixes. The tag and its
+GitHub Release were cut by the workflow rather than by hand, which is what S6-9 and #68 were for.
+
+**S6-16, unplanned — the back-merge hit a check that no changeset could satisfy.**
+`changeset-check` was already skipped on a release PR, because `changeset version` consumes every
+changeset on the release branch and the check could then only ever fail. The back-merge is the same
+case pointing the other way and the `base_ref` test missed it: it carries the release commit — a
+version bump and a CHANGELOG entry with the changesets already deleted — into `development`, so
+`status` finds a changed package and nothing to explain it. Adding a changeset would have published
+the version that had just shipped a second time.
+
+It had never fired before because the 0.3.0 back-merge passed **vacuously**: its merge base _was_
+`development`'s tip, which already carried the bump, so no package file appeared in the compared
+range at all. A check can be green for two years and still have never run against the case it will
+one day block.
+
+Keyed the skip on the branch name, now a rule in `CI-CD/00-git-flow.md` rather than a habit, since
+CI depends on it. The tempting rule — skip whenever the head already contains `main` — is wrong:
+every feature branch cut after a back-merge contains `main` too, so the check would have quietly
+stopped running on exactly the PRs it exists for. A check that silently stops running is worse than
+one that fails loudly.
+
+**Worth carrying into the retro.** Several of this sprint's unplanned items were tooling that had
+never been exercised on the path it was written for — a release check that had never met a
+back-merge, and a tag annotation that had never met a release branch carrying a later fix. Neither
+was a product fault, and both surfaced at the moment they were most expensive to think about. A
+smaller one in the same family: the timetable PR arrived with four unformatted files and a red
+`verify`, because `lint-staged` formats what is staged and a commit that does not run it is not
+formatted by anything else.
 
 ## Retro
 
