@@ -14,7 +14,7 @@ Actors: School (write), Principal (view). The school sets up the academic struct
 | FR-INST-004 |    P0    | A school allocates a **class teacher** to a class.                                                                                                    | Exactly one active class teacher per class; must be a verified teacher of the school.                                               |
 | FR-INST-005 |    P1    | A school manages its member roster (view verified students/parents/teachers/principal; remove a member).                                              | Removal revokes that member's academic access to the school immediately.                                                            |
 | FR-INST-006 |    P1    | A school can deactivate/reactivate a class.                                                                                                           | Deactivated class hides from publishing targets; existing data retained.                                                            |
-| FR-INST-007 |    P2    | A school can have multiple principals? (default: one).                                                                                                | **Assumption:** single principal per school in v1; multi supported later.                                                           |
+| FR-INST-007 |    P2    | A school can have **multiple principals**, equal in scope.                                                                                            | Any number may be verified; each has identical authority; none gains school-account powers (ADR-0018).                              |
 
 ## Class taxonomy (canonical enumeration)
 
