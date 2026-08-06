@@ -263,3 +263,5 @@ is being written after the fact rather than at a ceremony.
 | A3  | Audit the remaining release-path tooling for cases it has never run against — the ones found this sprint were all found by accident.      | devops           | Sprint 7          |
 | A4  | Write the retro at the ceremony rather than reconstructing it, starting with Sprint 7.                                                    | whole team       | Sprint 7 retro    |
 | A5  | Close out the `docs/close-sprint-2` branch — it still holds an unmerged Sprint 2 close-out commit from 2026-08-01.                        | technical-writer | Sprint 7          |
+
+<!-- branch protection test, do not merge -->
