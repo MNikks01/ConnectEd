@@ -210,3 +210,28 @@ export function registerQueueDepthMetrics(
     },
   });
 }
+
+/**
+ * How many events are sitting in the outbox unpublished (ADR-0019).
+ *
+ * This is the number that says whether the relay is alive. Queue depth cannot: a relay that has
+ * stopped produces an *empty* queue, which looks exactly like a quiet afternoon. The events pile
+ * up here instead, and the pile is only visible if something counts it.
+ */
+export function registerOutboxDepthMetric(
+  registry: Registry,
+  outbox: { depth: () => Promise<number> },
+): void {
+  new Gauge({
+    name: 'outbox_events_unpublished',
+    help: 'Domain events committed but not yet handed to the queue.',
+    registers: [registry],
+    async collect() {
+      try {
+        this.set(await outbox.depth());
+      } catch {
+        // Same reasoning as queue depth: a database blip must not take the whole scrape with it.
+      }
+    },
+  });
+}

@@ -394,18 +394,28 @@ describe('edit and delete (FR-ACAD-005)', () => {
 });
 
 describe('notifications on publish (FR-ACAD-004)', () => {
-  it('emits academic.published after the write', async () => {
+  it('records academic.published in the outbox, in the same transaction as the write', async () => {
     const events = recordingPublisher();
     const { createAcademicsModule } = await import('../modules/academics/index.js');
     const academics = createAcademicsModule({ db, events, logger });
 
-    await academics.service.publish(
+    const item = await academics.service.publish(
       { accountId: fixture.teacherAccountId, accountType: 'INDIVIDUAL', role: 'TEACHER' },
       fixture.classAId,
       { type: 'HOMEWORK', subjectId: fixture.mathsSubjectId, title: 'T', body: 'B' },
     );
 
-    expect(events.published.map((event) => event.type)).toContain('academic.published');
+    // Not through the publisher any more (ADR-0019) — the row is the emission.
+    expect(events.published).toHaveLength(0);
+
+    const recorded = await db.outboxEvent.findFirst({
+      where: { type: 'academic.published' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(recorded).not.toBeNull();
+    expect(recorded?.publishedAt).toBeNull();
+    expect((recorded?.payload as { itemId: string }).itemId).toBe(item.id);
   });
 
   it('fans out to every verified member of the class except the author', async () => {

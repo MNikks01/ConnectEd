@@ -103,14 +103,15 @@ Added while implementing the schema, for columns the tables above list without n
 
 ## Notifications & billing
 
-| Table               | Key columns                                                                                    |
-| ------------------- | ---------------------------------------------------------------------------------------------- |
-| `notification`      | `id`, `recipient_account_id FK`, `type`, `payload jsonb`, `read_at?`, `event_id` (idempotency) |
-| `notification_pref` | `account_id FK`, `category`, `enabled`                                                         |
-| `push_token`        | `id`, `account_id FK`, `platform`, `token`, `last_seen_at`                                     |
-| `plan`              | `id`, `code`, `name`, `limits jsonb`, `features jsonb`                                         |
-| `subscription`      | `id`, `school_id FK`, `plan_id FK`, `status`, `period_start`, `period_end`, `provider_ref`     |
-| `audit_log`         | `id`, `actor_account_id`, `action`, `entity`, `entity_id`, `metadata jsonb`, `created_at`      |
+| Table               | Key columns                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `notification`      | `id`, `recipient_account_id FK`, `type`, `payload jsonb`, `read_at?`, `event_id` (idempotency)                                                                                                          |
+| `notification_pref` | `account_id FK`, `category`, `enabled`                                                                                                                                                                  |
+| `push_token`        | `id`, `account_id FK`, `platform`, `token`, `last_seen_at`                                                                                                                                              |
+| `plan`              | `id`, `code`, `name`, `limits jsonb`, `features jsonb`                                                                                                                                                  |
+| `subscription`      | `id`, `school_id FK`, `plan_id FK`, `status`, `period_start`, `period_end`, `provider_ref`                                                                                                              |
+| `audit_log`         | `id`, `actor_account_id`, `action`, `entity`, `entity_id`, `metadata jsonb`, `created_at`                                                                                                               |
+| `outbox_event`      | `id`, `event_id`, `type`, `payload jsonb`, `occurred_at`, `published_at`, `attempts`, `last_error`, `created_at` — domain events written in the same transaction as the change they announce (ADR-0019) |
 
 ## ERD (core)
 
