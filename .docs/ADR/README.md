@@ -39,3 +39,4 @@ Date: YYYY-MM-DD
 | 0015                                         | _Reserved: payment provider (S5-0a)_                   | Pending  |
 | [0016](./0016-websocket-realtime.md)         | WebSocket delivery, authorized by a one-use ticket     | Accepted |
 | [0017](./0017-platform-admin-role.md)        | A platform-admin role, for moderation and nothing else | Accepted |
+| [0018](./0018-multiple-principals.md)        | A school may have more than one principal              | Accepted |

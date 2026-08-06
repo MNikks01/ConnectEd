@@ -27,8 +27,13 @@ missing" is a list somebody can act on rather than a feeling.
 
 ## Institution (`02-institution.md`)
 
-All of FR-INST-001 … 006 are ✅. **FR-INST-007** (P2, multiple principals) is written in the PRD as
-a question — "default: one" — so it is a product decision rather than outstanding work.
+All of FR-INST-001 … 007 are ✅. **FR-INST-007** was written in the PRD as a question — "multiple
+principals? (default: one)" — and was decided as multi in ADR-0018. The code already permitted it:
+nothing ever enforced one principal, because every principal check asks whether _this_ caller holds
+that membership and never how many others do. What was missing was the proof, which is now
+`multiple-principals.test.ts` — the flow a school actually uses, then all three halves of the
+promise: a second principal can be verified, can do everything the first can, and can do nothing
+more.
 
 ## Verification (`03-verification.md`)
 
