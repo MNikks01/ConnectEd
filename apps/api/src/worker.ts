@@ -42,7 +42,22 @@ const db = createDb({
 });
 
 const connection = createRedisConnection(config.REDIS_URL);
-const notifications = createNotificationsModule(db, logger);
+
+/**
+ * **The audience is not optional here, whatever its type says.**
+ *
+ * Notifications resolve class recipients through verification, which owns membership. Without it
+ * the service still constructs, still consumes events, and still writes rows — for events that
+ * name their recipient directly. Every *class* fan-out silently reaches nobody: homework, notices,
+ * events. This process shipped that way and nothing noticed, because until S7-17 no test had ever
+ * started it.
+ */
+const { createVerificationModule: createVerificationForWorker } =
+  await import('./modules/verification/index.js');
+const { createBillingModule } = await import('./modules/billing/index.js');
+const billing = createBillingModule(db, logger);
+const verification = createVerificationForWorker(db, logger, billing.service);
+const notifications = createNotificationsModule(db, logger, verification.service);
 const worker = createEventWorker(
   connection,
   logger,
@@ -97,7 +112,6 @@ const media = createMediaModule(createStorage(config, logger), logger, config.MA
 const { createAuthModule } = await import('./modules/auth/index.js');
 const { createPasswordHasher } = await import('./shared/auth/password.js');
 const { createTokenService } = await import('./shared/auth/tokens.js');
-const { createBillingModule: createBillingForWorker } = await import('./modules/billing/index.js');
 const { createMailer } = await import('./shared/mail/index.js');
 
 const auth = createAuthModule({
@@ -106,7 +120,7 @@ const auth = createAuthModule({
   logger,
   passwords: createPasswordHasher(config),
   tokens: createTokenService(config),
-  billing: createBillingForWorker(db, logger).service,
+  billing: billing.service,
   mailer: createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
 });
 
