@@ -96,4 +96,59 @@ test.describe('marks', () => {
     await expect(page.getByText('out of 20')).toBeVisible();
     expect(await page.content()).not.toContain('17.5');
   });
+
+  test('a published mark can be corrected, and the pupil sees the new one', async ({ page }) => {
+    const { school, classId } = await schoolWithClass('D');
+    const { teacher } = await verifiedTeacherFor(school, classId, 'Mathematics');
+    // Two pupils, because with one the test cannot tell "corrected the right pupil" from
+    // "corrected the first pupil" — and a component that always corrected `marks[0]` passed the
+    // single-pupil version of this test.
+    const first = await verifiedStudentIn(school, classId, 'first');
+    const second = await verifiedStudentIn(school, classId, 'second');
+
+    await signIn(page, teacher.email);
+    await page.goto(`/classes/${classId}/marks`);
+    await page.getByLabel('Subject').selectOption({ label: 'Mathematics' });
+    await page.getByLabel('Kind').selectOption('TEST');
+    await page.getByLabel('Assessment name').fill('Long division');
+    await page.getByLabel('Out of').fill('10');
+    await page.getByLabel('Date sat').fill('2026-08-02');
+    await page.getByRole('button', { name: 'Create assessment' }).click();
+
+    await page.getByRole('link', { name: 'Long division' }).click();
+    await page.getByLabel(`Score for ${first.fullName}`).fill('3');
+    await page.getByLabel(`Score for ${second.fullName}`).fill('6');
+    await page.getByRole('button', { name: 'Save draft' }).click();
+    await page.getByRole('button', { name: 'Publish marks' }).click();
+    await page.getByRole('button', { name: 'Yes, publish these marks' }).click();
+    await expect(
+      page.getByText('These marks are published and the class can see them.'),
+    ).toBeVisible();
+
+    // The correction: a transcription error, found after publishing. This is the path that existed
+    // only on the server until S8-2 — audited since the day it shipped, and unreachable.
+    await page.getByLabel(`New score for ${second.fullName}`).fill('8');
+    await page.getByRole('button', { name: `Correct ${second.fullName}’s mark` }).click();
+    await expect(page.getByText('Corrected. The change has been recorded.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signIn(page, second.email);
+    await page.goto(`/classes/${classId}/marks`);
+
+    // The corrected pupil sees the new mark, and no trace of the audit: that row is for the
+    // school, not for the child. Asserted on the rendered score element rather than page HTML —
+    // a bare "8" also appears in chunk filenames, which is how the first version of this passed
+    // for the wrong reason.
+    await expect(page.getByText('out of 10')).toBeVisible();
+    await expect(page.locator('main strong').first()).toHaveText('8');
+    await expect(page.getByText('Corrected')).toHaveCount(0);
+
+    // And the pupil who was *not* corrected still has their own mark. This is the assertion that
+    // fails when the form corrects `marks[0]` regardless of whose button was pressed.
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signIn(page, first.email);
+    await page.goto(`/classes/${classId}/marks`);
+
+    await expect(page.locator('main strong').first()).toHaveText('3');
+  });
 });

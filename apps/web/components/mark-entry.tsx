@@ -14,7 +14,11 @@
 import { Card } from '@connected/ui';
 import { useState } from 'react';
 
-import { enterMarksAction, publishMarksAction } from '@/app/(app)/(member)/actions';
+import {
+  correctMarkAction,
+  enterMarksAction,
+  publishMarksAction,
+} from '@/app/(app)/(member)/actions';
 import { ActionForm } from './action-form';
 
 import type { AssessmentWithMarksResponse, MarkResponse } from '@connected/types';
@@ -35,12 +39,60 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
 
   if (published) {
     return (
-      <Card>
-        <p style={{ margin: 0 }}>
-          These marks are published and the class can see them. Corrections are made one pupil at a
-          time and are recorded.
-        </p>
-      </Card>
+      <>
+        <Card>
+          <p style={{ margin: 0 }}>
+            These marks are published and the class can see them. Corrections are made one pupil at
+            a time and are recorded.
+          </p>
+        </Card>
+
+        {/*
+          One form per pupil rather than one grid, and that asymmetry with draft entry is the
+          point. Entering marks is one task done in one sitting; correcting one is a deliberate act
+          about a named child, and it is recorded as such. A grid here would invite exactly the
+          bulk overwrite the server refuses.
+        */}
+        {assessment.marks.map((mark) => (
+          <Card key={mark.studentAccountId}>
+            <h3 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-2)' }}>{mark.studentName}</h3>
+            <p style={{ marginTop: 0, color: 'var(--ui-color-text-muted)' }}>
+              Currently{' '}
+              {mark.score === null ? 'not marked' : `${mark.score} out of ${assessment.maxScore}`}
+              {mark.remark ? ` · ${mark.remark}` : ''}
+            </p>
+
+            <ActionForm
+              action={(formData) =>
+                correctMarkAction(assessment.id, classId, mark.studentAccountId, formData)
+              }
+              submitLabel={`Correct ${mark.studentName}’s mark`}
+              pendingLabel="Correcting…"
+              successMessage="Corrected. The change has been recorded."
+            >
+              <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                <span>New score for {mark.studentName}</span>
+                <input
+                  name="score"
+                  defaultValue={mark.score ?? ''}
+                  inputMode="decimal"
+                  placeholder="—"
+                  style={{ padding: 'var(--ui-space-2)' }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                <span>Remark for {mark.studentName}</span>
+                <input
+                  name="remark"
+                  defaultValue={mark.remark ?? ''}
+                  maxLength={1000}
+                  style={{ padding: 'var(--ui-space-2)' }}
+                />
+              </label>
+            </ActionForm>
+          </Card>
+        ))}
+      </>
     );
   }
 
