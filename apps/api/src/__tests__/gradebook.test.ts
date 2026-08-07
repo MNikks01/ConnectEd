@@ -364,6 +364,31 @@ describe('who may read a mark', () => {
     expect(response.status).toBe(404);
   });
 
+  it('the school sees a draft in the class list, not only by id', async () => {
+    // The two endpoints disagreed until S8-3: `listMarks` gave the school drafts and the class
+    // list did not, so a draft was openable by id and invisible in the only place a school would
+    // find one.
+    await createAssessment();
+
+    const response = await request(app)
+      .get(`/api/v1/classes/${fixture.classAId}/assessments`)
+      .set('Authorization', await asSchool());
+
+    expect(response.status).toBe(200);
+    expect(bodyAs<{ data: AssessmentResponse[] }>(response).data).toHaveLength(1);
+  });
+
+  it('a principal does not see a draft in the class list', async () => {
+    await createAssessment();
+
+    const response = await request(app)
+      .get(`/api/v1/classes/${fixture.classAId}/assessments`)
+      .set('Authorization', await auth(fixture.principalAccountId, 'INDIVIDUAL', 'PRINCIPAL'));
+
+    expect(response.status).toBe(200);
+    expect(bodyAs<{ data: AssessmentResponse[] }>(response).data).toHaveLength(0);
+  });
+
   it('the school sees everything, including a draft', async () => {
     const assessment = await createAssessment();
 

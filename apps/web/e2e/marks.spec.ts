@@ -151,4 +151,40 @@ test.describe('marks', () => {
 
     await expect(page.locator('main strong').first()).toHaveText('3');
   });
+
+  test('the school sees a draft the class cannot', async ({ page }) => {
+    const { school, classId } = await schoolWithClass('C');
+    const { teacher } = await verifiedTeacherFor(school, classId, 'Mathematics');
+    const pupil = await verifiedStudentIn(school, classId, 'pupil');
+
+    // A draft: created and marked, never published.
+    await signIn(page, teacher.email);
+    await page.goto(`/classes/${classId}/marks`);
+    await page.getByLabel('Subject').selectOption({ label: 'Mathematics' });
+    await page.getByLabel('Kind').selectOption('EXAM');
+    await page.getByLabel('Assessment name').fill('Mock exam');
+    await page.getByLabel('Out of').fill('50');
+    await page.getByLabel('Date sat').fill('2026-08-03');
+    await page.getByRole('button', { name: 'Create assessment' }).click();
+    await page.getByRole('link', { name: 'Mock exam' }).click();
+    await page.getByLabel(`Score for ${pupil.fullName}`).fill('41');
+    await page.getByRole('button', { name: 'Save draft' }).click();
+
+    // The pupil sees nothing, because it is not published.
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signIn(page, pupil.email);
+    await page.goto(`/classes/${classId}/marks`);
+    await expect(page.getByText('No marks have been published yet.')).toBeVisible();
+
+    // The school sees it, and is told plainly that the class cannot. Until S8-3 the school could
+    // open this by id and never find it listed — the two endpoints disagreed.
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signIn(page, school.email);
+    await page.goto(`/school/classes/${classId}/marks`);
+
+    await expect(page.getByText('Mock exam')).toBeVisible();
+    await expect(page.getByText('draft — the class cannot see this')).toBeVisible();
+    await expect(page.getByRole('cell', { name: pupil.fullName })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '41', exact: true })).toBeVisible();
+  });
 });
