@@ -77,6 +77,19 @@ export interface VerificationService {
   revokeMember: (actor: Actor, schoolId: string, accountId: string) => Promise<void>;
   listMembers: (actor: Actor, schoolId: string) => Promise<SchoolMemberResponse[]>;
   /**
+   * Confirms that a parent's child record and a student account are the same pupil, or undoes it.
+   *
+   * The school's call alone (FR-GRADE-005). It is the school that holds both halves — it approved
+   * the parent's request naming the child and the student's own request — and nobody else can know
+   * the answer. A parent claiming it would be asserting something about an account they do not own.
+   */
+  linkChildToStudent: (
+    actor: Actor,
+    schoolId: string,
+    childId: string,
+    studentAccountId: string | null,
+  ) => Promise<void>;
+  /**
    * Cross-module query, so it takes no actor: the caller has already authorized the operation this
    * answers a question for. Exposed on the public service because `membership` belongs to this
    * module — other modules must not read it directly (`.docs/Architecture/01-modules.md` rule 1).
@@ -329,6 +342,44 @@ export function createVerificationService({
     },
 
     /** The roster (FR-INST-005) — the school's own list of who it has verified. */
+    linkChildToStudent: async (actor, schoolId, childId, studentAccountId) => {
+      assertIsSchool(actor, schoolId);
+
+      const child = await repository.findChildForSchool(childId, schoolId);
+      // 404 rather than 403 for a child of another school: the existence of the record is itself
+      // information, and this is how the rest of the API answers.
+      if (!child) throw new NotFoundError();
+
+      if (studentAccountId !== null) {
+        if (!child.classId) {
+          throw new ConflictError('This child is not in a class yet, so there is nobody to link.');
+        }
+
+        // The pupil must actually be in that class. Without this the school could point a child at
+        // any account in the product and hand its parent that person's marks.
+        if (!(await repository.isVerifiedStudentOfClass(studentAccountId, child.classId))) {
+          throw new NotFoundError('That account is not a verified student of this child’s class.');
+        }
+      }
+
+      // Re-linking is allowed — corrections happen, and a school that linked the wrong pupil must
+      // be able to say so — but never silently: the audit row carries both the old and new value.
+      await repository.linkChildToStudent({
+        childId,
+        schoolId,
+        studentAccountId,
+        previousStudentAccountId: child.studentAccountId,
+        actorAccountId: actor.accountId,
+      });
+
+      logger.info(
+        { childId, schoolId, studentAccountId, previous: child.studentAccountId },
+        studentAccountId
+          ? 'Child linked to student account'
+          : 'Child unlinked from student account',
+      );
+    },
+
     listMembers: async (actor, schoolId) => {
       assertIsSchool(actor, schoolId);
 

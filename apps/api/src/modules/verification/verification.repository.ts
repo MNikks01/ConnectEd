@@ -118,6 +118,25 @@ export interface VerificationRepository {
   listClassMemberAccountIds: (classId: string) => Promise<string[]>;
   listSchoolMemberAccountIds: (schoolId: string) => Promise<string[]>;
   listMembershipsForAccount: (accountId: string) => Promise<MemberRow[]>;
+  findChildForSchool: (
+    childId: string,
+    schoolId: string,
+  ) => Promise<{ id: string; classId: string | null; studentAccountId: string | null } | null>;
+  /** True when the account holds a VERIFIED STUDENT membership scoped to exactly this class. */
+  isVerifiedStudentOfClass: (accountId: string, classId: string) => Promise<boolean>;
+  /**
+   * Points a child record at the pupil's own account, or clears it, and audits either way.
+   *
+   * Audited because it is an authorization edge: it decides which marks a parent may read, and a
+   * wrong link shows one family another child's results.
+   */
+  linkChildToStudent: (input: {
+    childId: string;
+    schoolId: string;
+    studentAccountId: string | null;
+    previousStudentAccountId: string | null;
+    actorAccountId: string;
+  }) => Promise<void>;
   listAllocationsForAccount: (accountId: string) => Promise<AllocationRow[]>;
 }
 
@@ -530,6 +549,48 @@ export function createVerificationRepository(db: Db): VerificationRepository {
     },
 
     /** The caller's own memberships — how a member discovers which class they are in. */
+    findChildForSchool: async (childId, schoolId) => {
+      return db.child.findFirst({
+        where: { id: childId, schoolId, deletedAt: null },
+        select: { id: true, classId: true, studentAccountId: true },
+      });
+    },
+
+    isVerifiedStudentOfClass: async (accountId, classId) => {
+      const membership = await db.membership.findFirst({
+        where: { accountId, classId, role: 'STUDENT', status: 'VERIFIED' },
+        select: { id: true },
+      });
+
+      return membership !== null;
+    },
+
+    linkChildToStudent: async ({
+      childId,
+      schoolId,
+      studentAccountId,
+      previousStudentAccountId,
+      actorAccountId,
+    }) => {
+      await db.$transaction(async (tx) => {
+        await tx.child.update({ where: { id: childId }, data: { studentAccountId } });
+
+        await tx.auditLog.create({
+          data: {
+            actorAccountId,
+            action: studentAccountId ? 'child.linked_to_student' : 'child.unlinked_from_student',
+            entity: 'child',
+            entityId: childId,
+            metadata: {
+              schoolId,
+              ...(studentAccountId ? { studentAccountId } : {}),
+              ...(previousStudentAccountId ? { previousStudentAccountId } : {}),
+            },
+          },
+        });
+      });
+    },
+
     listMembershipsForAccount: async (accountId) => {
       const rows = await db.membership.findMany({
         where: { accountId, status: 'VERIFIED' },
