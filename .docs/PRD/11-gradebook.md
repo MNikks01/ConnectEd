@@ -36,6 +36,34 @@ Two consequences run through everything below:
 | FR-GRADE-002 |    P0    | The teacher who created it, or the school, may edit or delete it.                            | Soft-delete. Deleting an assessment hides its marks; it does not silently keep them readable.                                               |
 | FR-GRADE-003 |    P1    | An assessment lists the students it applies to.                                              | The verified students of that class at the time of creation. A student verified later is added; a revoked one is not removed from history.  |
 
+## Which pupil a mark is about
+
+Found by starting the implementation, and it should have been found while writing this document.
+
+The product held **two unconnected representations of a pupil**: a `Child` row owned by a parent,
+and a student `Account` with a verified STUDENT membership. Nothing joined them, and nothing needed
+to — homework fans out to class _members_ and read tracking is per account. A mark is the first
+thing that is _about_ a pupil, so as written FR-GRADE-020 and FR-GRADE-021 could not both hold: a
+mark on a student account is invisible to the parent, and a mark on a child record is invisible to
+the student.
+
+**Decided: the school links them, at verification.** It is the school that holds both halves — it
+approved the parent's request naming the child and the student's own request — and nobody else can
+know the answer. A parent claiming the link would be asserting something about an account they do
+not own.
+
+| ID           | Priority | Requirement                                                                  | Acceptance criteria                                                                                                                                                     |
+| ------------ | :------: | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-GRADE-005 |    P0    | The school confirms that a child record and a student account are one pupil. | `PUT /schools/:id/children/:childId/student`. Only the school. The account must hold a **verified STUDENT membership in that child's class**; anything else is refused. |
+| FR-GRADE-006 |    P0    | The link can be corrected or removed, and every change is audited.           | `null` unlinks. The audit row carries the previous value as well as the new one.                                                                                        |
+
+**Two parents of one pupil each hold their own child record**, so the link is many-to-one: a unique
+constraint on the pupil's account would let the first parent link and refuse the second forever.
+
+**A pupil with no account of their own cannot be marked.** The link is nullable and stays null for
+them. That follows from the roster already being made of accounts rather than from this decision,
+but it is a real limit and it belongs here rather than in a surprise later.
+
 ## Marks
 
 | ID           | Priority | Requirement                                                             | Acceptance criteria                                                                                                                                 |

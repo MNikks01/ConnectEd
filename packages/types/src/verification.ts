@@ -140,3 +140,16 @@ export interface VerificationRequestResponse {
   decidedAt: string | null;
   createdAt: string;
 }
+
+/**
+ * Confirming that a parent's child record and a student account are the same pupil (FR-GRADE-005).
+ *
+ * `null` unlinks. It is a value rather than a separate endpoint because the school is stating what
+ * the link *is*, and "nobody" is a legitimate answer — a school that linked the wrong pupil needs a
+ * way to say so that is as ordinary as linking was.
+ */
+export const linkChildSchema = z.object({
+  studentAccountId: z.string().uuid().nullable(),
+});
+
+export type LinkChildInput = z.infer<typeof linkChildSchema>;
