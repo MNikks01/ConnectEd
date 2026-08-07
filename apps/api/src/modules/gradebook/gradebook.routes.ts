@@ -37,6 +37,14 @@ export function gradebookRoutes(service: GradebookService): ExpressRouter {
     }),
   );
 
+  router.get(
+    '/classes/:id/assessments',
+    handler(async (req, res) => {
+      const data = await service.listAssessments(requireActor(req), uuidParam(req, 'id'));
+      res.status(200).json({ data });
+    }),
+  );
+
   router.put(
     '/assessments/:id/marks',
     validateBody(enterMarksSchema),

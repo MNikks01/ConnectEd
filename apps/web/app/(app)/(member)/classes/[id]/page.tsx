@@ -75,6 +75,7 @@ export default async function ClassFeedPage({
           <span style={{ display: 'flex', gap: 'var(--ui-space-4)' }}>
             <Link href={`/classes/${id}/timetable`}>Timetable</Link>
             <Link href={`/classes/${id}/syllabus`}>Syllabus</Link>
+            <Link href={`/classes/${id}/marks`}>Marks</Link>
           </span>
         }
       />

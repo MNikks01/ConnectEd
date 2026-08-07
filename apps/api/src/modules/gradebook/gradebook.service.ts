@@ -44,6 +44,13 @@ export interface GradebookService {
     studentAccountId: string,
     input: CorrectMarkInput,
   ) => Promise<MarkRow>;
+  /**
+   * The assessments of a class, for the people who mark or oversee them.
+   *
+   * Not for pupils or parents: they read `/me/...` and `/children/...`, which are scoped to one
+   * pupil and carry their mark. This list carries none.
+   */
+  listAssessments: (actor: Actor, classId: string) => Promise<AssessmentResponse[]>;
   /** The marking view: every pupil's mark for one assessment. Never a pupil's own view. */
   listMarks: (actor: Actor, assessmentId: string) => Promise<AssessmentWithMarksResponse>;
   /** A pupil reading their own. */
@@ -229,6 +236,44 @@ export function createGradebookService({
       return corrected;
     },
 
+    listAssessments: async (actor, classId) => {
+      const klass = await db.class.findUnique({
+        where: { id: classId },
+        select: { schoolId: true },
+      });
+      if (!klass) throw new NotFoundError();
+
+      // A teacher of this class sees their own subjects' assessments, drafts included, plus the
+      // published ones from other subjects. Everyone else with a claim sees published only.
+      const mine = await db.subjectAllocation.findMany({
+        where: {
+          teacher: { accountId: actor.accountId, schoolId: klass.schoolId },
+          subject: { classId },
+        },
+        select: { subjectId: true },
+      });
+
+      if (mine.length > 0) {
+        await assertVerifiedMembership(db, actor, klass.schoolId, 'TEACHER');
+
+        const ownSubjects = new Set(mine.map((allocation) => allocation.subjectId));
+        const own = await Promise.all(
+          [...ownSubjects].map((subjectId) => repository.listForSubject(subjectId)),
+        );
+        const othersPublished = (
+          await repository.listForClass(classId, { publishedOnly: true })
+        ).filter((assessment) => !ownSubjects.has(assessment.subjectId));
+
+        return [...own.flat(), ...othersPublished]
+          .sort((a, b) => b.occurredOn.getTime() - a.occurredOn.getTime())
+          .map(toResponse);
+      }
+
+      await assertMaySeeWholeClass(actor, { classId } as AssessmentRow);
+
+      return (await repository.listForClass(classId, { publishedOnly: true })).map(toResponse);
+    },
+
     listMarks: async (actor, assessmentId) => {
       const assessment = await repository.findAssessment(assessmentId);
       if (!assessment) throw new NotFoundError();
@@ -245,7 +290,28 @@ export function createGradebookService({
         }
       }
 
-      return { ...toResponse(assessment), marks: await repository.listMarks(assessmentId) };
+      // Every pupil on the roster appears, marked or not (FR-GRADE-003). A grid that showed only
+      // the pupils already marked would hide exactly the ones a teacher still has to do — and
+      // "not marked" is a state this product is careful to keep distinct from zero.
+      const [roster, marks] = await Promise.all([
+        repository.listClassStudents(assessment.classId),
+        repository.listMarks(assessmentId),
+      ]);
+
+      const byPupil = new Map(marks.map((mark) => [mark.studentAccountId, mark]));
+
+      return {
+        ...toResponse(assessment),
+        marks: roster.map(
+          (pupil) =>
+            byPupil.get(pupil.accountId) ?? {
+              studentAccountId: pupil.accountId,
+              studentName: pupil.name,
+              score: null,
+              remark: null,
+            },
+        ),
+      };
     },
 
     listMine: async (actor, classId) => {
