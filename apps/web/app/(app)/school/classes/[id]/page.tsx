@@ -81,6 +81,10 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
         description={`${klass.subjectCount} subject${klass.subjectCount === 1 ? '' : 's'} · ${klass.active ? 'Active' : 'Inactive'}`}
       />
 
+      <p>
+        <Link href={`/school/classes/${id}/marks`}>Marks</Link>
+      </p>
+
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         <Card as="section">
           <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Subjects</h2>
