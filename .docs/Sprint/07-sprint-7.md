@@ -1,6 +1,6 @@
 # Sprint 7 — Events that cannot be lost, and the next phase's foundations
 
-`Status: Planned` · `Last updated: 2026-08-06` · Duration: 2 weeks
+`Status: Active` · `Last updated: 2026-08-06` · Duration: 2 weeks
 
 Goal: close the one durability gap the product actually has, and start whichever phase comes next
 properly rather than by drifting into it. This is a **proposal for planning** — adjust the split
@@ -156,7 +156,67 @@ from six sprints of "still open for the team".
 
 ## Review notes
 
-_Filled at review._
+**Shipped: the whole ungated half, and one item that did not exist at planning.**
+
+| Item  | What                                                     | PR   |
+| ----- | -------------------------------------------------------- | ---- |
+| S7-1  | The transactional outbox — mechanism, relay, depth gauge | #100 |
+| S7-2  | The remaining seven events; the publisher deleted        | #101 |
+| S7-3  | The release path audited for cases never exercised       | #103 |
+| S7-4  | `docs/close-sprint-2` closed out — by deletion           | #105 |
+| S7-17 | The worker started in CI, as a second process            | #106 |
+
+**Not shipped, and not startable.** S7-5 … S7-13 are all gated. S7-0a was not decided and is now
+carried a fourth time; S7-0b and S7-0c were not decided either. The stretch items were not reached
+and were never the point.
+
+## The chain is the story
+
+Each item made the next one visible, which is not how the sprint was planned — it is what happened.
+
+The completeness audit named one real engineering gap: a domain event whose publish failed was lost.
+Fixing it (S7-1, S7-2) produced a **new** failure mode — the relay is a process that must be
+running — which was written into the completeness doc rather than left implied. Auditing the release
+path (S7-3) then found that the process holding that new failure mode **had never been started by
+any test**, which became S7-17. And S7-17, on its first run, found a defect that had already
+shipped.
+
+## The defect S7-17 found, because it is the argument for the whole sprint
+
+`worker.ts` built its notifications module as `createNotificationsModule(db, logger)`. The audience
+parameter is optional, so it type-checked. Without it nothing resolves class recipients, so in the
+split deployment **every class fan-out reached nobody** — homework, notices, events — while
+notifications naming a recipient directly still arrived. Half-working, which is why nothing looked
+broken.
+
+S7-3 had described this gap the day before as "a typo in that file would be found in production". It
+was not a typo, and it was not theoretical for even a day.
+
+## Three defects were introduced and caught inside the sprint
+
+Worth recording, because a sprint that only lists what it fixed reads better than it was.
+
+- **S7-1 shipped an unbounded `queue.add` in the relay.** The publisher it replaced had a two-second
+  timeout for a documented reason — ioredis queues commands while disconnected rather than
+  rejecting — and in the relay an unbounded add would hang a pass and the process shutdown with it.
+  Caught in S7-2 by the test file the old contract left behind, which survives with its contract
+  inverted rather than deleted.
+- **`approve` took an event parameter and never recorded it.** An approval would have granted
+  membership and told nobody. Caught by an existing test, with lint flagging the unused argument at
+  the same moment.
+- **A merge went through without `verify` green.** Cancelling a stuck CI run while an auto-merge
+  gate was armed dropped the cancelled checks out of the list, and the gate merged on the two that
+  remained. The content was a markdown file and post-merge CI was green, but the guarantee was not
+  the one that had been described. The gate now refuses when fewer than five checks report.
+
+## What the sprint says about the plan
+
+Planning in two halves worked for the third sprint running, and it should stop being described as a
+clever trick. It is simply what a plan looks like when part of the work depends on somebody else's
+decision.
+
+The fourth carry of S7-0a is the thing to take to planning. Three sprints of ungated work have now
+been found to fill the gap; there is no reason to assume a fourth will be there.
 
 ## Retro
 
