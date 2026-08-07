@@ -95,3 +95,51 @@ export interface AssessmentWithMarksResponse extends AssessmentResponse {
 export interface MyMarkResponse extends AssessmentResponse {
   mark: MarkResponse | null;
 }
+
+/**
+ * Attendance — a register per class per day (`.docs/PRD/12-attendance.md`).
+ *
+ * Lives beside the gradebook because it is the same shape: a per-pupil fact, read by the pupil,
+ * their parent through the school-confirmed link, and the staff who answer for the class.
+ */
+export const ATTENDANCE_STATES = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'] as const;
+export type AttendanceState = (typeof ATTENDANCE_STATES)[number];
+
+/** Taking a register: the whole class, in one action. Half a register is not a smaller register. */
+export const takeRegisterSchema = z.object({
+  onDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date like 2026-08-07.'),
+  entries: z
+    .array(
+      z.object({
+        studentAccountId: z.string().uuid(),
+        state: z.enum(ATTENDANCE_STATES),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+export type TakeRegisterInput = z.infer<typeof takeRegisterSchema>;
+
+export interface AttendanceEntryResponse {
+  studentAccountId: string;
+  studentName: string;
+  state: AttendanceState;
+  /** Set when this came from an accepted leave, so a screen can say why rather than assert it. */
+  fromLeave: boolean;
+}
+
+export interface RegisterResponse {
+  classId: string;
+  onDate: string;
+  /** Null when nobody has taken it yet — an untaken register is not an empty one. */
+  takenAt: string | null;
+  entries: AttendanceEntryResponse[];
+}
+
+/** What a pupil or parent reads: their own days, newest first. */
+export interface MyAttendanceResponse {
+  onDate: string;
+  state: AttendanceState;
+  fromLeave: boolean;
+}
