@@ -60,7 +60,15 @@ test.describe('marks', () => {
     await page.goto(`/classes/${classId}/marks/${assessment.id}`);
     await page.getByRole('button', { name: 'Publish marks' }).click();
     await page.getByRole('button', { name: 'Yes, publish these marks' }).click();
-    await expect(page.getByText('Published. The class has been notified.')).toBeVisible();
+
+    // Assert on the *state*, not the success message. Publishing revalidates the page, and the
+    // re-render replaces the whole form — success message included — with the published card. On a
+    // fast machine the message paints first and the assertion passes; in CI the revalidation wins
+    // and it never exists. This is the S6-13 lesson again: a test that reads something transient
+    // passes for a reason unrelated to the thing it is checking.
+    await expect(
+      page.getByText('These marks are published and the class can see them.'),
+    ).toBeVisible();
 
     // Alice sees 17.5 and nothing of Bob's 4.
     await page.getByRole('button', { name: 'Sign out' }).click();
