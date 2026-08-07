@@ -1,6 +1,6 @@
 {
   "name": "@connected/types",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "//": "Consumers get built output, not raw .ts. apps/api runs on plain node, which cannot import TypeScript, and pointing main at src/ also leaves the Next bundler resolving './auth.js' against a file that does not exist. `turbo` builds this before anything that depends on it.",
