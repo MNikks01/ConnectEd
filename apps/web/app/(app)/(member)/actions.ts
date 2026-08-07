@@ -21,6 +21,7 @@ import {
   upsertSyllabusTopicSchema,
   enterMarksSchema,
   createAssessmentSchema,
+  correctMarkSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -413,6 +414,41 @@ export async function publishMarksAction(
 ): Promise<ActionResult> {
   return run(
     () => callAsUser(`/assessments/${assessmentId}/publish`, { method: 'POST' }),
+    [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
+  );
+}
+
+/**
+ * Correcting one published mark (FR-GRADE-012).
+ *
+ * One pupil at a time, deliberately. A bulk overwrite of published results would leave no record of
+ * what changed for whom — and the server refuses it for that reason. The audit row it writes is not
+ * shown to the pupil or their parents: they see the corrected mark, which is now simply the mark.
+ */
+export async function correctMarkAction(
+  assessmentId: string,
+  classId: string,
+  studentAccountId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = formData.get('score');
+  const remark = formData.get('remark');
+  const score = typeof raw === 'string' ? raw.trim() : '';
+
+  const parsed = correctMarkSchema.safeParse({
+    // Empty means "not marked", exactly as it does during entry — a correction can also be the
+    // removal of a mark that should never have been there.
+    score: score === '' ? null : score,
+    ...(typeof remark === 'string' && remark.trim() !== '' ? { remark: remark.trim() } : {}),
+  });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () =>
+      callAsUser(`/assessments/${assessmentId}/marks/${studentAccountId}`, {
+        method: 'PATCH',
+        body: parsed.data,
+      }),
     [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
   );
 }
