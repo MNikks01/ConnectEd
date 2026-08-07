@@ -175,3 +175,22 @@ export async function verifiedStudentIn(
   await approveVerification(school, request.id);
   return student;
 }
+
+/**
+ * An assessment, created through the API as its teacher.
+ *
+ * The creation form is not what the marks spec is about, and driving it through the browser would
+ * make a failure ambiguous between "marking is broken" and "the form is".
+ */
+export async function createAssessment(
+  teacher: Individual,
+  classId: string,
+  subjectId: string,
+  title = 'Fractions test',
+): Promise<{ id: string }> {
+  return apiPost<{ id: string }>(
+    `/classes/${classId}/assessments`,
+    { subjectId, kind: 'TEST', title, maxScore: '20', occurredOn: '2026-08-01' },
+    teacher.accessToken,
+  );
+}

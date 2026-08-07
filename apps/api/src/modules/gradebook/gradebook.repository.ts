@@ -69,6 +69,8 @@ export interface GradebookRepository {
   softDeleteAssessment: (id: string) => Promise<void>;
   /** Verified student accounts of a class — who an assessment applies to (FR-GRADE-003). */
   listClassStudentAccountIds: (classId: string) => Promise<string[]>;
+  /** The same roster with names, which is what a marking grid is. */
+  listClassStudents: (classId: string) => Promise<{ accountId: string; name: string }[]>;
   /** The pupil account a parent's child record points at, once the school has linked it. */
   pupilAccountForChild: (childId: string) => Promise<string | null>;
 }
@@ -291,6 +293,20 @@ export function createGradebookRepository(db: Db): GradebookRepository {
         select: { accountId: true },
       });
       return rows.map((row) => row.accountId);
+    },
+
+    listClassStudents: async (classId) => {
+      const rows = await db.membership.findMany({
+        where: { classId, role: 'STUDENT', status: 'VERIFIED' },
+        select: { account: { select: { id: true, userProfile: { select: { fullName: true } } } } },
+      });
+
+      return rows
+        .map((row) => ({
+          accountId: row.account.id,
+          name: row.account.userProfile?.fullName ?? '',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
 
     pupilAccountForChild: async (childId) => {

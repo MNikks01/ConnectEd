@@ -79,11 +79,11 @@ so the DoD above asks for the real shape. See `../CI-CD/03-release-path-audit.md
 
 **S7-0c is decided — these are no longer gated:**
 
-| #    | Item                                                            | Owner                 | Est. | DoD                                                                                                  |
-| ---- | --------------------------------------------------------------- | --------------------- | ---- | ---------------------------------------------------------------------------------------------------- |
-| S7-5 | ✅ **Done 2026-08-07** — `PRD/11-gradebook.md`, `Status: Draft` | product + tech-writer | M    | FR-GRADE-001…023, three permission-matrix rows, and a per-role scoping table for who may see a mark  |
-| S7-6 | Assessments and marks, server-side                              | backend               | L    | Transactional writes; ± permission tests; a student sees only their own; audit trail on every change |
-| S7-7 | Mark entry for teachers, results for students and parents       | frontend              | M    | Loading/error/empty/success/responsive/accessible; a parent sees their child and no other            |
+| #    | Item                                                                    | Owner                 | Est. | DoD                                                                                                  |
+| ---- | ----------------------------------------------------------------------- | --------------------- | ---- | ---------------------------------------------------------------------------------------------------- |
+| S7-5 | ✅ **Done 2026-08-07** — `PRD/11-gradebook.md`, `Status: Draft`         | product + tech-writer | M    | FR-GRADE-001…023, three permission-matrix rows, and a per-role scoping table for who may see a mark  |
+| S7-6 | ✅ **Done 2026-08-07** — assessments and marks, server-side             | backend               | L    | Transactional writes; ± permission tests; a student sees only their own; audit trail on every change |
+| S7-7 | ✅ **Done 2026-08-07** — mark entry, and results for pupils and parents | frontend              | M    | Loading/error/empty/success/responsive/accessible; a parent sees their child and no other            |
 
 **Gated on S7-0a — the billing module:**
 
