@@ -75,6 +75,15 @@ enum Section {
   E
 }
 
+/// Four states, not a boolean (FR-ATT-002). A pupil who arrived late was there, and a pupil the
+/// school excused is not the same as one who simply did not come.
+enum AttendanceState {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
 enum AssessmentKind {
   TEST
   EXAM
@@ -217,6 +226,7 @@ model Account {
   pupilRecords         Child[]               @relation("ChildStudentAccount")
   assessmentsAuthored  Assessment[]          @relation("AssessmentAuthor")
   marks                Mark[]                @relation("MarkStudent")
+  attendance           AttendanceEntry[]     @relation("AttendanceStudent")
   memberships          Membership[]
   verificationRequests VerificationRequest[] @relation("VerificationRequester")
   academicItems        AcademicItem[]
@@ -482,6 +492,7 @@ model Class {
   @@index([schoolId])
   @@map("class")
   assessments Assessment[]
+  attendance  AttendanceEntry[]
 }
 
 model Subject {
@@ -860,6 +871,7 @@ model LeaveApplication {
   @@index([classId, status])
   @@index([schoolId, status])
   @@map("leave_application")
+  attendanceEntries AttendanceEntry[]
 }
 
 model Feedback {
@@ -1253,4 +1265,40 @@ model Mark {
   @@unique([assessmentId, studentAccountId])
   @@index([studentAccountId])
   @@map("mark")
+}
+
+/// One pupil's attendance for one class on one day (FR-ATT-001).
+///
+/// Keyed on the **student account**, like a mark, so a parent reaches it through
+/// `Child.studentAccountId` — the link the school confirms. There is no register row: a register is
+/// the set of entries for a class and a date, and modelling it as its own table would add a parent
+/// object whose only content is the two columns already here.
+model AttendanceEntry {
+  id               String          @id @default(uuid()) @db.Uuid
+  classId          String          @map("class_id") @db.Uuid
+  studentAccountId String          @map("student_account_id") @db.Uuid
+  /// The day being recorded, not the day it was recorded. A register taken on Monday for Friday is
+  /// ordinary; a register that files itself under Monday is wrong.
+  onDate           DateTime        @map("on_date") @db.Date
+  state            AttendanceState
+  /// Set when the state came from an accepted leave rather than a judgement (FR-ATT-010), so the
+  /// screen can say *why* a pupil is excused instead of asserting it.
+  leaveApplicationId String?       @map("leave_application_id") @db.Uuid
+
+  takenByAccountId String          @map("taken_by_account_id") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  class   Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student Account           @relation("AttendanceStudent", fields: [studentAccountId], references: [id], onDelete: Cascade)
+  leave   LeaveApplication? @relation(fields: [leaveApplicationId], references: [id], onDelete: SetNull)
+
+  /// One entry per pupil per class per day. The upsert key that makes re-taking a register an
+  /// update rather than a second answer about the same child (FR-ATT-001).
+  @@unique([classId, studentAccountId, onDate])
+  /// The register read: one class, one day.
+  @@index([classId, onDate])
+  /// The pupil's and parent's read: one pupil, newest first.
+  @@index([studentAccountId, onDate])
+  @@map("attendance_entry")
 }
