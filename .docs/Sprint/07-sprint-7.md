@@ -28,11 +28,11 @@ So, as in Sprint 6: what needs a decision, and what starts on Monday regardless.
 
 ## Prerequisites — decisions, not work
 
-| #     | Decision                                       | Blocks       | Why it is not engineering's                                                                                                                                    |
-| ----- | ---------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S7-0a | **Stripe or Razorpay** (ADR-0015, carried ×3)  | S7-8 … S7-11 | Follows the region of the pilot schools. Retro action A1 asks for a decision _or_ an explicit drop; a fourth silent carry is the outcome to avoid.             |
-| S7-0b | **A mail transport** (carried)                 | S7-12, S7-13 | SES, Postmark, SMTP — any. FR-AUTH-009 is built and undeliverable until one exists.                                                                            |
-| S7-0c | **Gradebook or mobile — which phase is next?** | S7-5 … S7-7  | Both sit under "later phases" in the roadmap with no order between them. Deciding this _is_ deciding what the second half of this sprint and the next one are. |
+| #     | Decision                                      | Blocks                  | Why it is not engineering's                                                                                                                          |
+| ----- | --------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S7-0a | **Stripe or Razorpay** (ADR-0015, carried ×3) | S7-8 … S7-11            | Follows the region of the pilot schools. Retro action A1 asks for a decision _or_ an explicit drop; a fourth silent carry is the outcome to avoid.   |
+| S7-0b | **A mail transport** (carried)                | S7-12, S7-13            | SES, Postmark, SMTP — any. FR-AUTH-009 is built and undeliverable until one exists.                                                                  |
+| S7-0c | ✅ **Decided 2026-08-07: the gradebook.**     | S7-5 … S7-7 (unblocked) | Answered by starting S7-5, and recorded at the top of `PRD/11-gradebook.md` so the decision is written down rather than implied by a file appearing. |
 
 **S7-0c has a recommendation: the gradebook.** Mobile is a second client for an API that already
 works; the gradebook is a capability the product does not have at all, and every school asks for it.
@@ -77,13 +77,13 @@ A boot smoke test is the cheap version and would catch a typo. It would not catc
 catching, which is the relay running in one process while the API writes outbox rows in another —
 so the DoD above asks for the real shape. See `../CI-CD/03-release-path-audit.md` finding 5.
 
-**Gated on S7-0c, if the gradebook:**
+**S7-0c is decided — these are no longer gated:**
 
-| #    | Item                                                      | Owner                 | Est. | DoD                                                                                                       |
-| ---- | --------------------------------------------------------- | --------------------- | ---- | --------------------------------------------------------------------------------------------------------- |
-| S7-5 | `PRD/11-gradebook.md` — requirements before code          | product + tech-writer | M    | `FR-GRADE-` ids, permission-matrix rows for all seven roles, and an explicit answer on who may see a mark |
-| S7-6 | Assessments and marks, server-side                        | backend               | L    | Transactional writes; ± permission tests; a student sees only their own; audit trail on every change      |
-| S7-7 | Mark entry for teachers, results for students and parents | frontend              | M    | Loading/error/empty/success/responsive/accessible; a parent sees their child and no other                 |
+| #    | Item                                                                    | Owner                 | Est. | DoD                                                                                                  |
+| ---- | ----------------------------------------------------------------------- | --------------------- | ---- | ---------------------------------------------------------------------------------------------------- |
+| S7-5 | ✅ **Done 2026-08-07** — `PRD/11-gradebook.md`, `Status: Draft`         | product + tech-writer | M    | FR-GRADE-001…023, three permission-matrix rows, and a per-role scoping table for who may see a mark  |
+| S7-6 | ✅ **Done 2026-08-07** — assessments and marks, server-side             | backend               | L    | Transactional writes; ± permission tests; a student sees only their own; audit trail on every change |
+| S7-7 | ✅ **Done 2026-08-07** — mark entry, and results for pupils and parents | frontend              | M    | Loading/error/empty/success/responsive/accessible; a parent sees their child and no other            |
 
 **Gated on S7-0a — the billing module:**
 

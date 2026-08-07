@@ -48,17 +48,18 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 
 ## Verification
 
-| Method | Path                                        | Auth | Purpose                                                      |
-| ------ | ------------------------------------------- | :--: | ------------------------------------------------------------ |
-| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).           |
-| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                        |
-| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                              |
-| POST   | `/verifications/decisions`                  |  🛡   | Decide up to 100 at once; reports each outcome (FR-VER-009). |
-| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                      |
-| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class.    |
-| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                            |
-| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                                 |
-| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                         |
+| Method | Path                                        | Auth | Purpose                                                                                    |
+| ------ | ------------------------------------------- | :--: | ------------------------------------------------------------------------------------------ |
+| POST   | `/verifications`                            |  🛡   | Submit request (student/parent/teacher/principal).                                         |
+| GET    | `/schools/:id/verifications?status=PENDING` |  🛡   | School reviews queue.                                                                      |
+| POST   | `/verifications/:id/decision`               |  🛡   | Approve/reject.                                                                            |
+| POST   | `/verifications/decisions`                  |  🛡   | Decide up to 100 at once; reports each outcome (FR-VER-009).                               |
+| GET    | `/me/verifications`                         |  🔑  | My requests + statuses.                                                                    |
+| GET    | `/me/memberships`                           |  🔑  | My verified memberships — how a member finds their class.                                  |
+| GET    | `/me/subjects`                              |  🔑  | Subjects I am allocated to teach.                                                          |
+| DELETE | `/schools/:id/members/:accountId`           |  🛡   | School revokes a membership.                                                               |
+| GET    | `/schools/:id/members`                      |  🛡   | The school's roster.                                                                       |
+| PUT    | `/schools/:id/children/:childId/student`    |  🛡   | Confirm a child record and a student account are one pupil (FR-GRADE-005); `null` unlinks. |
 
 ## Academics
 
@@ -94,6 +95,23 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 | Method | Path             | Auth | Purpose                                                                                                                                                             |
 | ------ | ---------------- | :--: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/media/:prefix` |  🔑  | Upload an image (`academic-items`, `timetables`, `avatars`, `posts`). Returns an opaque key; the owning module decides who may later be issued a signed URL for it. |
+
+## Gradebook
+
+| Method | Path                                       | Auth | Purpose                                                                                 |
+| ------ | ------------------------------------------ | :--: | --------------------------------------------------------------------------------------- |
+| POST   | `/classes/:id/assessments`                 |  🛡   | Allocated teacher creates an assessment (FR-GRADE-001).                                 |
+| PUT    | `/assessments/:id/marks`                   |  🛡   | Enter the class's marks as a draft; refused once published.                             |
+| POST   | `/assessments/:id/publish`                 |  🛡   | Make every mark visible at once (FR-GRADE-011).                                         |
+| PATCH  | `/assessments/:id/marks/:studentAccountId` |  🛡   | Correct one mark; audited with the previous value (FR-GRADE-012).                       |
+| GET    | `/assessments/:id/marks`                   |  🛡   | The marking view — everybody's mark. Subject teacher, class teacher, principal, school. |
+| DELETE | `/assessments/:id`                         |  🛡   | Soft-delete.                                                                            |
+| GET    | `/me/classes/:id/marks`                    |  🔑  | A pupil's own marks, published only.                                                    |
+| GET    | `/children/:id/marks`                      |  🔑  | A parent's, for one child, via the link the school confirmed.                           |
+
+**Two shapes of read, deliberately on different paths.** `/assessments/:id/marks` answers with the
+whole class; `/me/...` and `/children/...` answer with one pupil. A permission mistake on one cannot
+quietly widen the other.
 
 ## Workflows
 

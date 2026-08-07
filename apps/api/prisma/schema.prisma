@@ -75,6 +75,13 @@ enum Section {
   E
 }
 
+enum AssessmentKind {
+  TEST
+  EXAM
+  ASSIGNMENT
+  PRACTICAL
+}
+
 enum VerificationStatus {
   PENDING
   VERIFIED
@@ -205,6 +212,11 @@ model Account {
 
   teacherProfiles      TeacherProfile[]
   children             Child[]
+  /// Children the school has confirmed are this account's own pupil record — see `Child.studentAccountId`.
+  /// More than one, because each parent of the same pupil holds their own row.
+  pupilRecords         Child[]               @relation("ChildStudentAccount")
+  assessmentsAuthored  Assessment[]          @relation("AssessmentAuthor")
+  marks                Mark[]                @relation("MarkStudent")
   memberships          Membership[]
   verificationRequests VerificationRequest[] @relation("VerificationRequester")
   academicItems        AcademicItem[]
@@ -469,6 +481,7 @@ model Class {
   @@unique([schoolId, medium, level, section])
   @@index([schoolId])
   @@map("class")
+  assessments Assessment[]
 }
 
 model Subject {
@@ -488,6 +501,7 @@ model Subject {
   @@unique([classId, name])
   @@index([classId])
   @@map("subject")
+  assessments Assessment[]
 }
 
 model TeacherProfile {
@@ -546,11 +560,25 @@ model Child {
   fullName        String    @map("full_name")
   schoolId        String?   @map("school_id") @db.Uuid
   classId         String?   @map("class_id") @db.Uuid
+  /// The pupil's own account, once the school has confirmed they are the same person.
+  ///
+  /// Until the gradebook there were two unconnected representations of a pupil — this row, owned
+  /// by a parent, and a student `Account` with a verified STUDENT membership — and nothing needed
+  /// them joined: homework fans out to class *members* and read tracking is per account. A mark is
+  /// the first thing that is *about* a pupil, so a parent could not otherwise find their child's.
+  ///
+  /// **Deliberately not unique.** Two parents of one pupil each hold their own `Child` row, and a
+  /// unique constraint here would let the first parent link and refuse the second forever.
+  ///
+  /// Nullable, and stays null for a pupil with no account of their own. Only the school sets it,
+  /// and only to an account with a verified STUDENT membership in the same class.
+  studentAccountId String?  @map("student_account_id") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  parent Account        @relation(fields: [parentAccountId], references: [id], onDelete: Cascade)
+  parent  Account  @relation(fields: [parentAccountId], references: [id], onDelete: Cascade)
+  student Account? @relation("ChildStudentAccount", fields: [studentAccountId], references: [id], onDelete: SetNull)
   school SchoolProfile? @relation(fields: [schoolId], references: [accountId], onDelete: SetNull)
   class  Class?         @relation(fields: [classId], references: [id], onDelete: SetNull)
 
@@ -559,6 +587,8 @@ model Child {
   leaveApplications    LeaveApplication[]
 
   @@index([parentAccountId])
+  /// The parent's read path: "which pupil is my child, and what are their marks".
+  @@index([studentAccountId])
   @@index([classId])
   @@map("child")
 }
@@ -1159,4 +1189,68 @@ model OutboxEvent {
   /// X" — both are served by this one composite index in that column order.
   @@index([publishedAt, createdAt])
   @@map("outbox_event")
+}
+
+/// A thing that gets marked: a test, an exam, an assignment, a practical (FR-GRADE-001).
+///
+/// Belongs to a subject, and therefore to exactly one class — the same shape as an academic item,
+/// and authorized the same way: only a teacher allocated to that subject may create one.
+model Assessment {
+  id        String         @id @default(uuid()) @db.Uuid
+  subjectId String         @map("subject_id") @db.Uuid
+  classId   String         @map("class_id") @db.Uuid
+  kind      AssessmentKind
+  title     String
+  /// The denominator every mark is read against. Stored per assessment rather than per mark: a
+  /// class does not sit the same test out of different totals.
+  maxScore  Decimal        @map("max_score") @db.Decimal(6, 2)
+  occurredOn DateTime      @map("occurred_on") @db.Date
+  authorAccountId String   @map("author_account_id") @db.Uuid
+
+  /// Null until the teacher publishes. **This is the visibility switch** — before it, marks exist
+  /// and only the teacher and the school may read them (FR-GRADE-010, FR-GRADE-011). A teacher
+  /// marking thirty scripts is half-finished for most of an evening.
+  publishedAt DateTime?    @map("published_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  deletedAt DateTime?      @map("deleted_at")
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  author  Account @relation("AssessmentAuthor", fields: [authorAccountId], references: [id], onDelete: Cascade)
+  marks   Mark[]
+
+  @@index([classId, publishedAt])
+  @@index([subjectId])
+  @@map("assessment")
+}
+
+/// One pupil's result for one assessment (FR-GRADE-010).
+///
+/// Keyed on the **student account**, which is what the class roster is made of. A parent reaches it
+/// through `Child.studentAccountId`, which the school confirms (FR-GRADE-005).
+model Mark {
+  id           String  @id @default(uuid()) @db.Uuid
+  assessmentId String  @map("assessment_id") @db.Uuid
+  studentAccountId String @map("student_account_id") @db.Uuid
+
+  /// Null is "not marked" and is **not** a zero (FR-GRADE-014). A pupil who was absent has no
+  /// score; a pupil who answered nothing has one, and it is 0.
+  score   Decimal? @db.Decimal(6, 2)
+  /// Free text for the pupil and their parents. The PRD leaves "is a remark ever private" open;
+  /// until it is answered there is one field and it is shared, which is the safer default to
+  /// explain to a parent.
+  remark  String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    Account    @relation("MarkStudent", fields: [studentAccountId], references: [id], onDelete: Cascade)
+
+  /// One mark per pupil per assessment. The upsert key for draft entry, and the guard against a
+  /// second row appearing when a teacher edits.
+  @@unique([assessmentId, studentAccountId])
+  @@index([studentAccountId])
+  @@map("mark")
 }

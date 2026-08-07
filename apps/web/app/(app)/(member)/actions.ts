@@ -19,6 +19,7 @@ import {
   publishAcademicItemSchema,
   submitFeedbackSchema,
   upsertSyllabusTopicSchema,
+  enterMarksSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -334,5 +335,63 @@ export async function disableTwoFactorAction(code: string): Promise<ActionResult
   return run(
     () => callAsUser('/me/2fa', { method: 'DELETE', body: { code } }),
     ['/settings/security'],
+  );
+}
+
+/**
+ * Entering a class's marks — the whole class in one submission (FR-GRADE-010).
+ *
+ * The form posts one field per pupil, `score-<accountId>`, and an empty field means **not marked**
+ * rather than zero. That distinction is the reason this parses rather than coerces: `Number('')`
+ * is 0, and a teacher who tabbed past a pupil would silently award them nothing.
+ */
+export async function enterMarksAction(
+  assessmentId: string,
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const marks: { studentAccountId: string; score: string | null; remark?: string }[] = [];
+
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith('score-')) continue;
+
+    const studentAccountId = key.slice('score-'.length);
+    const raw = typeof value === 'string' ? value.trim() : '';
+    const remark = formData.get(`remark-${studentAccountId}`);
+
+    marks.push({
+      studentAccountId,
+      score: raw === '' ? null : raw,
+      ...(typeof remark === 'string' && remark.trim() !== '' ? { remark: remark.trim() } : {}),
+    });
+  }
+
+  if (marks.length === 0) {
+    return { ok: false, message: 'There was nobody to mark.' };
+  }
+
+  const parsed = enterMarksSchema.safeParse({ marks });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/assessments/${assessmentId}/marks`, { method: 'PUT', body: parsed.data }),
+    [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
+  );
+}
+
+/**
+ * Publishing them, all at once (FR-GRADE-011).
+ *
+ * Separate from entry on purpose, and irreversible in the sense that matters: once published, a
+ * correction is one pupil at a time and audited. A teacher half-way through marking has not made a
+ * decision about anybody yet.
+ */
+export async function publishMarksAction(
+  assessmentId: string,
+  classId: string,
+): Promise<ActionResult> {
+  return run(
+    () => callAsUser(`/assessments/${assessmentId}/publish`, { method: 'POST' }),
+    [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
   );
 }

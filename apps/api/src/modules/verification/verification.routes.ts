@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import {
   bulkVerificationDecisionSchema,
+  linkChildSchema,
   submitVerificationSchema,
   verificationDecisionSchema,
 } from '@connected/types';
@@ -110,6 +111,24 @@ export function verificationRoutes(service: VerificationService): ExpressRouter 
         req.body as never,
       );
       res.status(200).json(updated);
+    }),
+  );
+
+  /**
+   * PUT rather than POST: linking is idempotent and the body carries the whole truth — the same
+   * request twice leaves the same state, and `null` is how a school undoes a wrong link.
+   */
+  router.put(
+    '/schools/:id/children/:childId/student',
+    validateBody(linkChildSchema),
+    handler(async (req, res) => {
+      await service.linkChildToStudent(
+        requireActor(req),
+        uuidParam(req, 'id'),
+        uuidParam(req, 'childId'),
+        (req.body as { studentAccountId: string | null }).studentAccountId,
+      );
+      res.status(204).send();
     }),
   );
 
