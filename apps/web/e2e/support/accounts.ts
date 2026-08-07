@@ -175,3 +175,21 @@ export async function verifiedStudentIn(
   await approveVerification(school, request.id);
   return student;
 }
+
+/**
+ * Makes a verified teacher the class teacher of a class (FR-INST-004).
+ *
+ * The school's action, and a prerequisite for anything the class teacher alone may do — taking a
+ * register, for one. A subject teacher is not a class teacher, and the API is right to refuse them.
+ */
+export async function allocateClassTeacher(
+  school: School,
+  classId: string,
+  teacher: Individual,
+): Promise<void> {
+  await apiPost(
+    `/classes/${classId}/class-teacher`,
+    { teacherAccountId: teacher.accountId },
+    school.accessToken,
+  );
+}

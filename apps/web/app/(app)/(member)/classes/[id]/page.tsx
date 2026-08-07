@@ -76,6 +76,7 @@ export default async function ClassFeedPage({
             <Link href={`/classes/${id}/timetable`}>Timetable</Link>
             <Link href={`/classes/${id}/syllabus`}>Syllabus</Link>
             <Link href={`/classes/${id}/marks`}>Marks</Link>
+            <Link href={`/classes/${id}/register`}>Attendance</Link>
           </span>
         }
       />
