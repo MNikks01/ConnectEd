@@ -13,10 +13,16 @@ import { Card, PageHeader } from '@connected/ui';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
+import { AssessmentComposer } from '@/components/assessment-composer';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
-import type { AssessmentResponse, MyMarkResponse, MyMembershipResponse } from '@connected/types';
+import type {
+  AssessmentResponse,
+  MyMarkResponse,
+  MyMembershipResponse,
+  MyTeachingSubjectResponse,
+} from '@connected/types';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Marks · GetConnected' };
@@ -96,6 +102,7 @@ export default async function MarksPage({ params }: { params: Promise<{ id: stri
   let mine: MyMarkResponse[] = [];
   const childrens: { name: string; marks: MyMarkResponse[]; unlinked: boolean }[] = [];
   let assessments: AssessmentResponse[] = [];
+  let teachingHere: MyTeachingSubjectResponse[] = [];
 
   try {
     if (asPupil) {
@@ -125,6 +132,12 @@ export default async function MarksPage({ params }: { params: Promise<{ id: stri
     if (teaches) {
       assessments = (await readAsUser<{ data: AssessmentResponse[] }>(`/classes/${id}/assessments`))
         .data;
+
+      // Only the subjects this teacher is allocated to *in this class* — the picker must not offer
+      // a subject the server will refuse.
+      teachingHere = (
+        await readAsUser<{ data: MyTeachingSubjectResponse[] }>('/me/subjects')
+      ).data.filter((subject) => subject.classId === id);
     }
   } catch (error) {
     if (error instanceof SessionExpiredError)
@@ -162,6 +175,12 @@ export default async function MarksPage({ params }: { params: Promise<{ id: stri
       {teaches ? (
         <section style={{ marginTop: 'var(--ui-space-5)' }}>
           <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>Assessments</h2>
+
+          <Card>
+            <h3 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-2)' }}>New assessment</h3>
+            <AssessmentComposer classId={id} subjects={teachingHere} />
+          </Card>
+
           {assessments.length === 0 ? (
             <Card>
               <p style={{ margin: 0 }}>No assessments yet.</p>
