@@ -1,5 +1,12 @@
 # @connected/types
 
+## 0.5.0
+
+### Minor Changes
+
+- d47a11c: Adds the gradebook contract: assessments, draft marks, publishing, and the per-pupil read shapes (FR-GRADE-001…023).
+- 0c796b3: Adds `linkChildSchema` — the school confirming that a parent's child record and a student account are the same pupil (FR-GRADE-005).
+
 ## 0.4.0
 
 ### Minor Changes
