@@ -23,6 +23,8 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | Create an assessment                          |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
 | Enter and publish marks                       |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
 | View a mark                                   |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Take a register                               |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   ✅   |      ➖      |
+| View a register                               |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
 | Submit leave application                      |   ➖    | ✅ (for child) |   ✅    |      ✅       |    ➖     |   ➖   |      ➖      |
 | Approve student/parent leave                  |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   👁    |      ➖      |
 | Approve teacher leave                         |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   👁    |      ➖      |
@@ -68,6 +70,13 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 - **Ownership rules**: users edit only their own content; schools manage only their own structure; teachers write
   only to allocated subjects/classes; class teachers approve leave only for their allocated class; parents act
   only within a verified child's scope.
+- **"View a register" is scoped the same way as "View a mark", with one difference.** Attendance is
+  a _class-level_ fact, so **any** teacher of the class reads the whole register — knowing who is in
+  the room is part of teaching it — where marks are subject-scoped. Pupils and parents still see one
+  pupil's. `12-attendance.md` carries the table.
+- **Taking a register is the class teacher's**, not any teacher's: FR-INST-004 already makes them
+  the person who answers for the class, and two people taking the same register is how a class ends
+  up with two answers about the same child.
 - **"View a mark" is the one row this table cannot express, and the gap is the point.** Five roles
   read marks and every one of them reads a _different set_: a student their own, a parent their own
   child's, a teacher the subjects they are allocated to, the class teacher every published mark in

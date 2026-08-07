@@ -20,6 +20,9 @@ import {
   submitFeedbackSchema,
   upsertSyllabusTopicSchema,
   enterMarksSchema,
+  createAssessmentSchema,
+  correctMarkSchema,
+  takeRegisterSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -339,6 +342,26 @@ export async function disableTwoFactorAction(code: string): Promise<ActionResult
 }
 
 /**
+ * Setting up an assessment (FR-GRADE-001).
+ *
+ * The subject is a picker rather than free text because the server refuses a subject this teacher
+ * is not allocated to, and a form that lets someone type their way into a 403 is a form that
+ * teaches them the product is broken.
+ */
+export async function createAssessmentAction(
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = createAssessmentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/classes/${classId}/assessments`, { method: 'POST', body: parsed.data }),
+    [`/classes/${classId}/marks`],
+  );
+}
+
+/**
  * Entering a class's marks — the whole class in one submission (FR-GRADE-010).
  *
  * The form posts one field per pupil, `score-<accountId>`, and an empty field means **not marked**
@@ -393,5 +416,70 @@ export async function publishMarksAction(
   return run(
     () => callAsUser(`/assessments/${assessmentId}/publish`, { method: 'POST' }),
     [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
+  );
+}
+
+/**
+ * Correcting one published mark (FR-GRADE-012).
+ *
+ * One pupil at a time, deliberately. A bulk overwrite of published results would leave no record of
+ * what changed for whom — and the server refuses it for that reason. The audit row it writes is not
+ * shown to the pupil or their parents: they see the corrected mark, which is now simply the mark.
+ */
+export async function correctMarkAction(
+  assessmentId: string,
+  classId: string,
+  studentAccountId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = formData.get('score');
+  const remark = formData.get('remark');
+  const score = typeof raw === 'string' ? raw.trim() : '';
+
+  const parsed = correctMarkSchema.safeParse({
+    // Empty means "not marked", exactly as it does during entry — a correction can also be the
+    // removal of a mark that should never have been there.
+    score: score === '' ? null : score,
+    ...(typeof remark === 'string' && remark.trim() !== '' ? { remark: remark.trim() } : {}),
+  });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () =>
+      callAsUser(`/assessments/${assessmentId}/marks/${studentAccountId}`, {
+        method: 'PATCH',
+        body: parsed.data,
+      }),
+    [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
+  );
+}
+
+/**
+ * Taking a register (FR-ATT-001).
+ *
+ * The form posts one field per pupil, `state-<accountId>`. Every pupil is submitted, including the
+ * ones left at their offered value — half a register is not a smaller register, it is a class where
+ * nobody knows who is missing.
+ */
+export async function takeRegisterAction(
+  classId: string,
+  onDate: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const entries: { studentAccountId: string; state: string }[] = [];
+
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith('state-') || typeof value !== 'string') continue;
+    entries.push({ studentAccountId: key.slice('state-'.length), state: value });
+  }
+
+  if (entries.length === 0) return { ok: false, message: 'There was nobody to register.' };
+
+  const parsed = takeRegisterSchema.safeParse({ onDate, entries });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/classes/${classId}/register`, { method: 'PUT', body: parsed.data }),
+    [`/classes/${classId}/register`, `/classes/${classId}`],
   );
 }

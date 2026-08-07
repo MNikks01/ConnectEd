@@ -177,20 +177,19 @@ export async function verifiedStudentIn(
 }
 
 /**
- * An assessment, created through the API as its teacher.
+ * Makes a verified teacher the class teacher of a class (FR-INST-004).
  *
- * The creation form is not what the marks spec is about, and driving it through the browser would
- * make a failure ambiguous between "marking is broken" and "the form is".
+ * The school's action, and a prerequisite for anything the class teacher alone may do — taking a
+ * register, for one. A subject teacher is not a class teacher, and the API is right to refuse them.
  */
-export async function createAssessment(
-  teacher: Individual,
+export async function allocateClassTeacher(
+  school: School,
   classId: string,
-  subjectId: string,
-  title = 'Fractions test',
-): Promise<{ id: string }> {
-  return apiPost<{ id: string }>(
-    `/classes/${classId}/assessments`,
-    { subjectId, kind: 'TEST', title, maxScore: '20', occurredOn: '2026-08-01' },
-    teacher.accessToken,
+  teacher: Individual,
+): Promise<void> {
+  await apiPost(
+    `/classes/${classId}/class-teacher`,
+    { teacherAccountId: teacher.accountId },
+    school.accessToken,
   );
 }

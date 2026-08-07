@@ -1,5 +1,11 @@
 # @connected/types
 
+## 0.6.0
+
+### Minor Changes
+
+- 5b15360: Adds the attendance contract: taking a register, and the per-pupil read shapes (FR-ATT-001…031).
+
 ## 0.5.0
 
 ### Minor Changes

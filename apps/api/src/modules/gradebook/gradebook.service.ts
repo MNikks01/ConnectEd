@@ -243,6 +243,16 @@ export function createGradebookService({
       });
       if (!klass) throw new NotFoundError();
 
+      // The school sees everything, drafts included — it owns the data and must be able to take
+      // over from a teacher who has left (`PRD/11-gradebook.md`). Handled before the allocation
+      // lookup because a school holds no subject allocations, so it would otherwise fall through to
+      // the published-only branch — and `listMarks` *does* give it drafts, which left the two
+      // endpoints disagreeing: a draft it could open by id and never see listed.
+      if (actor.accountType === 'SCHOOL') {
+        assertIsSchool(actor, klass.schoolId);
+        return (await repository.listForClass(classId, { publishedOnly: false })).map(toResponse);
+      }
+
       // A teacher of this class sees their own subjects' assessments, drafts included, plus the
       // published ones from other subjects. Everyone else with a claim sees published only.
       const mine = await db.subjectAllocation.findMany({

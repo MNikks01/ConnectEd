@@ -113,6 +113,19 @@ verification/ownership checked). This is the contract; the OpenAPI spec (generat
 whole class; `/me/...` and `/children/...` answer with one pupil. A permission mistake on one cannot
 quietly widen the other.
 
+## Attendance
+
+| Method | Path                          | Auth | Purpose                                                                            |
+| ------ | ----------------------------- | :--: | ---------------------------------------------------------------------------------- |
+| GET    | `/classes/:id/register?date=` |  🛡   | The register for a day, pre-filled from accepted leave where untaken (FR-ATT-010). |
+| PUT    | `/classes/:id/register`       |  🛡   | The class teacher or school takes it, whole class in one action.                   |
+| GET    | `/me/classes/:id/attendance`  |  🔑  | A pupil's own days.                                                                |
+| GET    | `/children/:id/attendance`    |  🔑  | A parent's, for one child, via the link the school confirmed.                      |
+
+**Reading is wider than taking, deliberately.** Any teacher of the class reads the whole register —
+knowing who is in the room is part of teaching it — while only the class teacher or the school takes
+one.
+
 ## Workflows
 
 | Method | Path                                         | Auth | Purpose                                                         |
