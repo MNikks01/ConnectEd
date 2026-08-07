@@ -33,6 +33,11 @@ The exact flow requested: **feature branch → PR to `development` → merge →
    does not. Left alone the next release re-publishes the same changelog and bumps from the same
    number — and the drift is what made an earlier release PR conflict across 176 files.
 
+   **Name the branch `chore/back-merge-<version>`.** CI reads it: `changeset-check` is skipped on a
+   back-merge, because the release commit it carries is a version bump with every changeset already
+   consumed, and no changeset could be added that would not publish the same version twice. A
+   back-merge branch named anything else fails that check for a reason nobody can act on.
+
 ## Lifecycle
 
 ```mermaid

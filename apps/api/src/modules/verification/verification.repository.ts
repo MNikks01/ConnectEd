@@ -6,6 +6,7 @@
  * Partially applied, it would leave someone holding academic access with no request explaining
  * why — or a request marked approved that grants nothing.
  */
+import { recordEvent } from '../../shared/outbox/index.js';
 import { membershipScopeKey } from '../../shared/db/membership-scope.js';
 import {
   BOUNDED_LIST_CAP,
@@ -17,6 +18,7 @@ import {
 import type { PageRequest } from '../../shared/http/pagination.js';
 
 import type { Db } from '../../shared/db/index.js';
+import type { PublishableEvent } from '../../shared/events/index.js';
 import type { UserRole, VerificationStatus } from '../../generated/prisma/client.js';
 
 export interface VerificationRequestRow {
@@ -66,7 +68,10 @@ export interface VerificationRepository {
     role: UserRole;
     classId: string | null;
   }) => Promise<{ id: string } | null>;
-  createRequest: (input: CreateRequestInput) => Promise<VerificationRequestRow>;
+  createRequest: (
+    input: CreateRequestInput,
+    toEvent: (row: VerificationRequestRow) => PublishableEvent,
+  ) => Promise<VerificationRequestRow>;
   createChild: (input: {
     parentAccountId: string;
     fullName: string;
@@ -79,17 +84,29 @@ export interface VerificationRepository {
     page: PageRequest,
   ) => Promise<VerificationRequestRow[]>;
   listForRequester: (accountId: string, page: PageRequest) => Promise<VerificationRequestRow[]>;
-  approve: (input: ApproveInput) => Promise<void>;
-  reject: (input: {
-    requestId: string;
-    actorAccountId: string;
-    note?: string | undefined;
-  }) => Promise<void>;
-  revokeMembership: (input: {
-    accountId: string;
-    schoolId: string;
-    actorAccountId: string;
-  }) => Promise<number>;
+  /**
+   * These three take a finished event rather than a `toEvent` callback, unlike the create paths:
+   * nothing in their events depends on an id that does not exist yet, so there is nothing to
+   * defer. It still commits with the write (ADR-0019).
+   */
+  approve: (input: ApproveInput, event: PublishableEvent) => Promise<void>;
+  reject: (
+    input: {
+      requestId: string;
+      actorAccountId: string;
+      note?: string | undefined;
+    },
+    event: PublishableEvent,
+  ) => Promise<void>;
+  /** Records the event only when something was actually revoked. */
+  revokeMembership: (
+    input: {
+      accountId: string;
+      schoolId: string;
+      actorAccountId: string;
+    },
+    event: PublishableEvent,
+  ) => Promise<number>;
   classBelongsToSchool: (classId: string, schoolId: string) => Promise<boolean>;
   subjectsBelongToSchool: (subjectIds: string[], schoolId: string) => Promise<boolean>;
   listMembers: (schoolId: string) => Promise<MemberRow[]>;
@@ -207,20 +224,26 @@ export function createVerificationRepository(db: Db): VerificationRepository {
         select: { id: true },
       }),
 
-    createRequest: async (input) => {
-      const row = await db.verificationRequest.create({
-        data: {
-          requesterAccountId: input.requesterAccountId,
-          schoolId: input.schoolId,
-          role: input.role,
-          ...(input.classId ? { classId: input.classId } : {}),
-          ...(input.childId ? { childId: input.childId } : {}),
-          ...(input.payload ? { payload: input.payload } : {}),
-          status: 'PENDING',
-        },
-        select: REQUEST_SELECT,
+    createRequest: async (input, toEvent) => {
+      return db.$transaction(async (tx) => {
+        const row = await tx.verificationRequest.create({
+          data: {
+            requesterAccountId: input.requesterAccountId,
+            schoolId: input.schoolId,
+            role: input.role,
+            ...(input.classId ? { classId: input.classId } : {}),
+            ...(input.childId ? { childId: input.childId } : {}),
+            ...(input.payload ? { payload: input.payload } : {}),
+            status: 'PENDING',
+          },
+          select: REQUEST_SELECT,
+        });
+
+        const created = toRow(row);
+        await recordEvent(tx, toEvent(created));
+
+        return created;
       });
-      return toRow(row);
     },
 
     createChild: ({ parentAccountId, fullName, schoolId, classId }) =>
@@ -251,7 +274,7 @@ export function createVerificationRepository(db: Db): VerificationRepository {
       return rows.map((row) => toRow(row));
     },
 
-    approve: async (input) => {
+    approve: async (input, event) => {
       const scopeKey = membershipScopeKey(input.classId, input.childId);
       const now = new Date();
 
@@ -322,16 +345,19 @@ export function createVerificationRepository(db: Db): VerificationRepository {
             },
           },
         });
+
+        await recordEvent(tx, event);
       });
     },
 
-    reject: async ({ requestId, actorAccountId, note }) => {
-      await db.$transaction([
-        db.verificationRequest.update({
+    reject: async ({ requestId, actorAccountId, note }, event) => {
+      await db.$transaction(async (tx) => {
+        await tx.verificationRequest.update({
           where: { id: requestId },
           data: { status: 'REJECTED', decidedBy: actorAccountId, decidedAt: new Date() },
-        }),
-        db.auditLog.create({
+        });
+
+        await tx.auditLog.create({
           data: {
             actorAccountId,
             action: 'verification.rejected',
@@ -339,12 +365,14 @@ export function createVerificationRepository(db: Db): VerificationRepository {
             entityId: requestId,
             metadata: note ? { note } : {},
           },
-        }),
-      ]);
+        });
+
+        await recordEvent(tx, event);
+      });
     },
 
     /** Returns how many membership rows were revoked, so the service can 404 on none. */
-    revokeMembership: async ({ accountId, schoolId, actorAccountId }) => {
+    revokeMembership: async ({ accountId, schoolId, actorAccountId }, event) => {
       const result = await db.$transaction(async (tx) => {
         const updated = await tx.membership.updateMany({
           where: { accountId, schoolId, status: 'VERIFIED' },
@@ -361,6 +389,9 @@ export function createVerificationRepository(db: Db): VerificationRepository {
               metadata: { schoolId, revokedCount: updated.count },
             },
           });
+
+          // Inside the `count > 0` branch: revoking nothing must not announce a revocation.
+          await recordEvent(tx, event);
         }
 
         return updated.count;

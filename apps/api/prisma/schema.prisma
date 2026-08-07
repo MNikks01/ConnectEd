@@ -1129,3 +1129,34 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_log")
 }
+
+/// Domain events waiting to be handed to the queue (ADR-0019).
+///
+/// Written in the *same transaction* as the change that produced them, so an event cannot exist
+/// without its change and a committed change cannot be missing its event. Before this table a
+/// failed `queue.add` lost the event entirely: the domain write had already committed, so the
+/// publisher logged and moved on.
+///
+/// A row is claimed by the relay, published, and stamped `published_at`. It is never deleted on
+/// the publish path — a sweep removes published rows once they are old enough, so that "did that
+/// notification go out?" stays answerable for a while after the fact.
+model OutboxEvent {
+  id     String @id @default(uuid()) @db.Uuid
+  /// The envelope's idempotency key, and the queue's job id — which is what makes a double
+  /// publish harmless rather than a duplicate notification.
+  eventId String @unique @map("event_id") @db.Uuid
+  type   String
+  /// The whole event, envelope included, exactly as the consumer will receive it.
+  payload Json
+
+  occurredAt  DateTime  @map("occurred_at")
+  publishedAt DateTime? @map("published_at")
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  /// The relay's only query is "unpublished, oldest first", and the sweep's is "published before
+  /// X" — both are served by this one composite index in that column order.
+  @@index([publishedAt, createdAt])
+  @@map("outbox_event")
+}

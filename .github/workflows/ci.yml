@@ -181,7 +181,22 @@ jobs:
     # It passed on the first release by accident: one changeset named an ignored package, was
     # therefore never consumed, and left something for `status` to find. Removing that leftover
     # (#58) is what exposed this.
-    if: github.event_name == 'pull_request' && github.base_ref != 'main'
+    #
+    # The **back-merge** is the same case pointing the other way, and the `base_ref` test misses it:
+    # it carries the release commit — a version bump and a CHANGELOG entry with every changeset
+    # already deleted — into `development`, so `status` finds a changed package and nothing to
+    # explain it. There is no changeset that could be added: writing one would publish the version
+    # that just shipped a second time.
+    #
+    # This did not surface until 0.4.0 because the 0.3.0 back-merge passed vacuously — its merge
+    # base *was* `development`'s tip, which already carried the bump, so no package file appeared in
+    # the compared range at all. The case had never been tested.
+    #
+    # Keyed on the branch name, which `.docs/CI-CD/00-git-flow.md` requires a back-merge to use.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.base_ref != 'main'
+      && !startsWith(github.head_ref, 'chore/back-merge')
     steps:
       - uses: actions/checkout@v4
         with:

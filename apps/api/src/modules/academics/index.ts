@@ -16,7 +16,6 @@ import { createTimetableService } from './timetable.service.js';
 
 import { Router } from 'express';
 import type { Db } from '../../shared/db/index.js';
-import type { EventPublisher } from '../../shared/events/index.js';
 import type { Logger } from '../../shared/logger/index.js';
 import type { Storage } from '../../shared/storage/index.js';
 import type { AcademicsService, MediaClaims } from './academics.service.js';
@@ -40,7 +39,6 @@ export interface AcademicsModule {
 export function createAcademicsModule(deps: {
   db: Db;
   storage?: Storage | undefined;
-  events: EventPublisher;
   logger: Logger;
   /** Told when an uploaded key becomes referenced, so the orphan sweep leaves it alone. */
   media?: MediaClaims | undefined;
@@ -49,7 +47,6 @@ export function createAcademicsModule(deps: {
     repository: createAcademicsRepository(deps.db),
     db: deps.db,
     storage: deps.storage,
-    events: deps.events,
     logger: deps.logger,
     media: deps.media,
   });
@@ -57,7 +54,6 @@ export function createAcademicsModule(deps: {
   const notices = createNoticesService({
     repository: createNoticesRepository(deps.db),
     db: deps.db,
-    events: deps.events,
     logger: deps.logger,
   });
 

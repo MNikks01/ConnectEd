@@ -22,8 +22,13 @@ const { createEventQueue, createEventWorker, createRedisConnection, EVENTS_QUEUE
 const { createNotificationsModule } = await import('./modules/notifications/index.js');
 const { createStorage } = await import('./shared/storage/index.js');
 
-const { createMetrics, registerDbPoolMetrics, registerQueueDepthMetrics } =
-  await import('./shared/observability/metrics.js');
+const {
+  createMetrics,
+  registerDbPoolMetrics,
+  registerOutboxDepthMetric,
+  registerQueueDepthMetrics,
+} = await import('./shared/observability/metrics.js');
+const { createOutboxRepository, createRelay } = await import('./shared/outbox/index.js');
 
 // Built here rather than inside createApp so the pool, the queue, and the worker can all report
 // into the same registry — /metrics is one endpoint, and a signal that lands in a second registry
@@ -41,7 +46,7 @@ const db = createDb({
 // BullMQ needs its own connection: a blocking worker command would otherwise stall every other
 // Redis call sharing the socket.
 const queueConnection = createRedisConnection(config.REDIS_URL);
-const events = createEventQueue(queueConnection, logger);
+const events = createEventQueue(queueConnection);
 
 // Dependencies register their own readiness probes here, at the composition root.
 const readiness = new ReadinessRegistry();
@@ -85,7 +90,6 @@ const app = createApp({
   metrics,
   readiness,
   db,
-  events: events.publisher,
   storage,
   realtime,
 });
@@ -95,12 +99,7 @@ const app = createApp({
  * RUN_WORKER_IN_PROCESS is false, so fan-out cannot compete with request handling.
  */
 const { createVerificationModule } = await import('./modules/verification/index.js');
-const verificationForWorker = createVerificationModule(
-  db,
-  logger,
-  events.publisher,
-  billing.service,
-);
+const verificationForWorker = createVerificationModule(db, logger, billing.service);
 const notifications = createNotificationsModule(db, logger, verificationForWorker.service);
 const workerConnection = config.RUN_WORKER_IN_PROCESS
   ? createRedisConnection(config.REDIS_URL)
@@ -115,6 +114,29 @@ const worker = workerConnection
   : undefined;
 
 if (worker) logger.info('Event worker running in-process');
+
+/**
+ * The outbox relay runs wherever the worker does (ADR-0019). In-process by default, so a local
+ * `pnpm dev` delivers notifications without a second process; when `RUN_WORKER_IN_PROCESS` is
+ * false it belongs to the worker instead, and running it in both would have two relays claiming
+ * from the same table — which `FOR UPDATE SKIP LOCKED` makes safe, but pointless.
+ */
+const outbox = createOutboxRepository(db);
+
+const relay = config.RUN_WORKER_IN_PROCESS
+  ? createRelay({
+      repository: outbox,
+      enqueue: events.enqueue,
+      logger,
+    })
+  : undefined;
+
+registerOutboxDepthMetric(metrics.registry, outbox);
+
+if (relay) {
+  relay.start();
+  logger.info('Outbox relay running in-process');
+}
 
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
@@ -149,6 +171,8 @@ function shutdown(signal: string): void {
       // Close in dependency order: stop consuming, stop publishing, then release the pool —
       // all only after in-flight requests have drained.
       await worker?.close();
+      // Before the queue and the pool it is mid-pass against; see the worker's shutdown.
+      await relay?.stop();
       // Sockets first: an open connection would otherwise keep the process alive past the point
       // the load balancer has already stopped sending it work.
       await realtime.close();

@@ -16,7 +16,6 @@ import { createVerificationModule } from '../modules/verification/index.js';
 import { createTokenService } from '../shared/auth/tokens.js';
 import { loadConfig } from '../shared/config/index.js';
 import { createLogger } from '../shared/logger/index.js';
-import { recordingPublisher } from '../shared/events/index.js';
 import { assertDbReachable, closeTestDb, resetDb, seedSchool, testDb } from './support/db.js';
 import { bodyAs } from './support/body.js';
 
@@ -398,10 +397,9 @@ describe('events (FR-ACAD-011)', () => {
 });
 
 describe('notifications (FR-ACAD-012)', () => {
-  it('publishes a notice.published event', async () => {
-    const events = recordingPublisher();
+  it('records a notice.published event in the outbox', async () => {
     const { createAcademicsModule } = await import('../modules/academics/index.js');
-    const academics = createAcademicsModule({ db, events, logger });
+    const academics = createAcademicsModule({ db, logger });
 
     await academics.notices.publishNotice(
       { accountId: fixture.schoolAccountId, accountType: 'SCHOOL' },
@@ -409,16 +407,13 @@ describe('notifications (FR-ACAD-012)', () => {
       { title: 'Holiday', body: 'School is closed on Friday.' },
     );
 
-    expect(events.published.map((event) => event.type)).toContain('notice.published');
+    const recorded = await db.outboxEvent.findMany({ where: { type: 'notice.published' } });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.publishedAt).toBeNull();
   });
 
   it('fans a notice out to every verified member of the school, minus its author', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     await notifications.service.handleEvent({
@@ -448,12 +443,7 @@ describe('notifications (FR-ACAD-012)', () => {
   });
 
   it('fans an event out, and is idempotent on redelivery', async () => {
-    const verification = createVerificationModule(
-      db,
-      logger,
-      recordingPublisher(),
-      billingService(),
-    );
+    const verification = createVerificationModule(db, logger, billingService());
     const notifications = createNotificationsModule(db, logger, verification.service);
 
     const event = {
