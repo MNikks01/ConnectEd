@@ -80,6 +80,19 @@ export interface EventPublishedEvent extends DomainEventBase {
   eventAt: string;
 }
 
+/** Marks became visible to pupils and parents (FR-GRADE-013). Carries no score — see below. */
+export interface MarksPublishedEvent extends DomainEventBase {
+  type: 'marks.published';
+  assessmentId: string;
+  classId: string;
+  subjectId: string;
+  /**
+   * The assessment's title, and deliberately nothing else. A notification names the thing that
+   * happened; the mark itself is behind the read, where the permission checks are.
+   */
+  title: string;
+}
+
 export interface LeaveDecidedEvent extends DomainEventBase {
   type: 'leave.decided';
   leaveId: string;
@@ -105,6 +118,7 @@ export type DomainEvent =
   | AcademicPublishedEvent
   | NoticePublishedEvent
   | EventPublishedEvent
+  | MarksPublishedEvent
   | LeaveDecidedEvent
   | FeedbackReviewedEvent;
 

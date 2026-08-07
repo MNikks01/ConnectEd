@@ -214,6 +214,37 @@ export function createNotificationsService({
           });
           return;
 
+        /**
+         * Marks became visible (FR-GRADE-013).
+         *
+         * The audience is the class, exactly as for homework — and the payload carries the
+         * assessment's title and **no score**. "Your Science test has been marked" is true for
+         * everyone in the class and tells nobody anything about anybody; the mark itself is behind
+         * the read, where the per-pupil checks are.
+         */
+        case 'marks.published': {
+          if (!audience) return;
+
+          const delivered = await fanOut({
+            recipients: await audience.listClassMemberAccountIds(event.classId),
+            type: 'marks.published',
+            category: 'ACADEMIC',
+            payload: {
+              assessmentId: event.assessmentId,
+              classId: event.classId,
+              subjectId: event.subjectId,
+              title: event.title,
+            },
+            eventId: event.eventId,
+          });
+
+          logger.info(
+            { assessmentId: event.assessmentId, classId: event.classId, recipients: delivered },
+            'Marks notification fanned out',
+          );
+          return;
+        }
+
         case 'academic.published': {
           if (!audience) return;
 

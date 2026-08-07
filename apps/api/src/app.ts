@@ -24,6 +24,7 @@ import { createModerationQueueModule } from './modules/moderation/index.js';
 import { createInstitutionModule } from './modules/institution/index.js';
 import { createAcademicsModule } from './modules/academics/index.js';
 import { createMediaModule } from './modules/media/index.js';
+import { createGradebookModule } from './modules/gradebook/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
 import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
@@ -220,6 +221,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       verification.routes,
       notifications.routes,
       academics.routes,
+      createGradebookModule(db, logger).routes,
       workflows.routes,
       social.routes,
       billing.routes,
