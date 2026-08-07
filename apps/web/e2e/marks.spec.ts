@@ -9,7 +9,6 @@
 import { expect, test } from '@playwright/test';
 
 import {
-  createAssessment,
   createClass,
   createSchool,
   verifiedStudentIn,
@@ -27,17 +26,26 @@ async function schoolWithClass(section: string): Promise<{ school: School; class
 test.describe('marks', () => {
   test('a pupil sees their own mark and not a classmate’s', async ({ page }) => {
     const { school, classId } = await schoolWithClass('E');
-    const { teacher, subjectId } = await verifiedTeacherFor(school, classId, 'Mathematics');
+    const { teacher } = await verifiedTeacherFor(school, classId, 'Mathematics');
     const alice = await verifiedStudentIn(school, classId, 'alice');
     const bob = await verifiedStudentIn(school, classId, 'bob');
 
-    // Set the assessment up through the API as the teacher, then read it as each pupil in a
-    // browser — which is the only place the "one child, not the class" promise is visible.
     await signIn(page, teacher.email);
 
-    const assessment = await createAssessment(teacher, classId, subjectId);
+    // **Created through the form, deliberately.** The first version of this spec set the
+    // assessment up through the API, and the product shipped with no way for a teacher to create
+    // one at all — every check passed because the test used the back door. A fixture shortcut is a
+    // claim that the front door works, not a test of it (S8-1).
+    await page.goto(`/classes/${classId}/marks`);
+    await page.getByLabel('Subject').selectOption({ label: 'Mathematics' });
+    await page.getByLabel('Kind').selectOption('TEST');
+    await page.getByLabel('Assessment name').fill('Fractions test');
+    await page.getByLabel('Out of').fill('20');
+    await page.getByLabel('Date sat').fill('2026-08-01');
+    await page.getByRole('button', { name: 'Create assessment' }).click();
 
-    await page.goto(`/classes/${classId}/marks/${assessment.id}`);
+    await expect(page.getByRole('link', { name: 'Fractions test' })).toBeVisible();
+    await page.getByRole('link', { name: 'Fractions test' }).click();
 
     // The grid carries every pupil, marked or not.
     await expect(page.getByLabel(`Score for ${alice.fullName}`)).toBeVisible();
@@ -57,7 +65,8 @@ test.describe('marks', () => {
     // Publish.
     await page.getByRole('button', { name: 'Sign out' }).click();
     await signIn(page, teacher.email);
-    await page.goto(`/classes/${classId}/marks/${assessment.id}`);
+    await page.goto(`/classes/${classId}/marks`);
+    await page.getByRole('link', { name: 'Fractions test' }).click();
     await page.getByRole('button', { name: 'Publish marks' }).click();
     await page.getByRole('button', { name: 'Yes, publish these marks' }).click();
 

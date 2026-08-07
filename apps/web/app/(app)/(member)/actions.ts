@@ -20,6 +20,7 @@ import {
   submitFeedbackSchema,
   upsertSyllabusTopicSchema,
   enterMarksSchema,
+  createAssessmentSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -335,6 +336,26 @@ export async function disableTwoFactorAction(code: string): Promise<ActionResult
   return run(
     () => callAsUser('/me/2fa', { method: 'DELETE', body: { code } }),
     ['/settings/security'],
+  );
+}
+
+/**
+ * Setting up an assessment (FR-GRADE-001).
+ *
+ * The subject is a picker rather than free text because the server refuses a subject this teacher
+ * is not allocated to, and a form that lets someone type their way into a 403 is a form that
+ * teaches them the product is broken.
+ */
+export async function createAssessmentAction(
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = createAssessmentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/classes/${classId}/assessments`, { method: 'POST', body: parsed.data }),
+    [`/classes/${classId}/marks`],
   );
 }
 
