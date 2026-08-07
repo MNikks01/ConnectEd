@@ -1,6 +1,6 @@
 # PRD — Permissions Matrix (server-enforced)
 
-`Status: Accepted` · `Last updated: 2026-08-04`
+`Status: Accepted` · `Last updated: 2026-08-07`
 
 Legend: ✅ can do · 👁 view only · ➖ not available/hidden. **All enforced on the server** against role,
 verification state, and resource ownership. See [`../Security/02-authorization.md`](../Security/02-authorization.md).
@@ -20,6 +20,9 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | Upload timetable                              |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | View timetable                                |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
 | Update syllabus coverage                      |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| Create an assessment                          |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| Enter and publish marks                       |   ➖    |       ➖       |   ✅    |      ✅       |     👁     |   ✅   |      ➖      |
+| View a mark                                   |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
 | Submit leave application                      |   ➖    | ✅ (for child) |   ✅    |      ✅       |    ➖     |   ➖   |      ➖      |
 | Approve student/parent leave                  |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   👁    |      ➖      |
 | Approve teacher leave                         |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   👁    |      ➖      |
@@ -65,5 +68,13 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 - **Ownership rules**: users edit only their own content; schools manage only their own structure; teachers write
   only to allocated subjects/classes; class teachers approve leave only for their allocated class; parents act
   only within a verified child's scope.
+- **"View a mark" is the one row this table cannot express, and the gap is the point.** Five roles
+  read marks and every one of them reads a _different set_: a student their own, a parent their own
+  child's, a teacher the subjects they are allocated to, the class teacher every published mark in
+  their class, the principal every published mark in the school. A `👁` that means five different
+  things is a contract nobody can test against, so the scoping table in
+  [`11-gradebook.md`](./11-gradebook.md) is the contract for this row and the tests follow that.
+  Marks are the first data in the product that must be protected from a member's own classmates
+  rather than from outsiders.
 - The matrix is the **product contract**; the **enforcement** contract lives in Security + API and must match it
   test-for-test (see permission integration tests in [`../Checklists/`](../Checklists/)).
