@@ -22,6 +22,7 @@ import {
   enterMarksSchema,
   createAssessmentSchema,
   correctMarkSchema,
+  takeRegisterSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -450,5 +451,35 @@ export async function correctMarkAction(
         body: parsed.data,
       }),
     [`/classes/${classId}/marks/${assessmentId}`, `/classes/${classId}/marks`],
+  );
+}
+
+/**
+ * Taking a register (FR-ATT-001).
+ *
+ * The form posts one field per pupil, `state-<accountId>`. Every pupil is submitted, including the
+ * ones left at their offered value — half a register is not a smaller register, it is a class where
+ * nobody knows who is missing.
+ */
+export async function takeRegisterAction(
+  classId: string,
+  onDate: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const entries: { studentAccountId: string; state: string }[] = [];
+
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith('state-') || typeof value !== 'string') continue;
+    entries.push({ studentAccountId: key.slice('state-'.length), state: value });
+  }
+
+  if (entries.length === 0) return { ok: false, message: 'There was nobody to register.' };
+
+  const parsed = takeRegisterSchema.safeParse({ onDate, entries });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/classes/${classId}/register`, { method: 'PUT', body: parsed.data }),
+    [`/classes/${classId}/register`, `/classes/${classId}`],
   );
 }
