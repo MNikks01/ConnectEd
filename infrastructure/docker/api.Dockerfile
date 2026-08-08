@@ -72,12 +72,36 @@ WORKDIR /app
 COPY --from=build --chown=node:node /repo /repo
 WORKDIR /repo/apps/api
 
+# pnpm is needed here — it is how `prisma` is invoked — but npm is not, and it is where the CVEs
+# the runtime image was failing on actually live.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 USER node
 
 CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 
 # ---------------------------------------------------------------------------------------------
-FROM base AS runtime
+# **Not `FROM base`.** The runtime carries no package manager: `base` adds corepack and pnpm, and
+# the image also inherits the npm that ships inside `node:20-slim`. The first CI scan failed on
+# exactly that — two fixable HIGH CVEs in npm's bundled `tar`, in an image whose only command is
+# `node dist/…`. Nothing here installs anything, so a package manager is attack surface with no
+# corresponding use, and stripping it is both the fix and the right shape.
+FROM node:20-slim AS runtime
+
+# Two things, and both are about what the scanner will find.
+#
+# The base image's package set is patched on Debian's schedule and rebuilt on the node image's,
+# and those do not line up — the first scan of this file found fixable CRITICALs in `libgnutls30`
+# that had been fixed upstream and not yet rebuilt here. Applying them at build is what makes
+# "minimal base, scanned" mean something after the day it was written.
+#
+# Then the package managers. Nothing here installs anything: npm, npx and corepack are attack
+# surface with no corresponding use, and npm's bundled `tar` is where this scan first failed.
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 ENV NODE_ENV=production
 WORKDIR /app
