@@ -1,6 +1,6 @@
 # API — Endpoint Catalogue
 
-`Status: Accepted` · `Last updated: 2026-08-01`
+`Status: Accepted` · `Last updated: 2026-08-08`
 
 Grouped by module. All under `/api/v1`. **Auth** column: 🔓 public · 🔑 authenticated · 🛡 authorized (role/
 verification/ownership checked). This is the contract; the OpenAPI spec (generated) is authoritative for shapes.
@@ -125,6 +125,29 @@ quietly widen the other.
 **Reading is wider than taking, deliberately.** Any teacher of the class reads the whole register —
 knowing who is in the room is part of teaching it — while only the class teacher or the school takes
 one.
+
+## Terms and report cards
+
+| Method | Path                                | Auth | Purpose                                                                    |
+| ------ | ----------------------------------- | :--: | -------------------------------------------------------------------------- |
+| POST   | `/schools/:id/terms`                |  🛡   | A school defines a term. Ranges may not overlap (FR-GRADE-030) → **409**.  |
+| GET    | `/schools/:id/terms`                |  🛡   | Its terms, newest first, each saying whether it is frozen.                 |
+| POST   | `/classes/:id/report-cards`         |  🛡   | The class teacher or school issues the whole class at once (FR-GRADE-040). |
+| GET    | `/classes/:id/report-cards?termId=` |  🛡   | The class's cards for a term. `termId` is required, never defaulted.       |
+| GET    | `/me/report-cards`                  |  🔑  | A pupil's own issued cards.                                                |
+| GET    | `/children/:id/report-cards`        |  🔑  | A parent's, for one child, via the link the school confirmed.              |
+
+**Issuing is a write that reads like a report.** `POST` because it creates documents: the response is
+`204` and the cards are then fetched, rather than returned inline, because the same list is what
+everyone else reads afterwards.
+
+**A card carries a snapshot, not a reference.** The response embeds every number as it stood at
+issue. A later correction to a mark does not change it (FR-GRADE-041); reissuing produces one card
+that says what it replaced, not a second document with the same name.
+
+**A subject teacher is refused here**, unlike `/assessments/:id/marks`. It is the one place the
+gradebook's scoping does not carry over, and the reason is in the
+[permission matrix](../PRD/09-permissions-matrix.md).
 
 ## Workflows
 
