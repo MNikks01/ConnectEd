@@ -1,6 +1,6 @@
 # CI/CD — Git Flow & Branching
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-08`
 
 The exact flow requested: **feature branch → PR to `development` → merge → PR `development` → `main`
 (production).**
@@ -24,6 +24,20 @@ The exact flow requested: **feature branch → PR to `development` → merge →
 4. Merge strategy: **squash** into `development` (clean history); the `development → main` release PR uses a merge
    commit to preserve the release boundary.
 5. Production releases go out via a **`development → main` release PR** (Changesets version/changelog).
+
+   **Run `pnpm version-packages` on the release branch and commit its output** — the version bump,
+   the CHANGELOG entries, and the deletion of every changeset it consumed — as part of the
+   `chore(release)` commit. This is the step, not a description of one that happens elsewhere.
+
+   Skipping it does not fail the release: the merge still ships and still tags. It fails afterwards,
+   in `changesets/action`, which finds unconsumed changesets on `main`, versions them itself, and
+   tries to commit as `Version Packages` — which this repository's own commitlint hook rejects for
+   not being a Conventional Commit. The release is out and correct; the version and changelog are
+   simply not. This happened on `release/2026-08-08.2`, and the fix was a second release carrying
+   nothing but the bump. See finding #3 in
+   [`03-release-path-audit.md`](03-release-path-audit.md) — a stray changeset on `main` is what
+   re-arms it.
+
 6. `hotfix/*` may go straight to `main` (gated) and must be back-merged to `development`.
 7. **Back-merge every release into `development` — with a merge commit, never a squash.**
    A squash re-applies `main`'s content as a new commit without recording `main` as an ancestor,
