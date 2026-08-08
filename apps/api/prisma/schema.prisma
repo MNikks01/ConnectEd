@@ -1249,10 +1249,17 @@ model Mark {
   /// Null is "not marked" and is **not** a zero (FR-GRADE-014). A pupil who was absent has no
   /// score; a pupil who answered nothing has one, and it is 0.
   score   Decimal? @db.Decimal(6, 2)
-  /// Free text for the pupil and their parents. The PRD leaves "is a remark ever private" open;
-  /// until it is answered there is one field and it is shared, which is the safer default to
-  /// explain to a parent.
+  /// Free text **for the pupil and their parents**. Shared, always.
   remark  String?
+  /// Free text for staff only, never returned on a pupil's or parent's read (FR-GRADE-015).
+  ///
+  /// A separate column rather than a flag on `remark`, because the question a teacher answers when
+  /// typing is "who is this for", and a field answers it where a checkbox invites forgetting. The
+  /// API keeps them apart by *type*, not by filtering: the pupil's response shape has no place to
+  /// put this, so it cannot leak by omission of a `delete`.
+  ///
+  /// "Private" is not absolute, and the UI says so: a subject access request still reaches it.
+  staffNote String? @map("staff_note")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

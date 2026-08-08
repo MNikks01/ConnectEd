@@ -513,3 +513,114 @@ describe('corrections', () => {
     expect(response.status).toBe(403);
   });
 });
+
+describe('the staff note (FR-GRADE-015)', () => {
+  /** A published assessment where the pupil has both a shared remark and a staff note. */
+  async function withBothNotes(): Promise<AssessmentResponse> {
+    const assessment = await createAssessment();
+
+    await request(app)
+      .put(`/api/v1/assessments/${assessment.id}/marks`)
+      .send({
+        marks: [
+          {
+            studentAccountId: fixture.studentAccountId,
+            score: '17.5',
+            remark: 'Strong on fractions.',
+            staffNote: 'Seemed upset before the test.',
+          },
+        ],
+      })
+      .set('Authorization', await asTeacher())
+      .expect(204);
+
+    await request(app)
+      .post(`/api/v1/assessments/${assessment.id}/publish`)
+      .set('Authorization', await asTeacher())
+      .expect(200);
+
+    return assessment;
+  }
+
+  it('is visible to the teacher who wrote it', async () => {
+    const assessment = await withBothNotes();
+
+    const response = await request(app)
+      .get(`/api/v1/assessments/${assessment.id}/marks`)
+      .set('Authorization', await asTeacher());
+
+    expect(bodyAs<AssessmentWithMarksResponse>(response).marks[0]?.staffNote).toBe(
+      'Seemed upset before the test.',
+    );
+  });
+
+  it('is visible to the school', async () => {
+    const assessment = await withBothNotes();
+
+    const response = await request(app)
+      .get(`/api/v1/assessments/${assessment.id}/marks`)
+      .set('Authorization', await asSchool());
+
+    expect(bodyAs<AssessmentWithMarksResponse>(response).marks[0]?.staffNote).toBeTruthy();
+  });
+
+  it('never reaches the pupil — not the field, not the words', async () => {
+    await withBothNotes();
+
+    const response = await request(app)
+      .get(`/api/v1/me/classes/${fixture.classAId}/marks`)
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+
+    // The shared remark does arrive: the distinction is the point, not silence.
+    expect(JSON.stringify(response.body)).toContain('Strong on fractions.');
+    // And the note does not — asserted on the raw body, because a field the pupil's response type
+    // cannot hold would still leak if somebody serialised the row directly.
+    expect(JSON.stringify(response.body)).not.toContain('upset');
+    expect(JSON.stringify(response.body)).not.toContain('staffNote');
+  });
+
+  it('never reaches the parent', async () => {
+    await db.child.update({
+      where: { id: fixture.childId },
+      data: { classId: fixture.classAId, studentAccountId: fixture.studentAccountId },
+    });
+    await db.membership.updateMany({
+      where: { accountId: fixture.parentAccountId, childId: fixture.childId },
+      data: {
+        classId: fixture.classAId,
+        scopeKey: membershipScopeKey(fixture.classAId, fixture.childId),
+      },
+    });
+    await withBothNotes();
+
+    const response = await request(app)
+      .get(`/api/v1/children/${fixture.childId}/marks`)
+      .set('Authorization', await auth(fixture.parentAccountId, 'INDIVIDUAL', 'PARENT'));
+
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(response.body)).toContain('Strong on fractions.');
+    expect(JSON.stringify(response.body)).not.toContain('upset');
+  });
+
+  it('survives a correction', async () => {
+    const assessment = await withBothNotes();
+
+    await request(app)
+      .patch(`/api/v1/assessments/${assessment.id}/marks/${fixture.studentAccountId}`)
+      .send({ score: '18', staffNote: 'Spoke to them; all fine now.' })
+      .set('Authorization', await asTeacher())
+      .expect(200);
+
+    const staff = await request(app)
+      .get(`/api/v1/assessments/${assessment.id}/marks`)
+      .set('Authorization', await asTeacher());
+    expect(bodyAs<AssessmentWithMarksResponse>(staff).marks[0]?.staffNote).toBe(
+      'Spoke to them; all fine now.',
+    );
+
+    const pupil = await request(app)
+      .get(`/api/v1/me/classes/${fixture.classAId}/marks`)
+      .set('Authorization', await auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT'));
+    expect(JSON.stringify(pupil.body)).not.toContain('Spoke to them');
+  });
+});

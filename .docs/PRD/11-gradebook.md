@@ -66,13 +66,14 @@ but it is a real limit and it belongs here rather than in a surprise later.
 
 ## Marks
 
-| ID           | Priority | Requirement                                                             | Acceptance criteria                                                                                                                                 |
-| ------------ | :------: | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-GRADE-010 |    P0    | The allocated teacher enters a mark per student, as a **draft**.        | Score against the assessment's maximum, optional grade label, optional remark. Drafts are visible **only** to the teacher and the school.           |
-| FR-GRADE-011 |    P0    | The teacher **publishes** the assessment's marks in one action.         | All marks become visible together. A partially marked assessment cannot be published without an explicit "leave blank" per missing student.         |
-| FR-GRADE-012 |    P0    | A published mark can be corrected, and every correction is **audited**. | `AuditLog` records actor, previous value, new value, and time. The student and parent see the corrected mark; the audit trail is not shown to them. |
-| FR-GRADE-013 |    P1    | Publishing notifies the student and their verified parents.             | One notification per recipient naming the assessment, not the mark. The mark itself is behind the read.                                             |
-| FR-GRADE-014 |    P2    | A mark may be withheld for one student without blocking the rest.       | An absent or ungraded student shows as "not marked", not as zero. Zero is a score; absence is not.                                                  |
+| ID           | Priority | Requirement                                                               | Acceptance criteria                                                                                                                                                   |
+| ------------ | :------: | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-GRADE-010 |    P0    | The allocated teacher enters a mark per student, as a **draft**.          | Score against the assessment's maximum, optional grade label, optional remark. Drafts are visible **only** to the teacher and the school.                             |
+| FR-GRADE-011 |    P0    | The teacher **publishes** the assessment's marks in one action.           | All marks become visible together. A partially marked assessment cannot be published without an explicit "leave blank" per missing student.                           |
+| FR-GRADE-012 |    P0    | A published mark can be corrected, and every correction is **audited**.   | `AuditLog` records actor, previous value, new value, and time. The student and parent see the corrected mark; the audit trail is not shown to them.                   |
+| FR-GRADE-013 |    P1    | Publishing notifies the student and their verified parents.               | One notification per recipient naming the assessment, not the mark. The mark itself is behind the read.                                                               |
+| FR-GRADE-015 |    P0    | A teacher may write a **staff note** a pupil and their parents never see. | A second field, not a flag. Returned only on the marking view; the pupil's and parent's response shapes have nowhere to put it. Labelled in the UI by _who reads it_. |
+| FR-GRADE-014 |    P2    | A mark may be withheld for one student without blocking the rest.         | An absent or ungraded student shows as "not marked", not as zero. Zero is a score; absence is not.                                                                    |
 
 ## Who may see a mark
 
@@ -115,16 +116,31 @@ differs per board. It needs its own requirements. `FR-GRADE-030+` is reserved.
 **No attendance.** It is the other thing the legacy product implied and never shipped, and it is not
 this.
 
+## Decided
+
+**The grading scale: raw score and percentage, and nothing else** (decided 2026-08-08). A mark
+prints as `17.5 out of 20 (88%)`. No letters, no bands, no boundaries anywhere in the product.
+
+The reason is that a scale is the one part of this that genuinely differs per board, and every way
+of holding it is worse than not holding it yet. One fixed scale would mislabel marks for any school
+whose board disagrees. Per-school bands are real work — a scale entity, per-school configuration,
+and a migration story for a school that changes its bands mid-year — and none of it is needed to
+put a report card in front of a parent. Letter bands remain possible later precisely because the
+raw score is what is stored; presentation can be added without touching a single mark.
+
+**A teacher may keep a note the family does not see** (decided 2026-08-08, FR-GRADE-015). A second
+field rather than a flag on the shared one, because the question a teacher answers while typing is
+_who is this for_, and a field answers it where a checkbox invites forgetting.
+
+Two things the UI must keep saying. Each field is labelled by **who reads it** — "the pupil and
+their parents will see this", "not shown to the family" — because "private note" tells a teacher
+nothing about whom "private" excludes. And **private is not absolute**: a subject access request
+still reaches it, and a note written as though nobody will ever read it is a note that will be read
+out at the worst possible moment.
+
 ## Open questions for product
 
-1. **Grading scale.** Percentage, letter grade, or both, and who defines the boundaries — the
-   school, or the product? The schema should carry a raw score regardless; the scale is presentation
-   until a school needs it enforced.
-2. **Whether a parent sees a remark written for a teacher's own use.** The current answer above is
-   yes, on the grounds that anything a teacher types about a child is something the parent may see.
-   If a private note is wanted, it needs a separate field with its own visibility, and it should be
-   obvious in the UI which one is which.
-3. **Retention.** Marks are the longest-lived data in the product. How long after a student leaves?
+1. **Retention.** Marks are the longest-lived data in the product. How long after a student leaves?
 
 ## Legacy
 
