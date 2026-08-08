@@ -1,6 +1,6 @@
 # Getting Started
 
-`Status: Accepted` · `Last updated: 2026-08-06`
+`Status: Accepted` · `Last updated: 2026-08-08`
 
 From a fresh clone to a running product with data in it. Everything here was run against
 `development` on 2026-08-06; where a command has a trap in it, the trap is written down rather than
@@ -10,7 +10,8 @@ left to be discovered.
 
 - **Node.js** ≥ 20 LTS
 - **pnpm** ≥ 9 — `corepack enable && corepack prepare pnpm@latest --activate`
-- **Docker** + Compose — Postgres, Redis and MinIO run in containers; the app processes run on the host
+- **Docker** + Compose — Postgres, Redis and MinIO run in containers; the app processes run on the
+  host. (There is also a compose file that runs _everything_ in containers — see below.)
 - **Git** with access to `github.com/MNikks01/ConnectEd`
 
 ## First run
@@ -29,6 +30,27 @@ pnpm dev                          # turbo runs api (:4000) and web (:3000)
 - Web **http://localhost:3000** · API **http://localhost:4000** · health `/healthz`, `/readyz`
 - MinIO console **http://localhost:9001** (`minioadmin` / `minioadmin`)
 - The media bucket is created by the API at boot (`ensureBucket()`), so there is nothing to click.
+
+### Or: the whole thing, from images
+
+If you want to _use_ the product rather than edit it — a demo, a first look, checking that it starts
+from nothing — there is a second compose file that runs everything, including the API, the worker
+and the web app:
+
+```bash
+docker compose -f infrastructure/docker/compose.yml up --build
+```
+
+Sign in at **http://localhost:3000**. No Node, no pnpm, no `.env`, and no migration step to
+remember: a migration container runs first and everything else waits for it to finish.
+
+It is not the development loop — a rebuilt image per keystroke is not one — and the two do not
+collide, because that file publishes only 3000 and 4000. What it is good for is the question the
+first run above cannot answer: _does this start on a machine that has never seen it?_
+
+Its arrangement is the deployed one rather than a convenient one: the worker is a separate
+container and the API runs with `RUN_WORKER_IN_PROCESS=false`, which is what ADR-0019 assumes and
+what every test has used since S7-17.
 
 **`.env` as shipped is enough.** Every required variable has a working local default, including an
 HS256 development secret. Asymmetric signing (Ed25519 + JWKS, ADR-0014) is what deployed
@@ -64,23 +86,24 @@ the product looks like it is working.
 
 ## Everyday commands
 
-| Task                 | Command                                                      |
-| -------------------- | ------------------------------------------------------------ |
-| Run api + web        | `pnpm dev`                                                   |
-| Run the worker       | `pnpm --filter @connected/api worker:dev`                    |
-| Build everything     | `pnpm build`                                                 |
-| Lint · format        | `pnpm lint` · `pnpm format` (`format:check` is what CI runs) |
-| Type-check           | `pnpm type-check`                                            |
-| Test everything      | `pnpm test`                                                  |
-| API tests only       | `pnpm --filter @connected/api test`                          |
-| One test file        | `pnpm --filter @connected/api test path/to/file.test.ts`     |
-| End-to-end           | `pnpm --filter @connected/web test:e2e`                      |
-| End-to-end, watched  | `pnpm --filter @connected/web test:e2e:ui`                   |
-| New migration        | `pnpm --filter @connected/api db:migrate --name <change>`    |
-| Prisma Studio        | `pnpm --filter @connected/api db:studio`                     |
-| Reset the database   | `pnpm --filter @connected/api db:reset`                      |
-| Grant platform admin | `pnpm --filter @connected/api admin:grant <email>`           |
-| Add a changeset      | `pnpm changeset`                                             |
+| Task                  | Command                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| Run api + web         | `pnpm dev`                                                   |
+| Run the worker        | `pnpm --filter @connected/api worker:dev`                    |
+| Build everything      | `pnpm build`                                                 |
+| Lint · format         | `pnpm lint` · `pnpm format` (`format:check` is what CI runs) |
+| Type-check            | `pnpm type-check`                                            |
+| Test everything       | `pnpm test`                                                  |
+| API tests only        | `pnpm --filter @connected/api test`                          |
+| One test file         | `pnpm --filter @connected/api test path/to/file.test.ts`     |
+| End-to-end            | `pnpm --filter @connected/web test:e2e`                      |
+| End-to-end, watched   | `pnpm --filter @connected/web test:e2e:ui`                   |
+| Smoke a running stack | `pnpm --filter @connected/web test:smoke`                    |
+| New migration         | `pnpm --filter @connected/api db:migrate --name <change>`    |
+| Prisma Studio         | `pnpm --filter @connected/api db:studio`                     |
+| Reset the database    | `pnpm --filter @connected/api db:reset`                      |
+| Grant platform admin  | `pnpm --filter @connected/api admin:grant <email>`           |
+| Add a changeset       | `pnpm changeset`                                             |
 
 Filters use the **package name** (`@connected/api`, `@connected/web`), not the folder.
 

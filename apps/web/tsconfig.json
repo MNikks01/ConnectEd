@@ -20,6 +20,7 @@
     "e2e",
     "middleware.ts",
     "playwright.config.ts",
+    "smoke.config.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

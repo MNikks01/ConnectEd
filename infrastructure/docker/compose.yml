@@ -1,0 +1,165 @@
+# The whole product, from images (S9-2).
+#
+#   docker compose -f infrastructure/docker/compose.yml up --build
+#
+# Then sign in at http://localhost:3000. Nothing else is required — no pnpm, no Node, no `.env`,
+# no migration step remembered separately.
+#
+# **This is not the everyday development file.** `docker-compose.yml` at the repository root starts
+# Postgres, Redis and MinIO and leaves the application to `pnpm dev`, which is the right trade when
+# you are editing it: a rebuilt image per keystroke is not a development loop. This file is for the
+# other questions — does the product start from nothing, does it start the way it will be deployed,
+# and does a person who has never seen the repository get a working sign-in.
+#
+# The two do not collide: this file publishes only 3000 and 4000, so the root file can be running
+# its backing services at the same time.
+#
+# **The arrangement is the deployed one, not a convenient one.** The API runs with
+# `RUN_WORKER_IN_PROCESS=false` and the worker is a separate container, because that is the split
+# ADR-0019 assumes and the one every test has used since S7-17 — which is also the sprint where
+# running the worker separately for the first time found a shipped defect. Starting it in-process
+# here would make this file agree with nothing.
+name: connected
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: connected
+      POSTGRES_PASSWORD: connected
+      POSTGRES_DB: connected
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U connected']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Runs once and exits. Everything that touches the database waits for it to exit *successfully*,
+  # which is why it is a service rather than a step in an entrypoint: an API that starts against an
+  # unmigrated schema fails in a way that reads as a product bug.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: migrate
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://connected:connected@postgres:5432/connected?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+    restart: unless-stopped
+    ports:
+      - '4000:4000'
+    environment:
+      <<: &app-env
+        DATABASE_URL: postgresql://connected:connected@postgres:5432/connected?schema=public
+        REDIS_URL: redis://redis:6379
+        S3_ENDPOINT: http://minio:9000
+        S3_BUCKET: connected
+        S3_ACCESS_KEY: minioadmin
+        S3_SECRET_KEY: minioadmin
+        # **Local only, and deliberately obvious about it.** Every value here is a development
+        # constant in a version-controlled file: it is not a secret, it is a placeholder shaped
+        # like one. Real environments take these from a secrets manager (S9-6), and nothing in
+        # this tree may ever hold one — see `infrastructure/CLAUDE.md`.
+        JWT_ACCESS_SECRET: local-compose-secret-not-a-secret-32ch
+        TWO_FACTOR_KEY: local-compose-two-factor-key-not-secret32
+        LOG_LEVEL: info
+      API_PORT: '4000'
+      # Where the *browser* reaches this app. It is what CORS is checked against, so it is the
+      # published address rather than the container name.
+      WEB_ORIGIN: http://localhost:3000
+      RUN_WORKER_IN_PROCESS: 'false'
+      METRICS_ENABLED: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # `node -e` rather than curl or wget: the slim base has neither, and adding one to a runtime
+      # image to check its own health is a strange thing to ship.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # The same image as the API. One artefact, two commands — see the comment at the top of
+  # `api.Dockerfile` for why that is not a shortcut.
+  worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+    restart: unless-stopped
+    command: ['node', 'dist/worker.js']
+    environment:
+      <<: *app-env
+      METRICS_ENABLED: 'false'
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # The container network's name for the API, not the browser's. The web app calls the API
+      # server-side only, which is what makes a runtime variable possible at all — see the comment
+      # in `web.Dockerfile`.
+      API_URL: http://api:4000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:

@@ -35,6 +35,10 @@ const DATABASE_URL =
 
 export default defineConfig({
   testDir: './e2e',
+  // The smoke test lives alongside these but is not one of them: it runs against something already
+  // deployed, from `smoke.config.ts`. Running it here would point it at this suite's servers and
+  // quietly turn a deployment check into a duplicate of the E2E suite.
+  testIgnore: '**/smoke.spec.ts',
   // The suite shares one database, so parallel workers would truncate each other's fixtures.
   workers: 1,
   fullyParallel: false,
