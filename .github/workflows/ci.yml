@@ -172,6 +172,55 @@ jobs:
       - name: Every alert routes somewhere and names a runbook that exists
         run: node scripts/check-alerts.mjs
 
+  # The restore drill (S9-7), kept honest.
+  #
+  # This does **not** prove the backups work — there is no database with real data in it yet, which
+  # waits on S9-4. It proves the drill itself still runs: a restore script that has silently rotted
+  # is worse than none, because it is the thing somebody reaches for on the worst morning of the
+  # quarter and finds broken.
+  #
+  # Cheap, because the drill's own guard does the interesting part: it refuses an empty database,
+  # so the seed has to have worked for this job to mean anything.
+  restore-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: connected
+          POSTGRES_PASSWORD: connected
+          POSTGRES_DB: connected_drill_src
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U connected"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://connected:connected@localhost:5432/connected_drill_src?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrate and seed
+        run: |
+          pnpm --filter @connected/api db:deploy
+          pnpm --filter @connected/api db:seed
+
+      # `--network host` because the service container is reachable at localhost from the job, and
+      # the drill runs its client in a container of its own — see the script's header for why the
+      # client is pinned to the server's image rather than taken from the runner.
+      - name: Drill
+        run: node scripts/restore-drill.mjs
+        env:
+          DRILL_URL: postgresql://connected:connected@localhost:5432/connected_drill_src
+          DRILL_NETWORK: host
+
   # The images the product will actually be deployed as (S9-1).
   #
   # Built on every pull request, and the point is not the artefact — nothing is pushed here, that is

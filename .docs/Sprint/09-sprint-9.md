@@ -70,21 +70,21 @@ says everything else is done. The paragraph above says it is not.
 
 **Ungated — starts regardless.** Every item here is unblocked today.
 
-| #     | Item                                                                                | Owner       | Est. | DoD                                                                                                                                                                                       |
-| ----- | ----------------------------------------------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web            | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them                      |
-| S9-2  | ✅ **Done 2026-08-08** — `infrastructure/docker/compose.yml` runs the whole product | devops      | M    | One command from a clean machine to a working sign-in, proved by a smoke test rather than by claim. Migrations are their own container that everything waits on                           |
-| S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                         |
-| S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                        |
-| S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4) |
-| S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                         |
-| S9-7  | **Backup and restore, exercised** (NFR-014)                                         | devops      | L    | Restore a real backup into a scratch database and measure it. RTO ≤ 1h and RPO ≤ 15 min are currently claims with no evidence; the runbook `db-restore.md` has never run                  |
-| S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                          |
-| S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                        |
-| S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)                    | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                                    |
-| S9-11 | **NFR evidence**: accessibility audited (NFR-012)                                   | frontend    | M    | WCAG 2.1 AA across the real screens, not a Lighthouse score on the home page. Every item's DoD has claimed a11y for nine sprints and nothing has ever checked it                          |
-| S9-12 | **NFR evidence**: coverage measured (NFR-009)                                       | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                                           |
-| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                       |
+| #     | Item                                                                                | Owner       | Est. | DoD                                                                                                                                                                                                               |
+| ----- | ----------------------------------------------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web            | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them                                              |
+| S9-2  | ✅ **Done 2026-08-08** — `infrastructure/docker/compose.yml` runs the whole product | devops      | M    | One command from a clean machine to a working sign-in, proved by a smoke test rather than by claim. Migrations are their own container that everything waits on                                                   |
+| S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                                                 |
+| S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                                                |
+| S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4)                         |
+| S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                                                 |
+| S9-7  | ◐ **Restore proven 2026-08-08; retention is not**                                   | devops      | L    | `scripts/restore-drill.mjs` takes a real dump, restores it, and compares every table's row count. 400,027 rows verified in 5.3s, sabotage-checked. RPO needs continuous archiving, which needs a provider — S9-0a |
+| S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                  |
+| S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                |
+| S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)                    | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                                                            |
+| S9-11 | **NFR evidence**: accessibility audited (NFR-012)                                   | frontend    | M    | WCAG 2.1 AA across the real screens, not a Lighthouse score on the home page. Every item's DoD has claimed a11y for nine sprints and nothing has ever checked it                                                  |
+| S9-12 | **NFR evidence**: coverage measured (NFR-009)                                       | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                                                                   |
+| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                               |
 
 **Gated on S8-0a — billing** (unchanged since Sprint 7, now explicitly scheduled after this sprint):
 S8-10 the provider port and its fake · S8-11 checkout · S8-12 webhook reconciliation · S8-13 dunning.
@@ -163,6 +163,38 @@ the scope, so nothing was blocked waiting for it.
 `Deployment/01-release-process.md` has described the intended pipeline since Sprint 2. It now opens
 with a table separating what is wired from what is intent, because a release process nobody can tell
 the truth about is worse than a short one.
+
+## What S9-7 found
+
+**NFR-014 is half a requirement without a provider, and the half that is left is worth having.**
+RTO ≤ 1h and RPO ≤ 15 min were written in Sprint 2 and neither had ever been exercised;
+`Runbooks/db-restore.md` described a PITR procedure against a managed instance, a standby and a WAL
+archive, none of which exist.
+
+The restore half can be proven anyway, and now is: `scripts/restore-drill.mjs` takes a real
+`pg_dump`, restores it into a scratch database, and compares the row count of **every table** in
+both. 400,027 rows across 50 tables — 185 MB, a 21 MB dump — restored and verified in **5.3
+seconds** on a developer machine.
+
+Sabotage-checked by excluding one table from the dump, which the drill catches and fails on. That is
+the failure mode worth having a drill for: not a restore that errors, but one that succeeds and is
+quietly incomplete.
+
+**The number is evidence, not the RTO.** Noticing, deciding, provisioning and repointing are all
+outside it and all dominate on a bad morning. The runbook now says so rather than implying the
+opposite.
+
+**RPO today is unbounded**, because nothing takes a backup on a schedule — the drill takes one when
+you run it. Fifteen minutes needs continuous archiving and continuous archiving needs a provider, so
+that half waits on S9-0a and is recorded as waiting rather than as done.
+
+The drill's client runs in a `postgres:16` container rather than from the host, which is the one
+detail most likely to matter later: a client older than the server refuses the dump outright, and
+that is a discovery nobody wants to make during an incident.
+
+A CI job runs it against a seeded database on every pull request. That does not prove the backups
+work — there is no database with real data yet — it proves the drill does. A restore script that has
+silently rotted is worse than none.
 
 ## Stretch (only if committed done)
 
