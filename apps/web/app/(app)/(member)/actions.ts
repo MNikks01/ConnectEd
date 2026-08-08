@@ -373,7 +373,12 @@ export async function enterMarksAction(
   classId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const marks: { studentAccountId: string; score: string | null; remark?: string }[] = [];
+  const marks: {
+    studentAccountId: string;
+    score: string | null;
+    remark?: string;
+    staffNote?: string;
+  }[] = [];
 
   for (const [key, value] of formData.entries()) {
     if (!key.startsWith('score-')) continue;
@@ -381,11 +386,15 @@ export async function enterMarksAction(
     const studentAccountId = key.slice('score-'.length);
     const raw = typeof value === 'string' ? value.trim() : '';
     const remark = formData.get(`remark-${studentAccountId}`);
+    const staffNote = formData.get(`staff-note-${studentAccountId}`);
 
     marks.push({
       studentAccountId,
       score: raw === '' ? null : raw,
       ...(typeof remark === 'string' && remark.trim() !== '' ? { remark: remark.trim() } : {}),
+      ...(typeof staffNote === 'string' && staffNote.trim() !== ''
+        ? { staffNote: staffNote.trim() }
+        : {}),
     });
   }
 
@@ -434,6 +443,7 @@ export async function correctMarkAction(
 ): Promise<ActionResult> {
   const raw = formData.get('score');
   const remark = formData.get('remark');
+  const staffNote = formData.get('staffNote');
   const score = typeof raw === 'string' ? raw.trim() : '';
 
   const parsed = correctMarkSchema.safeParse({
@@ -441,6 +451,9 @@ export async function correctMarkAction(
     // removal of a mark that should never have been there.
     score: score === '' ? null : score,
     ...(typeof remark === 'string' && remark.trim() !== '' ? { remark: remark.trim() } : {}),
+    ...(typeof staffNote === 'string' && staffNote.trim() !== ''
+      ? { staffNote: staffNote.trim() }
+      : {}),
   });
   if (!parsed.success) return invalid(parsed.error);
 

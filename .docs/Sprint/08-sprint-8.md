@@ -24,15 +24,15 @@ that sets up through the back door proves the back door works.
 
 ## Prerequisites — decisions, not work
 
-| #     | Decision                                                                            | Blocks                    | Why it is not engineering's                                                                                                                                                         |
-| ----- | ----------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S8-0a | **Stripe or Razorpay** (ADR-0015, carried ×4)                                       | S8-10 … S8-13             | Fifth sprint of asking. Sprint 7's plan said a fourth silent carry was the outcome to avoid, and it happened anyway.                                                                |
-| S8-0b | **A mail transport** (carried)                                                      | S8-14, S8-15              | FR-AUTH-009 is built and undeliverable until one exists.                                                                                                                            |
-| S8-0c | **The grading scale** — percentage, letter, or both, and who defines the boundaries | S8-6, S8-7 (report cards) | `PRD/11-gradebook.md` left it open. A report card is a document a school stands behind, and the scale differs per board.                                                            |
-| S8-0d | **Is a teacher's remark ever private from parents?**                                | Nothing technically       | Currently one field, shared, which is the safer default to explain. If a private note is wanted it needs its own field and visibility, and the UI must make which is which obvious. |
+| #     | Decision                                                               | Blocks               | Why it is not engineering's                                                                                                                                                             |
+| ----- | ---------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S8-0a | **Stripe or Razorpay** (ADR-0015, carried ×4)                          | S8-10 … S8-13        | Fifth sprint of asking. Sprint 7's plan said a fourth silent carry was the outcome to avoid, and it happened anyway.                                                                    |
+| S8-0b | **A mail transport** (carried)                                         | S8-14, S8-15         | FR-AUTH-009 is built and undeliverable until one exists.                                                                                                                                |
+| S8-0c | ✅ **Decided 2026-08-08: raw score and percentage, no letters.**       | S8-6, S8-7 unblocked | A scale is the part that differs per board, and every way of holding it now is worse than not holding it yet. Letter bands stay possible later because the raw score is what is stored. |
+| S8-0d | ✅ **Decided 2026-08-08: yes — a separate staff note** (FR-GRADE-015). | Done, shipped        | A field rather than a flag: the question a teacher answers while typing is _who is this for_. Labelled by who reads it, and the UI says private is not absolute.                        |
 
-**S8-0d is small and worth answering early.** It costs a field and a visibility rule now; it costs a
-migration and an apology later, after a teacher has typed something candid into the shared one.
+**Both were answered on 2026-08-08, before anybody typed something candid into a shared field.**
+S8-0d shipped the same day it was decided, which was the whole argument for asking early.
 
 ## Committed backlog (proposed)
 

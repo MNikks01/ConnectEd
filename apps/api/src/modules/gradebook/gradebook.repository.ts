@@ -25,11 +25,17 @@ export interface AssessmentRow {
   createdAt: Date;
 }
 
+/** A mark as a pupil or parent may see it. No staff note, by construction (FR-GRADE-015). */
 export interface MarkRow {
   studentAccountId: string;
   studentName: string;
   score: string | null;
   remark: string | null;
+}
+
+/** The same mark for staff. The only row type that carries the note. */
+export interface StaffMarkRow extends MarkRow {
+  staffNote: string | null;
 }
 
 export interface GradebookRepository {
@@ -48,9 +54,16 @@ export interface GradebookRepository {
   /** Upserts the whole class's marks in one transaction — a half-entered assessment helps nobody. */
   enterMarks: (
     assessmentId: string,
-    marks: { studentAccountId: string; score: string | null; remark?: string | undefined }[],
+    marks: {
+      studentAccountId: string;
+      score: string | null;
+      remark?: string | undefined;
+      staffNote?: string | undefined;
+    }[],
   ) => Promise<void>;
-  listMarks: (assessmentId: string) => Promise<MarkRow[]>;
+  /** The marking view. Carries the staff note; only staff-authorized callers reach it. */
+  listMarks: (assessmentId: string) => Promise<StaffMarkRow[]>;
+  /** A pupil's own. Deliberately selects no staff note — the row type has nowhere to put one. */
   findMark: (assessmentId: string, studentAccountId: string) => Promise<MarkRow | null>;
   /** Publishing stamps the assessment and records the event in the same transaction (ADR-0019). */
   publish: (
@@ -63,9 +76,10 @@ export interface GradebookRepository {
     studentAccountId: string;
     score: string | null;
     remark?: string | undefined;
+    staffNote?: string | undefined;
     previous: { score: string | null; remark: string | null };
     actorAccountId: string;
-  }) => Promise<MarkRow>;
+  }) => Promise<StaffMarkRow>;
   softDeleteAssessment: (id: string) => Promise<void>;
   /** Verified student accounts of a class — who an assessment applies to (FR-GRADE-003). */
   listClassStudentAccountIds: (classId: string) => Promise<string[]>;
@@ -169,12 +183,17 @@ export function createGradebookRepository(db: Db): GradebookRepository {
                 studentAccountId: mark.studentAccountId,
               },
             },
-            update: { score: mark.score, remark: mark.remark ?? null },
+            update: {
+              score: mark.score,
+              remark: mark.remark ?? null,
+              staffNote: mark.staffNote ?? null,
+            },
             create: {
               assessmentId,
               studentAccountId: mark.studentAccountId,
               score: mark.score,
               remark: mark.remark ?? null,
+              staffNote: mark.staffNote ?? null,
             },
           }),
         ),
@@ -188,6 +207,7 @@ export function createGradebookRepository(db: Db): GradebookRepository {
           studentAccountId: true,
           score: true,
           remark: true,
+          staffNote: true,
           student: { select: { userProfile: { select: { fullName: true } } } },
         },
         orderBy: { createdAt: 'asc' },
@@ -198,6 +218,7 @@ export function createGradebookRepository(db: Db): GradebookRepository {
         studentName: row.student?.userProfile?.fullName ?? '',
         score: row.score?.toString() ?? null,
         remark: row.remark,
+        staffNote: row.staffNote,
       }));
     },
 
@@ -242,17 +263,19 @@ export function createGradebookRepository(db: Db): GradebookRepository {
       studentAccountId,
       score,
       remark,
+      staffNote,
       previous,
       actorAccountId,
     }) => {
       return db.$transaction(async (tx) => {
         const row = await tx.mark.update({
           where: { assessmentId_studentAccountId: { assessmentId, studentAccountId } },
-          data: { score, remark: remark ?? null },
+          data: { score, remark: remark ?? null, staffNote: staffNote ?? null },
           select: {
             studentAccountId: true,
             score: true,
             remark: true,
+            staffNote: true,
             student: { select: { userProfile: { select: { fullName: true } } } },
           },
         });
@@ -279,6 +302,7 @@ export function createGradebookRepository(db: Db): GradebookRepository {
           studentName: row.student?.userProfile?.fullName ?? '',
           score: row.score?.toString() ?? null,
           remark: row.remark,
+          staffNote: row.staffNote,
         };
       });
     },

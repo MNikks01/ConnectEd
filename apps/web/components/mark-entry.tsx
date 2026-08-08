@@ -21,7 +21,7 @@ import {
 } from '@/app/(app)/(member)/actions';
 import { ActionForm } from './action-form';
 
-import type { AssessmentWithMarksResponse, MarkResponse } from '@connected/types';
+import type { AssessmentWithMarksResponse, StaffMarkResponse } from '@connected/types';
 
 interface Props {
   assessment: AssessmentWithMarksResponse;
@@ -29,7 +29,7 @@ interface Props {
   roster: { accountId: string; name: string }[];
 }
 
-function markFor(marks: MarkResponse[], accountId: string): MarkResponse | undefined {
+function markFor(marks: StaffMarkResponse[], accountId: string): StaffMarkResponse | undefined {
   return marks.find((mark) => mark.studentAccountId === accountId);
 }
 
@@ -81,10 +81,19 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                 />
               </label>
               <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
-                <span>Remark for {mark.studentName}</span>
+                <span>Remark for {mark.studentName} — the family will see this</span>
                 <input
                   name="remark"
                   defaultValue={mark.remark ?? ''}
+                  maxLength={1000}
+                  style={{ padding: 'var(--ui-space-2)' }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                <span>Staff note for {mark.studentName} — not shown to the family</span>
+                <input
+                  name="staffNote"
+                  defaultValue={mark.staffNote ?? ''}
                   maxLength={1000}
                   style={{ padding: 'var(--ui-space-2)' }}
                 />
@@ -125,16 +134,33 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                   alignItems: 'end',
                 }}
               >
-                <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                <div style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
                   <span>{pupil.name}</span>
-                  <input
-                    name={`remark-${pupil.accountId}`}
-                    defaultValue={existing?.remark ?? ''}
-                    placeholder="Remark (optional)"
-                    maxLength={1000}
-                    style={{ padding: 'var(--ui-space-2)' }}
-                  />
-                </label>
+                  <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                    <span style={{ fontSize: 'var(--ui-font-size-1)' }}>
+                      Remark for {pupil.name} — the pupil and their parents will see this
+                    </span>
+                    <input
+                      name={`remark-${pupil.accountId}`}
+                      defaultValue={existing?.remark ?? ''}
+                      maxLength={1000}
+                      style={{ padding: 'var(--ui-space-2)' }}
+                    />
+                  </label>
+                  <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
+                    {/* Labelled for who reads it, not for what it is. "Private note" tells a
+                        teacher nothing about who "private" excludes. */}
+                    <span style={{ fontSize: 'var(--ui-font-size-1)' }}>
+                      Staff note for {pupil.name} — not shown to the family
+                    </span>
+                    <input
+                      name={`staff-note-${pupil.accountId}`}
+                      defaultValue={existing?.staffNote ?? ''}
+                      maxLength={1000}
+                      style={{ padding: 'var(--ui-space-2)' }}
+                    />
+                  </label>
+                </div>
 
                 <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
                   {/* Named for the pupil, so a screen reader announces whose box this is rather

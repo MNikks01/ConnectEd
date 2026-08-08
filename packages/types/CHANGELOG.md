@@ -1,5 +1,11 @@
 # @connected/types
 
+## 0.7.0
+
+### Minor Changes
+
+- f2d1075: Adds the staff note (FR-GRADE-015): a mark carries a remark the family sees and a note only staff see, kept apart by response type rather than by filtering.
+
 ## 0.6.0
 
 ### Minor Changes

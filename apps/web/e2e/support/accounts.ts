@@ -15,9 +15,22 @@ export const PASSWORD = 'correct horse battery staple';
 
 let counter = 0;
 
+/**
+ * A unique slug that is also a **legal handle**, which the previous version was not.
+ *
+ * The API caps a handle at 30 characters. `${prefix}-${Date.now()}-${counter}` spends 13 of them on
+ * a millisecond timestamp, so the two longest prefixes — `liverecipient` and `platformadmin` —
+ * crossed the limit exactly when the counter reached three digits. That happens partway through a
+ * full suite run and never when a spec runs alone, so it read as a flake for as long as it existed:
+ * whether it fired depended on how many accounts earlier tests had created, which changes every
+ * time a test is added or reordered.
+ *
+ * Base 36 spends 8 characters instead of 13, leaving room for a four-digit counter and a longer
+ * prefix than anyone has needed yet.
+ */
 function unique(prefix: string): string {
   counter += 1;
-  return `${prefix}-${Date.now()}-${counter}`;
+  return `${prefix}-${Date.now().toString(36)}-${counter}`;
 }
 
 export interface Individual {
