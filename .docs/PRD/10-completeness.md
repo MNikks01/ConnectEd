@@ -1,6 +1,6 @@
 # PRD — Completeness
 
-`Status: Accepted` · `Last updated: 2026-08-06`
+`Status: Accepted` · `Last updated: 2026-08-08`
 
 Every functional requirement in this folder, and whether it is built. Written at the point where
 nothing was left that could be built without a decision from outside engineering, so that "what is
@@ -83,6 +83,12 @@ staff holding `PLATFORM_ADMIN` (ADR-0017), which closed the product's oldest unk
 
 ## The decisions everything blocked is waiting on
 
+**Both 1 and 2 were deferred by product on 2026-08-08**, explicitly, until everything else is
+complete. That is an answer about sequencing rather than about providers, and it is recorded here
+because five sprints of asking produced no other kind. What it puts weight on is the phrase
+"everything else" — see the deployment gap below, which is not a requirement and is the reason this
+document reading "every P0 built" does not mean the product can be given to a school.
+
 1. **A payment provider** — Stripe or Razorpay. Blocks FR-BILL-002, 004, 006 and the trigger half
    of 005. It follows the region of the pilot schools; the legacy product was India-first.
 
@@ -135,6 +141,30 @@ dead-letter set.
 
 The number to watch is `outbox_events_unpublished`. A stopped relay produces an _empty_ queue, which
 is indistinguishable from a quiet afternoon — the pile is only visible if something counts it.
+
+### The product has never run anywhere — **open**
+
+Recorded on 2026-08-08, while planning Sprint 9, because a completeness record that reads 64 of 73
+built and every P0 done should not be able to hide this.
+
+- There is **no container image** for the API, the web app or the worker.
+- `infrastructure/CLAUDE.md` documents six directories; five of them — `docker/`, `kubernetes/`,
+  `helm/`, `terraform/`, `nginx/` — do not exist. The observability stack that does exist is pointed
+  at nothing that runs.
+- `docker-compose.yml` starts Postgres, Redis and MinIO; the application processes run on the host
+  under `pnpm dev`. There is no way to start the product from a clean machine.
+- The release workflow's deploy steps are four commented lines. Every green release to `main` ships
+  to a **branch**.
+- `Deployment/00-environments.md` describes `dev`, `staging` and `production` with deploy triggers.
+  None of the three exists.
+
+Nothing in the PRD asks for any of it, which is why nine sprints of tracking functional requirements
+never showed it. `Sprint/09-sprint-9.md` is the plan for it.
+
+**Related and equally unmeasured: the sixteen NFRs in `TRD/00-technical-requirements.md` have no
+evidence section.** Latency, throughput, coverage, accessibility, and the RTO/RPO in NFR-014 are
+assertions in a table. The functional half of this document earns its "verified, not remembered"
+heading; the non-functional half has never been checked at all.
 
 ### The relay is a process that must be running
 
