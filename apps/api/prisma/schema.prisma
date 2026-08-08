@@ -227,6 +227,7 @@ model Account {
   assessmentsAuthored  Assessment[]          @relation("AssessmentAuthor")
   marks                Mark[]                @relation("MarkStudent")
   attendance           AttendanceEntry[]     @relation("AttendanceStudent")
+  reportCards          ReportCard[]          @relation("ReportCardStudent")
   memberships          Membership[]
   verificationRequests VerificationRequest[] @relation("VerificationRequester")
   academicItems        AcademicItem[]
@@ -460,6 +461,7 @@ model SchoolProfile {
 
   @@index([name])
   @@map("school_profile")
+  terms       Term[]
 }
 
 // ---------------------------------------------------------------------------
@@ -493,6 +495,7 @@ model Class {
   @@map("class")
   assessments Assessment[]
   attendance  AttendanceEntry[]
+  reportCards ReportCard[]
 }
 
 model Subject {
@@ -1308,4 +1311,63 @@ model AttendanceEntry {
   /// The pupil's and parent's read: one pupil, newest first.
   @@index([studentAccountId, onDate])
   @@map("attendance_entry")
+}
+
+/// A school's own term: a name and a date range (FR-GRADE-030).
+///
+/// The product had no notion of one before report cards needed it, and it is the school's to define
+/// because boards disagree about how many there are and when they run.
+model Term {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String   @map("school_id") @db.Uuid
+  name      String
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  school      SchoolProfile @relation(fields: [schoolId], references: [accountId], onDelete: Cascade)
+  reportCards ReportCard[]
+
+  /// Overlap is refused in the service, not here: Postgres can express it with an exclusion
+  /// constraint over a daterange, and Prisma cannot emit one — a hand-written constraint would be
+  /// reverted by the next `migrate dev`. The check has a test rather than a schema line.
+  @@index([schoolId, startDate])
+  @@map("term")
+}
+
+/// One pupil's report card for one term (FR-GRADE-040 … 043).
+///
+/// **A snapshot, not a view.** Every number on it is copied at the moment of issue, because a card
+/// is a document a family keeps: recomputing it would let a correction in March silently rewrite a
+/// card issued in December, leaving two documents with the same name.
+model ReportCard {
+  id               String   @id @default(uuid()) @db.Uuid
+  termId           String   @map("term_id") @db.Uuid
+  classId          String   @map("class_id") @db.Uuid
+  studentAccountId String   @map("student_account_id") @db.Uuid
+
+  /// The whole card as it was issued: subjects, their assessments and totals, and the attendance
+  /// counts. JSON because it is a *record of what was said*, not a queryable model — querying it
+  /// would mean the numbers were live again, which is the thing this exists to prevent.
+  snapshot Json
+  /// The class teacher's overall comment, shared with the family (FR-GRADE-035).
+  comment  String?
+
+  issuedAt         DateTime  @map("issued_at")
+  issuedByAccountId String   @map("issued_by_account_id") @db.Uuid
+  /// Set when this card replaced an earlier one, so the card can say so (FR-GRADE-042).
+  replacedIssuedAt DateTime? @map("replaced_issued_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student Account @relation("ReportCardStudent", fields: [studentAccountId], references: [id], onDelete: Cascade)
+
+  /// One current card per pupil per term. Reissuing replaces it and records what it replaced.
+  @@unique([termId, studentAccountId])
+  @@index([studentAccountId])
+  @@map("report_card")
 }

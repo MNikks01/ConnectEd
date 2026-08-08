@@ -27,6 +27,7 @@ import { createMediaModule } from './modules/media/index.js';
 import { createAttendanceModule } from './modules/attendance/index.js';
 import { createGradebookModule } from './modules/gradebook/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
+import { createReportCardsModule } from './modules/reportcards/index.js';
 import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
 import { createWorkflowsModule } from './modules/workflows/index.js';
@@ -224,6 +225,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       academics.routes,
       createGradebookModule(db, logger).routes,
       createAttendanceModule(db, logger).routes,
+      createReportCardsModule(db, logger).routes,
       workflows.routes,
       social.routes,
       billing.routes,
