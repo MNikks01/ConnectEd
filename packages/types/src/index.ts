@@ -26,6 +26,7 @@ export * from './moderation.js';
 export * from './notices.js';
 export * from './notifications.js';
 export * from './rum.js';
+export * from './report-cards.js';
 export * from './social.js';
 export * from './verification.js';
 export * from './workflows.js';

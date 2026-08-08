@@ -24,3 +24,19 @@ export function uuidParam(req: Request, name: string): string {
 
   return raw;
 }
+
+/**
+ * The same check for a query parameter that names a resource.
+ *
+ * `?termId=garbage` reaches Prisma exactly the way `/classes/garbage` would, and turns into the
+ * same 500. A required id in a query string is still an id.
+ */
+export function uuidQuery(req: Request, name: string): string {
+  const raw = req.query[name];
+
+  if (typeof raw !== 'string' || !UUID.test(raw)) {
+    throw new NotFoundError();
+  }
+
+  return raw;
+}
