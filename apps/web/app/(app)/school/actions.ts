@@ -18,6 +18,7 @@ import {
   createEventSchema,
   createNoticeSchema,
   createSubjectSchema,
+  createTermSchema,
   updateSchoolProfileSchema,
   verificationDecisionSchema,
 } from '@connected/types';
@@ -310,4 +311,24 @@ export async function decideVerificationsAction(
   } catch (error) {
     return { ok: false, message: apiErrorMessage(error) };
   }
+}
+
+/**
+ * Defining a term (FR-GRADE-030).
+ *
+ * The school's alone. Ranges may not overlap, and the API refuses one with a 409 naming the term
+ * it clashes with — which is why the message is shown rather than replaced with something generic:
+ * "those dates overlap Term 1" tells a registrar what to change, and "conflict" does not.
+ */
+export async function createTermAction(
+  schoolId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = createTermSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/schools/${schoolId}/terms`, { method: 'POST', body: parsed.data }),
+    ['/school/terms'],
+  );
 }

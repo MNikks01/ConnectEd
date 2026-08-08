@@ -83,6 +83,8 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
 
       <p>
         <Link href={`/school/classes/${id}/marks`}>Marks</Link>
+        {' · '}
+        <Link href={`/school/classes/${id}/report-cards`}>Report cards</Link>
       </p>
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>

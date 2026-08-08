@@ -137,6 +137,11 @@ one.
 | GET    | `/me/report-cards`                  |  🔑  | A pupil's own issued cards.                                                |
 | GET    | `/children/:id/report-cards`        |  🔑  | A parent's, for one child, via the link the school confirmed.              |
 
+**Listing terms is wider than defining one.** Any verified member of the school may read the list;
+only the school may add to it. Issuing names a term, and the class teacher who issues is not the
+school — a server that allows the action while hiding the only list to choose from is refusing the
+feature.
+
 **Issuing is a write that reads like a report.** `POST` because it creates documents: the response is
 `204` and the cards are then fetched, rather than returned inline, because the same list is what
 everyone else reads afterwards.
