@@ -1,5 +1,4 @@
 ---
-'@connected/api': minor
 '@connected/types': minor
 ---
 
