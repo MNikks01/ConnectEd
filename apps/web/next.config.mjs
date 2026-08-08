@@ -34,6 +34,14 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Emits `.next/standalone`: the server plus only the `node_modules` it actually reached for. It
+  // is what the container image runs, and in a pnpm workspace it is the difference between
+  // shipping the app and shipping the monorepo. `next start` still works from `.next` as before,
+  // so the E2E suite is unaffected.
+  output: 'standalone',
+  // Without this, standalone traces from `apps/web` and misses the workspace's hoisted
+  // `node_modules` one directory up.
+  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
   transpilePackages: ['@connected/ui'],
   // The browser must never see a stack trace or an internal header.
   poweredByHeader: false,
