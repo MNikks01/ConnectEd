@@ -12,6 +12,7 @@
 import {
   assertIsSchool,
   assertParentOfVerifiedChild,
+  assertVerifiedMemberOfSchool,
   assertVerifiedMembership,
 } from '../../shared/authz/index.js';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/errors/index.js';
@@ -220,7 +221,14 @@ export function createReportCardsService({
     },
 
     listTerms: async (actor, schoolId) => {
-      assertIsSchool(actor, schoolId);
+      // Wider than defining one, and it has to be: issuing names a term, and the class teacher who
+      // issues is not the school. Gating the list on `assertIsSchool` left the person the feature
+      // is for unable to see the only thing they are allowed to choose from — a server that says
+      // yes to the action and no to the list it needs.
+      //
+      // The reach is small: a term is a name and two dates, and it is printed on every card a
+      // family already holds.
+      await assertVerifiedMemberOfSchool(db, actor, schoolId);
       return (await repository.listTerms(schoolId)).map(toTermResponse);
     },
 

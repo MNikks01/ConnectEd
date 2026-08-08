@@ -1,9 +1,12 @@
 /**
- * Applies migrations to the end-to-end database before the suite runs.
+ * Prepares the end-to-end run: builds what the suite serves, then migrates the database it talks to.
  *
- * CI does this as its own step; locally nothing did, so a schema change meant a full suite run that
- * died on a missing column — three times in one day, at two minutes a go. The fix belongs in the
- * command rather than in a person's memory.
+ * CI does both as its own steps; locally nothing did. The migration half cost three full suite runs
+ * in one day, each dying on a missing column. The build half cost worse: `playwright.config.ts` sets
+ * `reuseExistingServer` locally and starts the API with `node dist/index.js`, so a run against a
+ * two-day-old `dist` boots a server without the routes being tested and reports the absence as a
+ * page error. Nothing in the output says "stale build" — it looks like a product defect, and it is
+ * the same trap as the missing migration wearing a different coat.
  *
  * **Wired into `test:e2e` rather than a `pretest:e2e` hook**, because pnpm does not run pre/post
  * scripts unless `enable-pre-post-scripts` is set, and this repository does not set it. A hook here
@@ -22,7 +25,12 @@ const DATABASE_URL =
   process.env.DATABASE_URL ??
   'postgresql://connected:connected@localhost:5432/connected_e2e?schema=public';
 
-execFileSync('pnpm', ['--filter', '@connected/api', 'db:deploy'], {
-  stdio: 'inherit',
-  env: { ...process.env, DATABASE_URL },
-});
+const run = (args) =>
+  execFileSync('pnpm', args, { stdio: 'inherit', env: { ...process.env, DATABASE_URL } });
+
+// Both servers, because both are started from a build rather than from source: the API as
+// `node dist/index.js`, the web app as `next start`, which serves whatever `.next` was left behind.
+// A no-op rebuild is nearly free; a run against a stale one costs an afternoon.
+run(['--filter', '@connected/api', 'build']);
+run(['--filter', 'web', 'build']);
+run(['--filter', '@connected/api', 'db:deploy']);

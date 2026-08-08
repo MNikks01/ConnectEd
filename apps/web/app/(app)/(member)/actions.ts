@@ -23,6 +23,7 @@ import {
   createAssessmentSchema,
   correctMarkSchema,
   takeRegisterSchema,
+  issueReportCardsSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -494,5 +495,37 @@ export async function takeRegisterAction(
   return run(
     () => callAsUser(`/classes/${classId}/register`, { method: 'PUT', body: parsed.data }),
     [`/classes/${classId}/register`, `/classes/${classId}`],
+  );
+}
+
+/**
+ * Issuing a class's report cards (FR-GRADE-040).
+ *
+ * The form posts one optional field per pupil, `comment-<accountId>`. A pupil with no comment is
+ * still issued a card: the comment is the one typed thing on it, and a term where only the
+ * commented-on children have documents is a term nobody can explain.
+ */
+export async function issueReportCardsAction(
+  classId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const termId = formData.get('termId');
+  const comments: Record<string, string> = {};
+
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith('comment-') || typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed !== '') comments[key.slice('comment-'.length)] = trimmed;
+  }
+
+  const parsed = issueReportCardsSchema.safeParse({
+    termId: typeof termId === 'string' ? termId : '',
+    ...(Object.keys(comments).length > 0 ? { comments } : {}),
+  });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser(`/classes/${classId}/report-cards`, { method: 'POST', body: parsed.data }),
+    [`/classes/${classId}/report-cards`, `/classes/${classId}`],
   );
 }

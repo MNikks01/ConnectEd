@@ -235,6 +235,29 @@ describe('terms', () => {
     expect(attempt.status).toBe(403);
   });
 
+  it('is readable by the class teacher who has to issue against it', async () => {
+    const term = await createTerm();
+
+    const listed = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/terms`)
+      .set('Authorization', await asClassTeacher());
+
+    // Defining a term is the school's; *choosing* one is the class teacher's, and a server that
+    // says yes to issuing while refusing the list to pick from is refusing the feature.
+    expect(listed.status).toBe(200);
+    expect(bodyAs<{ data: TermResponse[] }>(listed).data.map((row) => row.id)).toEqual([term.id]);
+  });
+
+  it('is not readable by someone with no membership at the school', async () => {
+    await createTerm();
+
+    const listed = await request(app)
+      .get(`/api/v1/schools/${fixture.schoolAccountId}/terms`)
+      .set('Authorization', await auth(fixture.outsiderAccountId, 'INDIVIDUAL', 'USER'));
+
+    expect(listed.status).toBe(403);
+  });
+
   it('is frozen once a card has been issued against it', async () => {
     const { term } = await issuedTerm();
 
