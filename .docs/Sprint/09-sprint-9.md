@@ -74,7 +74,7 @@ says everything else is done. The paragraph above says it is not.
 | ----- | ----------------------------------------------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web            | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them                      |
 | S9-2  | ✅ **Done 2026-08-08** — `infrastructure/docker/compose.yml` runs the whole product | devops      | M    | One command from a clean machine to a working sign-in, proved by a smoke test rather than by claim. Migrations are their own container that everything waits on                           |
-| S9-3  | Images built and pushed by CI on every release                                      | devops      | M    | Tagged with the release tag, not `latest`. Uncommenting the workflow's placeholder is the smallest part of this                                                                           |
+| S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                         |
 | S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                        |
 | S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4) |
 | S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                         |
@@ -146,6 +146,23 @@ token the browser holds being one the API accepts.
 It is **not yet S9-5**, and the sprint doc now says so. A smoke test that runs after a deploy is a
 monitor; S9-5 is when it fails one. Sabotage-checked meanwhile by stopping the API container, which
 fails it in 300 ms.
+
+## What S9-3 found
+
+**The first real release would have failed at the push.** `github.repository` is
+`MNikks01/ConnectEd`, and a container reference must be lowercase — Docker refuses the name rather
+than normalising it. Interpolating the variable straight into a tag would have failed _after_ the
+tag and the GitHub Release had been created, which is the same ordering problem as
+`release/2026-08-08.2` and would have looked just as much like a broken release. Caught by trying
+`docker tag` with the real repository name rather than assuming.
+
+The registry is `ghcr.io`, and that is not a decision about where the product runs. S9-0a is still
+open; a registry and a cluster do not have to be the same provider, and `GITHUB_TOKEN` already has
+the scope, so nothing was blocked waiting for it.
+
+`Deployment/01-release-process.md` has described the intended pipeline since Sprint 2. It now opens
+with a table separating what is wired from what is intent, because a release process nobody can tell
+the truth about is worse than a short one.
 
 ## Stretch (only if committed done)
 
