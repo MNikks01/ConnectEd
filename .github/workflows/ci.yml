@@ -172,6 +172,85 @@ jobs:
       - name: Every alert routes somewhere and names a runbook that exists
         run: node scripts/check-alerts.mjs
 
+  # The images the product will actually be deployed as (S9-1).
+  #
+  # Built on every pull request, and the point is not the artefact — nothing is pushed here, that is
+  # the release's job. The point is that the Dockerfiles stay buildable. A monorepo image breaks
+  # from an ordinary-looking change: a new workspace package that the manifest-copy step does not
+  # list, a dependency that needs a compiler, a file that was only ever present on a laptop. Each of
+  # those is silent until somebody deploys.
+  #
+  # Then scanned, because "minimal base, non-root, no dev dependencies" is a claim with a shelf
+  # life: a base image that was clean when it was chosen acquires CVEs on somebody else's schedule.
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the API and worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          load: true
+          tags: connected-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          load: true
+          tags: connected-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The claims the Dockerfiles make, checked rather than trusted. Each of these was true when
+      # the file was written, and each is one careless `USER root` or one dev dependency away from
+      # not being.
+      - name: The images are what they claim to be
+        run: |
+          set -euo pipefail
+
+          for image in connected-api:ci connected-web:ci; do
+            user=$(docker image inspect "$image" --format '{{.Config.User}}')
+            if [ "$user" != "node" ]; then
+              echo "::error::$image runs as '${user:-root}', not node"
+              exit 1
+            fi
+          done
+
+          # tsx, vitest, Playwright and the Prisma CLI have no business in a running container.
+          # The Prisma CLI is the interesting one: its absence is why the migrate target exists.
+          for pkg in tsx vitest @playwright/test prisma typescript; do
+            if docker run --rm --entrypoint sh connected-api:ci -c "[ -e node_modules/$pkg ]"; then
+              echo "::error::connected-api ships the dev dependency $pkg"
+              exit 1
+            fi
+          done
+
+      - name: Scan both images
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: connected-api:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Scan the web image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: connected-web:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
   changeset-check:
     runs-on: ubuntu-latest
     # Feature PRs into `development` must carry a changeset. A **release** PR into `main` is where

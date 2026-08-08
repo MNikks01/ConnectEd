@@ -70,27 +70,61 @@ says everything else is done. The paragraph above says it is not.
 
 **Ungated — starts regardless.** Every item here is unblocked today.
 
-| #     | Item                                                             | Owner       | Est. | DoD                                                                                                                                                                      |
-| ----- | ---------------------------------------------------------------- | ----------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| S9-1  | Multi-stage Dockerfiles for **api, web, worker**                 | devops      | L    | Non-root, minimal base, no dev dependencies in the final layer, image scanned in CI. Three images, because the split deployment is real since S7-17                      |
-| S9-2  | A compose file that runs the **whole product** from those images | devops      | M    | `docker compose up` on a clean machine reaches a working sign-in. The current file starts dependencies and leaves the product to `pnpm dev`                              |
-| S9-3  | Images built and pushed by CI on every release                   | devops      | M    | Tagged with the release tag, not `latest`. Uncommenting the workflow's placeholder is the smallest part of this                                                          |
-| S9-4  | A **staging environment** the release actually reaches           | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                       |
-| S9-5  | A **post-deploy smoke test** against the deployed thing          | devops      | M    | Sign in, read a class, take a register. It must fail the deploy, not report afterwards                                                                                   |
-| S9-6  | Secrets, for the first time                                      | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                        |
-| S9-7  | **Backup and restore, exercised** (NFR-014)                      | devops      | L    | Restore a real backup into a scratch database and measure it. RTO ≤ 1h and RPO ≤ 15 min are currently claims with no evidence; the runbook `db-restore.md` has never run |
-| S9-8  | Terraform for the chosen target                                  | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                         |
-| S9-9  | `infrastructure/CLAUDE.md` corrected                             | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                       |
-| S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003) | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                   |
-| S9-11 | **NFR evidence**: accessibility audited (NFR-012)                | frontend    | M    | WCAG 2.1 AA across the real screens, not a Lighthouse score on the home page. Every item's DoD has claimed a11y for nine sprints and nothing has ever checked it         |
-| S9-12 | **NFR evidence**: coverage measured (NFR-009)                    | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                          |
-| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                   | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                      |
+| #     | Item                                                                     | Owner       | Est. | DoD                                                                                                                                                                      |
+| ----- | ------------------------------------------------------------------------ | ----------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them     |
+| S9-2  | A compose file that runs the **whole product** from those images         | devops      | M    | `docker compose up` on a clean machine reaches a working sign-in. The current file starts dependencies and leaves the product to `pnpm dev`                              |
+| S9-3  | Images built and pushed by CI on every release                           | devops      | M    | Tagged with the release tag, not `latest`. Uncommenting the workflow's placeholder is the smallest part of this                                                          |
+| S9-4  | A **staging environment** the release actually reaches                   | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                       |
+| S9-5  | A **post-deploy smoke test** against the deployed thing                  | devops      | M    | Sign in, read a class, take a register. It must fail the deploy, not report afterwards                                                                                   |
+| S9-6  | Secrets, for the first time                                              | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                        |
+| S9-7  | **Backup and restore, exercised** (NFR-014)                              | devops      | L    | Restore a real backup into a scratch database and measure it. RTO ≤ 1h and RPO ≤ 15 min are currently claims with no evidence; the runbook `db-restore.md` has never run |
+| S9-8  | Terraform for the chosen target                                          | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                         |
+| S9-9  | `infrastructure/CLAUDE.md` corrected                                     | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                       |
+| S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)         | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                   |
+| S9-11 | **NFR evidence**: accessibility audited (NFR-012)                        | frontend    | M    | WCAG 2.1 AA across the real screens, not a Lighthouse score on the home page. Every item's DoD has claimed a11y for nine sprints and nothing has ever checked it         |
+| S9-12 | **NFR evidence**: coverage measured (NFR-009)                            | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                          |
+| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                           | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                      |
 
 **Gated on S8-0a — billing** (unchanged since Sprint 7, now explicitly scheduled after this sprint):
 S8-10 the provider port and its fake · S8-11 checkout · S8-12 webhook reconciliation · S8-13 dunning.
 
 **Gated on S8-0b — mail:** S8-14 the transport behind a port · S8-15 the email verification gate,
 **only after** S8-14.
+
+## What S9-1 found
+
+Three things, and the pattern is the sprint's own risk paragraph coming true on the first day:
+everything the product needs that only a developer's machine has ever provided.
+
+**The web app could not have been deployed twice.** `lib/api-client.ts` read the API's location from
+`NEXT_PUBLIC_API_URL`, and a `NEXT_PUBLIC_*` value is inlined into the bundle at build time. Staging
+and production would have needed different images of identical code. The module's own docstring says
+it is server-side only — the browser calls this app's route handlers, never the API — so it never
+needed a public variable at all. It now prefers a plain `API_URL`, read at runtime, and keeps the
+public one as a fallback because the E2E suite and every local `.env` set it.
+
+**A stale `tsconfig.tsbuildinfo` was being copied into the image.** tsc read it, believed the output
+it described already existed, and emitted declarations and no JavaScript — so `packages/types/dist`
+arrived holding three `.d.ts` files and no `index.js`, and every import of it failed to resolve. The
+build was reading a fact about a machine it was not running on. It is the stale-build trap from
+`test:e2e` one layer down, and `.dockerignore` now excludes it.
+
+**Two images, not three.** The plan said one each for the API, the worker and the web app. The API
+and the worker are now one image with two commands, and the reason is S7-17: `worker.ts` and
+`index.ts` had drifted, the worker built its notifications module without the audience parameter, it
+type-checked, and every class fan-out in the split deployment reached nobody. Two images built from
+one source is one more chance for exactly that. One artefact, two commands, and what runs in
+production is what was tested.
+
+There is a **third target**, `migrate`, and it exists because the runtime image deliberately cannot
+migrate — `pnpm deploy --prod` drops the Prisma CLI. A schema in an image with nothing able to apply
+it is worse than no schema, because it reads as a capability. The migration runner is what S9-4's
+gated step will run.
+
+Proven by running them: the API image reached Postgres, Redis and MinIO on a container network,
+`/readyz` reported all three up, the migration runner applied all migrations to a fresh database,
+and a school registered through the containerised API. 160 MB and 93 MB.
 
 ## Stretch (only if committed done)
 

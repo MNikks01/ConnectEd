@@ -1,0 +1,42 @@
+# Everything the build does not need, and several things it must not have.
+#
+# `node_modules` above all: the host's tree is built for the host's platform and libc, and copying
+# it into the image would shadow the one `pnpm install` just resolved — argon2 is a native module,
+# so the failure would be at runtime rather than at build.
+node_modules
+**/node_modules
+
+# Build output. The image builds its own; a stale local `dist` copied in is the E2E stale-build
+# trap again, one layer down.
+dist
+.next
+**/dist
+**/.next
+apps/api/src/generated
+
+# **And the incremental-build state, which is the same trap wearing a smaller hat.** With a host
+# `tsconfig.tsbuildinfo` copied in, tsc believes the output it describes already exists and emits
+# nothing but declarations — so `packages/types/dist` arrived holding three `.d.ts` files and no
+# `index.js`, and every import of it failed to resolve. The build was reading a fact about a
+# machine it was not running on.
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Secrets and local state, which must never reach a layer — an image layer is not deletable.
+.env
+.env.*
+!.env.example
+
+# Noise that only invalidates the cache.
+.git
+.github
+.turbo
+**/.turbo
+coverage
+test-results
+playwright-report
+*.log
+.DS_Store
+.claude
+.docs
+docs

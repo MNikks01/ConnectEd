@@ -9,7 +9,20 @@
  */
 import { ErrorCode, type CurrentAccountResponse, type ErrorEnvelope } from '@connected/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+/**
+ * Where the API is, from **this server's** point of view.
+ *
+ * `API_URL` first, and it is the one that matters in a container. `NEXT_PUBLIC_*` values are
+ * inlined into the bundle at build time, so an image built with one is pinned to the API it was
+ * built against — staging and production would need different images of identical code. This
+ * module is server-side only (see above), so it does not need a public variable at all, and a
+ * plain one is read at runtime where an environment can still set it.
+ *
+ * The public variable stays as a fallback because the E2E suite and every local `.env` set it, and
+ * breaking those to fix a deployment nobody has yet would be the wrong trade.
+ */
+const API_URL =
+  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
 /** A failed API call, carrying the machine-readable code clients branch on. */
 export class ApiError extends Error {
