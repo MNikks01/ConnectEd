@@ -49,6 +49,8 @@ export const enterMarksSchema = z.object({
         /** `null` is "not marked" and is not a zero — see FR-GRADE-014. */
         score: score.nullable(),
         remark: z.string().trim().max(1000).optional(),
+        /** Staff-only (FR-GRADE-015). Never returned to a pupil or parent. */
+        staffNote: z.string().trim().max(1000).optional(),
       }),
     )
     .min(1)
@@ -61,6 +63,7 @@ export type EnterMarksInput = z.infer<typeof enterMarksSchema>;
 export const correctMarkSchema = z.object({
   score: score.nullable(),
   remark: z.string().trim().max(1000).optional(),
+  staffNote: z.string().trim().max(1000).optional(),
 });
 
 export type CorrectMarkInput = z.infer<typeof correctMarkSchema>;
@@ -79,7 +82,13 @@ export interface AssessmentResponse {
   createdAt: string;
 }
 
-/** One pupil's result. Deliberately carries no comparison to anybody else's. */
+/**
+ * One pupil's result, **as the pupil and their parents see it**.
+ *
+ * Deliberately carries no comparison to anybody else's — and, since FR-GRADE-015, no staff note.
+ * That omission is enforced by this type having nowhere to put one: a leak would have to be a new
+ * field somebody added on purpose, not a `delete` somebody forgot.
+ */
 export interface MarkResponse {
   studentAccountId: string;
   studentName: string;
@@ -87,8 +96,13 @@ export interface MarkResponse {
   remark: string | null;
 }
 
+/** The same mark as staff see it. The only shape that carries the staff note. */
+export interface StaffMarkResponse extends MarkResponse {
+  staffNote: string | null;
+}
+
 export interface AssessmentWithMarksResponse extends AssessmentResponse {
-  marks: MarkResponse[];
+  marks: StaffMarkResponse[];
 }
 
 /** What a pupil or their parent reads: the assessment, and their own mark on it. */

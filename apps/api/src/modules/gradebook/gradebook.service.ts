@@ -20,7 +20,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/error
 import type { Actor } from '../../shared/authz/index.js';
 import type { Db } from '../../shared/db/index.js';
 import type { Logger } from '../../shared/logger/index.js';
-import type { AssessmentRow, GradebookRepository, MarkRow } from './gradebook.repository.js';
+import type { AssessmentRow, GradebookRepository, StaffMarkRow } from './gradebook.repository.js';
 import type {
   AssessmentResponse,
   AssessmentWithMarksResponse,
@@ -43,7 +43,7 @@ export interface GradebookService {
     assessmentId: string,
     studentAccountId: string,
     input: CorrectMarkInput,
-  ) => Promise<MarkRow>;
+  ) => Promise<StaffMarkRow>;
   /**
    * The assessments of a class, for the people who mark or oversee them.
    *
@@ -224,6 +224,7 @@ export function createGradebookService({
         studentAccountId,
         score: input.score,
         remark: input.remark,
+        staffNote: input.staffNote,
         previous: { score: previous.score, remark: previous.remark },
         actorAccountId: actor.accountId,
       });
@@ -319,6 +320,7 @@ export function createGradebookService({
               studentName: pupil.name,
               score: null,
               remark: null,
+              staffNote: null,
             },
         ),
       };
