@@ -48,10 +48,10 @@ S8-0d shipped the same day it was decided, which was the whole argument for aski
 
 **Gated on S8-0c — report cards:**
 
-| #    | Item                                       | Owner                 | Est. | DoD                                                                           |
-| ---- | ------------------------------------------ | --------------------- | ---- | ----------------------------------------------------------------------------- |
-| S8-6 | `FR-GRADE-030+` — report card requirements | product + tech-writer | M    | What a term is, what a card contains, who signs it, and which scale it prints |
-| S8-7 | Report cards, server and screen            | backend + frontend    | L    | Aggregates published marks only; a card is generated from data, never typed   |
+| #    | Item                                                               | Owner                 | Est. | DoD                                                                                                           |
+| ---- | ------------------------------------------------------------------ | --------------------- | ---- | ------------------------------------------------------------------------------------------------------------- |
+| S8-6 | ✅ **Done 2026-08-08** — `PRD/13-report-cards.md`, `Status: Draft` | product + tech-writer | M    | Terms, what a card contains, and the decision that a card is _issued_ as a snapshot rather than rendered live |
+| S8-7 | Report cards, server and screen                                    | backend + frontend    | L    | Aggregates published marks only; a card is generated from data, never typed                                   |
 
 **Gated on S8-0a — the billing module** (unchanged from Sprint 7, and unstarted):
 

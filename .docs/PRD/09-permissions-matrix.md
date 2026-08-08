@@ -25,6 +25,8 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | View a mark                                   |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
 | Take a register                               |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   ✅   |      ➖      |
 | View a register                               |    👁    |       👁        |    👁    |       👁       |     👁     |   ✅   |      ➖      |
+| Issue report cards                            |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   ✅   |      ➖      |
+| View a report card                            |    👁    |       👁        |   ➖    |       👁       |     👁     |   ✅   |      ➖      |
 | Submit leave application                      |   ➖    | ✅ (for child) |   ✅    |      ✅       |    ➖     |   ➖   |      ➖      |
 | Approve student/parent leave                  |   ➖    |       ➖       |   ➖    |      ✅       |    ➖     |   👁    |      ➖      |
 | Approve teacher leave                         |   ➖    |       ➖       |   ➖    |      ➖       |    ✅     |   👁    |      ➖      |
@@ -74,6 +76,10 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
   a _class-level_ fact, so **any** teacher of the class reads the whole register — knowing who is in
   the room is part of teaching it — where marks are subject-scoped. Pupils and parents still see one
   pupil's. `12-attendance.md` carries the table.
+- **A subject teacher is `➖` on "View a report card", and that is not an oversight.** They see their
+  own subject's marks, and a card is a statement about a child across their whole term — teaching
+  them French is not a reason to read it. It is the only row where a teacher sees _less_ than a
+  parent, and it is deliberate.
 - **Taking a register is the class teacher's**, not any teacher's: FR-INST-004 already makes them
   the person who answers for the class, and two people taking the same register is how a class ends
   up with two answers about the same child.
