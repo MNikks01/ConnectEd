@@ -1,5 +1,35 @@
 # @connected/types
 
+## 0.8.0
+
+### Minor Changes
+
+- 3da52b0: Terms and report cards, server side (FR-GRADE-030 … 043).
+
+  A school defines its own terms, and their date ranges may not overlap — an assessment must belong to
+  one term or none. The class teacher or the school issues cards for a whole class in one action.
+
+  A card is **issued, not rendered**: issuing copies every number onto it, so a later correction to a
+  mark leaves an already-issued card alone. A school that wants the correction reflected reissues, and
+  the new card says on its face that it replaced an earlier one and when that one was issued.
+
+  The arithmetic carries the gradebook's rule through: an assessment a pupil was not marked for is
+  excluded from both sides of the total rather than counted as zero, and a pupil with nothing marked
+  has no percentage rather than a nought.
+
+### Patch Changes
+
+- c3f6287: Report cards on screen (S8-7), and the term list a class teacher needs to reach them.
+
+  A school defines its terms at `/school/terms`; a class teacher issues a class's cards at
+  `/classes/:id/report-cards`, and pupils and parents read their own there. The card renders the
+  stored snapshot and computes nothing — the whole point of the feature is that what it says was
+  decided when it was issued.
+
+  Listing a school's terms is now open to any verified member of that school, rather than to the
+  school account alone. Issuing names a term and the class teacher who issues is not the school, so
+  the narrower rule allowed the action while hiding the only list to choose from.
+
 ## 0.7.0
 
 ### Minor Changes
