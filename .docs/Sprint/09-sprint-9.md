@@ -70,21 +70,21 @@ says everything else is done. The paragraph above says it is not.
 
 **Ungated — starts regardless.** Every item here is unblocked today.
 
-| #     | Item                                                                                | Owner       | Est. | DoD                                                                                                                                                                                                               |
-| ----- | ----------------------------------------------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web            | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them                                              |
-| S9-2  | ✅ **Done 2026-08-08** — `infrastructure/docker/compose.yml` runs the whole product | devops      | M    | One command from a clean machine to a working sign-in, proved by a smoke test rather than by claim. Migrations are their own container that everything waits on                                                   |
-| S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                                                 |
-| S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                                                |
-| S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4)                         |
-| S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                                                 |
-| S9-7  | ◐ **Restore proven 2026-08-08; retention is not**                                   | devops      | L    | `scripts/restore-drill.mjs` takes a real dump, restores it, and compares every table's row count. 400,027 rows verified in 5.3s, sabotage-checked. RPO needs continuous archiving, which needs a provider — S9-0a |
-| S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                  |
-| S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                |
-| S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)                    | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                                                            |
-| S9-11 | ✅ **Done 2026-08-08** — accessibility measured, and it holds                       | frontend    | M    | `e2e/accessibility.spec.ts` scans 22 populated screens plus a failed form against WCAG 2.1 A/AA. Zero violations; sabotage-checked. The mechanical third only — the rest needs a person, and the spec says so     |
-| S9-12 | ✅ **Done 2026-08-08** — coverage measured, and NFR-009 is met                      | backend     | S    | Services 95.3% lines / **80.8% branches** / 96.9% functions. Thresholds in `vitest.config.ts` now fail the build on regression, and CI runs the API suite with coverage rather than twice                         |
-| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                               |
+| #     | Item                                                                                | Owner       | Est. | DoD                                                                                                                                                                                                                       |
+| ----- | ----------------------------------------------------------------------------------- | ----------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S9-1  | ✅ **Done 2026-08-08** — multi-stage Dockerfiles for api, worker and web            | devops      | L    | Two images, not three, and a third target for migrations — see below. Non-root, no dev dependencies, both verified by the new `images` CI job, which also scans them                                                      |
+| S9-2  | ✅ **Done 2026-08-08** — `infrastructure/docker/compose.yml` runs the whole product | devops      | M    | One command from a clean machine to a working sign-in, proved by a smoke test rather than by claim. Migrations are their own container that everything waits on                                                           |
+| S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                                                         |
+| S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                                                        |
+| S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4)                                 |
+| S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                                                         |
+| S9-7  | ◐ **Restore proven 2026-08-08; retention is not**                                   | devops      | L    | `scripts/restore-drill.mjs` takes a real dump, restores it, and compares every table's row count. 400,027 rows verified in 5.3s, sabotage-checked. RPO needs continuous archiving, which needs a provider — S9-0a         |
+| S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                          |
+| S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                        |
+| S9-10 | ◐ **Measured on a laptop 2026-08-08; the staging number is still owed**             | backend     | L    | `scripts/load-test.mjs`. Reads ~1,060 rps at p97.5 = 110 ms, writes p97.5 = 78 ms, no failed requests. Comfortably inside NFR-002 and NFR-003 — on a machine with no network in it, which is the caveat, not the footnote |
+| S9-11 | ✅ **Done 2026-08-08** — accessibility measured, and it holds                       | frontend    | M    | `e2e/accessibility.spec.ts` scans 22 populated screens plus a failed form against WCAG 2.1 A/AA. Zero violations; sabotage-checked. The mechanical third only — the rest needs a person, and the spec says so             |
+| S9-12 | ✅ **Done 2026-08-08** — coverage measured, and NFR-009 is met                      | backend     | S    | Services 95.3% lines / **80.8% branches** / 96.9% functions. Thresholds in `vitest.config.ts` now fail the build on regression, and CI runs the API suite with coverage rather than twice                                 |
+| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                                       |
 
 **Gated on S8-0a — billing** (unchanged since Sprint 7, now explicitly scheduled after this sprint):
 S8-10 the provider port and its fake · S8-11 checkout · S8-12 webhook reconciliation · S8-13 dunning.
@@ -252,6 +252,38 @@ with the real figure in the message.
 
 CI runs the API suite **with** coverage rather than running it twice — the same 1,150 tests, one
 pass, and the thresholds gate it.
+
+## What S9-10 measured, and where
+
+NFR-002 (p95 read < 300 ms, p95 write < 600 ms) and NFR-003 (500 RPS baseline) have been in the TRD
+since Sprint 2 with no number attached. There is one now.
+
+| Scenario                                            |   RPS |  p50 |  p90 | p97.5 |   p99 | non-2xx |
+| --------------------------------------------------- | ----: | ---: | ---: | ----: | ----: | ------: |
+| read `/me/memberships` — every page does this first | 1,060 | 36ms | 70ms | 110ms | 138ms |       0 |
+| read a class feed — the read that fans out          | 1,074 | 39ms | 67ms | 104ms | 126ms |       0 |
+| write an academic item — transaction + outbox row   |   408 | 18ms | 37ms |  78ms | 101ms |       0 |
+
+**Inside both targets, with room.** Reads sustain twice NFR-003's baseline; the tail is a third of
+NFR-002's allowance.
+
+**p97.5, not p95, and deliberately.** autocannon reports a fixed set of percentiles and p95 is not
+among them. Interpolating between p90 and p97.5 would be inventing a number, so the gate uses p97.5
+against the p95 target — strictly harder to pass, which is the right direction to be wrong in.
+
+**Where it ran is half the number.** An Apple M2 laptop, macOS 26.5.2, with the API, Postgres, Redis
+and the load generator all on the same machine. There is **no network in these figures** — no TLS,
+no proxy, no hop between the app and its database — and those are exactly what a p95 is usually
+spent on. The dataset is also small: a class feed with little in it is a cheap read, and the number
+would move on a school with three years of history.
+
+So this is recorded as **half done**. What it proves is that nothing in the request path is
+accidentally quadratic and that the harness works. NFR-002 and NFR-003 are about a deployed system,
+and that is S9-4 — which is S9-0a.
+
+The 500 RPS baseline is a read figure. The write scenario runs at ten connections on purpose: a
+write here is a transaction plus an outbox row, and hammering it measures the disk underneath rather
+than anything about the product.
 
 ## Stretch (only if committed done)
 
