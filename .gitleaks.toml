@@ -1,0 +1,38 @@
+# Secret scanning (S9-6).
+#
+# The default rules, plus one narrow exception. Extending this file should be rare and each entry
+# should say what it exempts and why — an allowlist is the part of a scanner that decides what it
+# will not find, and it grows quietly.
+
+[extend]
+useDefault = true
+
+[[rules]]
+# gitleaks' own `private-key` rule, re-declared only so the allowlist below can hang off it rather
+# than off the whole scan. A global allowlist would apply to every rule, including the ones for
+# cloud credentials.
+id = "private-key"
+description = "Private key"
+regex = '''-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY( BLOCK)?-----'''
+keywords = ["-----BEGIN"]
+
+[rules.allowlist]
+description = """
+`.env.example` documents how to supply an Ed25519 signing key by showing the shape of one:
+
+  JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+
+The body is three literal dots. It is a comment, on a commented-out variable, and the file is the
+one place a newcomer looks to find out which variables exist — replacing the example with prose
+would cost more than the false positive does.
+
+Matched on the placeholder body, **not on the path.** Allowlisting `.env.example` wholesale would
+mean a real key pasted into the very file people copy would be the one thing this scanner cannot
+see.
+"""
+# `regexTarget = "line"` matters: by default an allowlist regex is matched against the *secret*
+# gitleaks captured, which for this rule is the `-----BEGIN …-----` marker alone. Matching the
+# marker would exempt every private key in the repository. The line is what distinguishes a
+# placeholder from a key.
+regexTarget = "line"
+regexes = ['''-----BEGIN[ A-Z]*PRIVATE KEY-----\\n\.\.\.\\n-----END''']

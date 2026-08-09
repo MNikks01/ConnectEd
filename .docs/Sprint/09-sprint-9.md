@@ -77,7 +77,7 @@ says everything else is done. The paragraph above says it is not.
 | S9-3  | ✅ **Done 2026-08-08** — images built and pushed by CI on every release             | devops      | M    | `api`, `migrate` and `web` to `ghcr.io`, tagged with the release date and never `latest`; digests written onto the GitHub Release                                                                                         |
 | S9-4  | A **staging environment** the release actually reaches                              | devops      | L    | Migrations run as their own gated step; the worker deployed as a second process, since that is the arrangement every test now uses                                                                                        |
 | S9-5  | ◐ **Harness built 2026-08-08**, not yet a gate                                      | devops      | M    | `e2e/smoke.spec.ts` + `smoke.config.ts` run against a stack that is already up; sabotage-checked by stopping the API. It becomes S9-5 proper when a deploy runs it and fails on it (S9-4)                                 |
-| S9-6  | Secrets, for the first time                                                         | devops      | M    | Nothing has ever needed a real one: every secret in the repository is an E2E constant or a compose default. Rotation documented, not just storage                                                                         |
+| S9-6  | ◐ **Inventoried and scanned 2026-08-08; a manager still needs a target**            | devops      | M    | `Security/06-secrets.md` names every secret, its blast radius and its source. `secret-scan` runs gitleaks over the whole history on every PR — 143 commits, no findings, sabotage-checked. A secrets manager is S9-0a     |
 | S9-7  | ◐ **Restore proven 2026-08-08; retention is not**                                   | devops      | L    | `scripts/restore-drill.mjs` takes a real dump, restores it, and compares every table's row count. 400,027 rows verified in 5.3s, sabotage-checked. RPO needs continuous archiving, which needs a provider — S9-0a         |
 | S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                          |
 | S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                        |
@@ -284,6 +284,34 @@ and that is S9-4 — which is S9-0a.
 The 500 RPS baseline is a read figure. The write scenario runs at ten connections on purpose: a
 write here is a transaction plus an outbox row, and hammering it measures the disk underneath rather
 than anything about the product.
+
+## What S9-6 found
+
+**The repository has never held a real secret, and that is why the rules had never been tested.**
+Every value in it is a development constant or a compose default. So S9-6 split into the half that
+can be done without an environment and the half that cannot.
+
+The half that can: an inventory in `Security/06-secrets.md` — every secret, what it protects, what a
+leak costs, and where it comes from in each environment. `JWT_PRIVATE_KEY` is the one worth naming
+here, because its blast radius is impersonation of anyone, silently, and it is _optional_ in the
+config schema. That is correct locally, where HS256 is the default and needs no key management, and
+it means **its absence in a deployed environment is a defect rather than a default** — which is now
+written down where somebody deploying will read it.
+
+And a scanner. `secret-scan` runs gitleaks over the **whole history** on every pull request, not the
+diff: a secret that entered three months ago is live today, and a diff-only scan would call the
+branch clean. 143 commits, no findings.
+
+**One false positive, ruled out rather than silenced.** `.env.example` shows the shape of a signing
+key, whose body is three literal dots. The allowlist matches that placeholder and **not the file** —
+exempting `.env.example` wholesale would make a real key pasted into the very file people copy the
+one thing the scanner cannot see. Sabotage-checked by writing a genuine Ed25519 key into that file,
+which is caught.
+
+The half that cannot be done: a secrets manager, least-privilege access, an audit trail, and
+rotation for anything but the signing key. All of it needs a target, which is S9-0a. The doc says
+which parts are missing rather than describing them as though they exist — the mistake
+`Runbooks/db-restore.md` had been making since Sprint 2.
 
 ## Stretch (only if committed done)
 
