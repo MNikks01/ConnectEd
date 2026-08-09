@@ -222,14 +222,14 @@ run**, and where the run happened is part of the number.
 | NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network |
 | NFR-009 | ≥ 80% coverage on domain/services                |  ✅   | **Services 95.3% lines, 80.8% branches, 96.9% functions** (S9-12). Thresholds now fail the build on regression                                                                    |
 | NFR-010 | Docker Compose locally · images for deploy       |  ✅   | `docker compose -f infrastructure/docker/compose.yml up` reaches a working sign-in (S9-2); three images pushed per release (S9-1, S9-3)                                           |
-| NFR-011 | Latest 2 evergreen browsers · ≥ 320px            |  ⛔   | **Playwright runs Chromium only, at one viewport.** Firefox, WebKit and every narrow screen are untested. Cheap to fix and nothing has                                            |
+| NFR-011 | Latest 2 evergreen browsers · ≥ 320px            |  ✅   | Chromium, Firefox and WebKit in CI, plus a 320px project (S9-17). Its first run found two defects: WebKit dropped every session cookie, and one page overflowed by 69px           |
 | NFR-012 | WCAG 2.1 AA                                      |   ◐   | **Zero violations** across 22 populated screens and a failed form (S9-11) — the mechanical third that axe can see. Not a human audit                                              |
 | NFR-013 | Strict TS · lint/format gates · ADRs             |  ✅   | Strict everywhere, gates in `verify`, 18 ADRs, seven `CLAUDE.md` files                                                                                                            |
 | NFR-014 | Nightly backups · PITR · RTO ≤ 1h · RPO ≤ 15 min |   ◐   | **Restore proven: 400,027 rows verified in 5.3 s**, sabotage-checked (S9-7). Nothing takes a backup on a schedule, so **RPO is unbounded**; PITR needs a provider                 |
 | NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                     |
 | NFR-016 | Copy externalised · English + Hindi              |  ⛔   | **Not started.** No i18n library, no message catalogue, every string inline — while the product models `medium` per class and offers Hindi as one                                 |
 
-**Four ✅, seven ◐, three ⛔, and two of the ⛔ are cheap.**
+**Five ✅, seven ◐, two ⛔.** NFR-011 was one of the cheap ⛔ rows and is now green — its first run found two defects (S9-17), which is the argument for the other cheap one.
 
 ### What this half says that the functional half did not
 

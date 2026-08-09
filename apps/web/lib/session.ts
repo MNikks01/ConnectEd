@@ -19,12 +19,33 @@ import { cookies } from 'next/headers';
 export const ACCESS_COOKIE = 'connected_access';
 export const REFRESH_COOKIE = 'connected_refresh';
 
+/**
+ * `Secure`, explicitly, rather than keyed to `NODE_ENV` alone.
+ *
+ * It must be on in production and cannot be on when the app is served over plain HTTP — and the
+ * end-to-end suite is exactly that case: a **production build over `http://localhost`**, on purpose,
+ * because testing a development build proves nothing about what ships.
+ *
+ * Chromium hides the problem. It treats `localhost` as a secure context and keeps a `Secure` cookie
+ * set over HTTP; **WebKit does not, and drops it silently** — so every sign-in in Safari failed with
+ * a redirect back to `/login` and no error anywhere. That is the defect S9-17 was added to find, and
+ * it was invisible for nine sprints because the suite only ever ran one engine.
+ *
+ * Same shape as `RATE_LIMIT_ENABLED`: a switch the test environment sets deliberately beats
+ * behaviour inferred from `NODE_ENV`, because the inference is what made the two cases
+ * indistinguishable.
+ */
+const secureCookies =
+  process.env.SESSION_COOKIE_SECURE === undefined
+    ? process.env.NODE_ENV === 'production'
+    : process.env.SESSION_COOKIE_SECURE === 'true';
+
 /** Refresh lives at the site root because middleware and route handlers both need to see it. */
 const BASE_COOKIE = {
   httpOnly: true,
   sameSite: 'lax',
   path: '/',
-  secure: process.env.NODE_ENV === 'production',
+  secure: secureCookies,
 } as const;
 
 export interface SessionTokens {

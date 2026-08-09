@@ -139,16 +139,35 @@ test.describe('the app under the policy', () => {
 
     // `frame-ancestors` is enforced by the framing browser, so this is the only way to see it:
     // put the app in an iframe on another page and check nothing rendered inside it.
+    // Armed **before** the frame exists: `setContent` returns after the iframe has already asked
+    // for the page, so a waiter created afterwards waits for a request that has been and gone.
+    const framedRequest = page.waitForRequest((request) => request.url().endsWith('/login'), {
+      timeout: 10_000,
+    });
+
     await page.setContent(
       `<iframe id="framed" src="${test.info().project.use.baseURL ?? ''}/login"></iframe>`,
     );
 
+    // Proof the frame tried. Without it, a frame that never loaded for an unrelated reason would
+    // satisfy the assertion below by rendering nothing.
+    await framedRequest;
+
+    // **The console message is Chromium's wording, so only Chromium is asked for it.** Firefox
+    // refuses the frame just as firmly and says so differently — or not to the page console at
+    // all — and asserting on the sentence rather than the outcome failed there for nine sprints
+    // without anybody seeing it, because only one engine ever ran (S9-17).
+    //
     // Polled rather than slept on: the refusal is logged when the browser gets the response, and
     // how long that takes is not this test's business.
-    await expect
-      .poll(() => violations.join(' '), { timeout: 10_000 })
-      .toMatch(/frame-ancestors|Refused to (display|frame)/i);
+    if (test.info().project.name === 'chromium') {
+      await expect
+        .poll(() => violations.join(' '), { timeout: 10_000 })
+        .toMatch(/frame-ancestors|Refused to (display|frame)/i);
+    }
 
+    // The assertion that holds in every engine: the frame asked for the page and rendered none of
+    // it.
     const framedText = await page.evaluate(() => {
       const frame = document.querySelector<HTMLIFrameElement>('#framed');
       try {

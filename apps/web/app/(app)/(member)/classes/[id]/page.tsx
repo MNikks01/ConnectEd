@@ -72,7 +72,10 @@ export default async function ClassFeedPage({
         title={membership?.className ?? 'Class'}
         {...(membership?.schoolName ? { description: membership.schoolName } : {})}
         actions={
-          <span style={{ display: 'flex', gap: 'var(--ui-space-4)' }}>
+          // `flexWrap` matters at 320px: five links in a row that cannot wrap made this page
+          // 69px wider than the viewport, and the fifth link is one S8-7 added to a row that was
+          // already tight. The container wraps; a non-wrapping flex child inside it does not.
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--ui-space-4)' }}>
             <Link href={`/classes/${id}/timetable`}>Timetable</Link>
             <Link href={`/classes/${id}/syllabus`}>Syllabus</Link>
             <Link href={`/classes/${id}/marks`}>Marks</Link>
