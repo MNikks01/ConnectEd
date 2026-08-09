@@ -225,6 +225,28 @@ jobs:
         env:
           DRILL_URL: postgresql://connected:connected@localhost:5432/connected_drill_src
           DRILL_NETWORK: host
+  # Secret scanning (S9-6).
+  #
+  # An image layer and a git object are both permanent: a secret committed and then removed is a
+  # secret published, and the only useful moment to catch one is before the merge. This scans the
+  # **whole history**, not the diff — 143 commits in under a second — because a secret that entered
+  # three months ago is still live today, and a diff-only scan would say the branch is clean.
+  #
+  # `--no-git` is deliberately not used: it walks the working tree including `node_modules`, which
+  # produced nineteen findings in other people's fixtures the one time it was tried.
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Shallow by default, and a shallow clone is a scan of the last commit wearing the
+          # costume of a scan of the repository.
+          fetch-depth: 0
+
+      - name: Scan the history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:latest \
+            detect --source /repo --config /repo/.gitleaks.toml --no-banner --redact -v
 
   # The images the product will actually be deployed as (S9-1).
   #
