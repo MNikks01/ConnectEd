@@ -83,7 +83,7 @@ says everything else is done. The paragraph above says it is not.
 | S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                |
 | S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)                    | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                                                            |
 | S9-11 | ✅ **Done 2026-08-08** — accessibility measured, and it holds                       | frontend    | M    | `e2e/accessibility.spec.ts` scans 22 populated screens plus a failed form against WCAG 2.1 A/AA. Zero violations; sabotage-checked. The mechanical third only — the rest needs a person, and the spec says so     |
-| S9-12 | **NFR evidence**: coverage measured (NFR-009)                                       | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                                                                   |
+| S9-12 | ✅ **Done 2026-08-08** — coverage measured, and NFR-009 is met                      | backend     | S    | Services 95.3% lines / **80.8% branches** / 96.9% functions. Thresholds in `vitest.config.ts` now fail the build on regression, and CI runs the API suite with coverage rather than twice                         |
 | S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                               |
 
 **Gated on S8-0a — billing** (unchanged since Sprint 7, now explicitly scheduled after this sprint):
@@ -222,6 +222,36 @@ selector.
 contrast, names, roles, labels, landmarks. It cannot tell you whether a heading describes its
 section, whether an error says what to do, or whether the marking grid can be operated by somebody
 who cannot see it. NFR-012 is **measured, not audited**, and the difference belongs in the record.
+
+## What S9-12 found
+
+NFR-009 asks for **≥ 80% on domain and services**. Nothing had ever measured it, and roughly 1,150
+passing tests is a count rather than a figure — the two are not the same claim, and only one of them
+tells you which lines a change can break unnoticed.
+
+| Group                  | Files | Lines |  Branches | Functions |
+| ---------------------- | ----: | ----: | --------: | --------: |
+| **Services** (the NFR) |    23 | 95.3% | **80.8%** |     96.9% |
+| `shared/authz`         |     2 | 98.2% |     90.7% |    100.0% |
+| Routes                 |    23 | 98.3% |     91.7% |     96.8% |
+| Repositories           |    23 | 94.1% |     71.7% |     94.8% |
+| Everything             |   185 | 89.4% |     78.0% |     92.0% |
+
+**NFR-009 is met, and on branches it is met by 0.8 points.** That is the number to watch: branch
+coverage is what falls when a guard clause is added without a test for the case it guards, and it is
+the metric a growing codebase loses first.
+
+"Everything" is lower and that is not alarming — it includes generated Prisma output, bootstrap and
+observability wiring, none of which is what the requirement is about. Reporting only the whole-tree
+figure would have understated the part that matters and flattered nothing.
+
+Thresholds are now in `vitest.config.ts` as **floors slightly under what was measured**, not
+aspirations: a threshold above the current figure is a build that is already red, and one far below
+catches nothing. Sabotage-checked by raising the services line floor to 99.9%, which fails the run
+with the real figure in the message.
+
+CI runs the API suite **with** coverage rather than running it twice — the same 1,150 tests, one
+pass, and the thresholds gate it.
 
 ## Stretch (only if committed done)
 
