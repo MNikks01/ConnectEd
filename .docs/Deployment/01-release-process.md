@@ -1,6 +1,6 @@
 # Deployment — Release Process
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-08`
 
 ## Flow (ties to git flow)
 
@@ -11,6 +11,42 @@ flowchart LR
   dev -->|release PR| main[main]
   main -->|gated deploy| Prod[production]
 ```
+
+## What is actually wired, as of 2026-08-08
+
+This document has described the intended pipeline since Sprint 2. Most of it is still intent, and
+the parts that are real are worth separating from the parts that are not — a release process nobody
+can tell the truth about is worse than a short one.
+
+| Step                       | State                                                                    |
+| -------------------------- | ------------------------------------------------------------------------ |
+| CI on every PR             | ✅ lint, type-check, tests, E2E, image build + scan                      |
+| Tag + GitHub Release       | ✅ on every merge to `main` from a `release/*` branch                    |
+| **Build and push images**  | ✅ **S9-3** — `api`, `migrate` and `web` to `ghcr.io`, tagged by release |
+| `migrate deploy` on deploy | ⏳ the image exists and nothing runs it — S9-4                           |
+| Deploy to dev/staging/prod | ⏳ no environment exists yet — S9-0a, S9-4                               |
+| Post-deploy smoke          | ◐ the test exists (`pnpm --filter web test:smoke`); nothing gates on it  |
+| Rollback by redeploying    | ⏳ needs somewhere to deploy                                             |
+
+### The images
+
+Three, from two Dockerfiles in [`../../infrastructure/docker/`](../../infrastructure/docker/):
+
+| Image     | What                                                                            |
+| --------- | ------------------------------------------------------------------------------- |
+| `api`     | The API **and** the worker — one artefact, two commands (`node dist/worker.js`) |
+| `migrate` | `prisma migrate deploy`, and nothing else. Runs once and exits                  |
+| `web`     | The Next.js app, standalone output                                              |
+
+Tagged with the release date — `2026-08-08.2` for `release/2026-08-08.2` — and **never `latest`**.
+`latest` is the tag that makes an incident unanswerable: two machines pulling it a week apart run
+different code and both report the same version. Each release's notes carry the digests, because the
+question "which image is that release?" gets asked by somebody with the release page open and no
+terminal.
+
+The API and the worker share an image deliberately. S7-17 found `worker.ts` and `index.ts` had
+drifted in a way that type-checked and left every class fan-out reaching nobody; two images built
+from one source is one more chance at that.
 
 ## Steps
 

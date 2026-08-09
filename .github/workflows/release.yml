@@ -9,6 +9,7 @@ concurrency: release-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
+  packages: write # push images to ghcr.io (S9-3)
   id-token: write # OIDC to cloud — no long-lived keys
 
 jobs:
@@ -32,6 +33,7 @@ jobs:
       # repository had no tags at all: nothing distinguished the commit that went to production
       # from the forty-odd that were merged the same week.
       - name: Tag the release
+        id: tag
         if: contains(github.event.head_commit.message, 'release/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,6 +79,11 @@ jobs:
           # lists every PR in the range, which is what someone asking "when did that ship?" wants.
           gh release create "$tag" --title "$tag" --generate-notes --verify-tag
 
+          # The images are tagged with this, so it has to leave the step. `release/2026-08-08.2`
+          # contains a slash, which a container tag may not, so the image tag is the part after it.
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${tag#release/}" >> "$GITHUB_OUTPUT"
+
       # Aggregates changesets → version bumps + CHANGELOG, opens/updates the "Version Packages" PR,
       # or publishes when that PR merges.
       #
@@ -97,8 +104,115 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Placeholder deploy steps — wire to the real target (K8s/PaaS) when infra lands.
-      # - name: Build & push images (api, web, worker)  # infrastructure/docker
-      # - name: prisma migrate deploy                    # gated, with backup checkpoint
+      # ---------------------------------------------------------------------------------------
+      # The artefacts (S9-3).
+      #
+      # **Only on a real release**, keyed on the same condition as the tag, and using the tag the
+      # step above actually chose rather than recomputing it — a second `date -u` a few seconds
+      # later is a different day at midnight, and the two would disagree exactly when it matters
+      # least and confuses most.
+      #
+      # `ghcr.io` because this repository is on GitHub: no account to open, no credential to
+      # rotate, and `GITHUB_TOKEN` already has the scope. It is not a decision about where the
+      # product *runs* (S9-0a) — a registry and a cluster do not have to be the same provider.
+
+      # `github.repository` is `MNikks01/ConnectEd`, and a container reference **must be
+      # lowercase** — Docker refuses the name outright rather than normalising it. Interpolating
+      # the variable directly would have failed the first real release, at the push, after the tag
+      # and the GitHub Release had already been created.
+      - name: Lowercase the registry path
+        id: registry
+        if: steps.tag.outputs.image_tag != ''
+        run: |
+          echo "repo=ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the container registry
+        if: steps.tag.outputs.image_tag != ''
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.tag.outputs.image_tag != ''
+
+      # **Immutable tags, and no `latest`.** `latest` is the tag that makes an incident
+      # unanswerable: two machines pulling it a week apart run different code and both report the
+      # same version. Every image here is named for the release it came from, and the digest is
+      # printed so a deploy can pin to something a retag cannot move.
+      - name: Build and push the API and worker image
+        if: steps.tag.outputs.image_tag != ''
+        id: api_image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          push: true
+          tags: ${{ steps.registry.outputs.repo }}/api:${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The migration runner, from the same Dockerfile and the same source as the API — which is
+      # the point of it being a target rather than a file. A schema and the code that reads it
+      # arriving from different builds is the failure this shape prevents.
+      - name: Build and push the migration runner
+        if: steps.tag.outputs.image_tag != ''
+        id: migrate_image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          target: migrate
+          push: true
+          tags: ${{ steps.registry.outputs.repo }}/migrate:${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push the web image
+        if: steps.tag.outputs.image_tag != ''
+        id: web_image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          push: true
+          tags: ${{ steps.registry.outputs.repo }}/web:${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Written onto the GitHub Release, because the question this answers — "which image is that
+      # release?" — is asked during an incident, by somebody who has the release page open and not
+      # a terminal.
+      - name: Record the digests on the release
+        if: steps.tag.outputs.image_tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          REPO: ${{ steps.registry.outputs.repo }}
+          API_DIGEST: ${{ steps.api_image.outputs.digest }}
+          MIGRATE_DIGEST: ${{ steps.migrate_image.outputs.digest }}
+          WEB_DIGEST: ${{ steps.web_image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          repo="$REPO"
+
+          {
+            printf '\n## Images\n\n'
+            printf '| Image | Tag | Digest |\n| --- | --- | --- |\n'
+            printf '| `%s/api` | `%s` | `%s` |\n' "$repo" "$IMAGE_TAG" "$API_DIGEST"
+            printf '| `%s/migrate` | `%s` | `%s` |\n' "$repo" "$IMAGE_TAG" "$MIGRATE_DIGEST"
+            printf '| `%s/web` | `%s` | `%s` |\n' "$repo" "$IMAGE_TAG" "$WEB_DIGEST"
+            printf '\nThe API and the worker are the same image, run with different commands.\n'
+          } > /tmp/images.md
+
+          gh release view "$TAG" --json body --jq .body > /tmp/body.md
+          cat /tmp/body.md /tmp/images.md > /tmp/full.md
+          gh release edit "$TAG" --notes-file /tmp/full.md
+
+      # Still placeholders — they need a target, which is S9-0a.
+      # - name: prisma migrate deploy   # the migrate image above, gated, with a backup checkpoint
       # - name: Deploy production (rolling/canary)
-      # - name: Post-deploy smoke + health watch
+      # - name: Post-deploy smoke + health watch  # `pnpm --filter web test:smoke` (S9-5)
