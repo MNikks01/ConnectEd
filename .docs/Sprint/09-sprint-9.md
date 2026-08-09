@@ -82,7 +82,7 @@ says everything else is done. The paragraph above says it is not.
 | S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                  |
 | S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                |
 | S9-10 | **NFR evidence**: latency and throughput measured (NFR-002, 003)                    | backend     | L    | p95 read < 300 ms, p95 write < 600 ms, 500 RPS baseline. A number from a run, against staging, with the shape of the load written down                                                                            |
-| S9-11 | **NFR evidence**: accessibility audited (NFR-012)                                   | frontend    | M    | WCAG 2.1 AA across the real screens, not a Lighthouse score on the home page. Every item's DoD has claimed a11y for nine sprints and nothing has ever checked it                                                  |
+| S9-11 | ✅ **Done 2026-08-08** — accessibility measured, and it holds                       | frontend    | M    | `e2e/accessibility.spec.ts` scans 22 populated screens plus a failed form against WCAG 2.1 A/AA. Zero violations; sabotage-checked. The mechanical third only — the rest needs a person, and the spec says so     |
 | S9-12 | **NFR evidence**: coverage measured (NFR-009)                                       | backend     | S    | ≥ 80% on domain and services. ~1150 tests is a count, not a coverage figure, and the two are not the same claim                                                                                                   |
 | S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                               |
 
@@ -195,6 +195,33 @@ that is a discovery nobody wants to make during an incident.
 A CI job runs it against a seeded database on every pull request. That does not prove the backups
 work — there is no database with real data yet — it proves the drill does. A restore script that has
 silently rotted is worse than none.
+
+## What S9-11 found
+
+**Nothing, and that is the result** — the product has no WCAG 2.1 A/AA violations that axe can see,
+across every screen a pupil, a teacher and a school actually use. Nine sprints of Definition of Done
+claiming "Accessible" turn out to have been true, which is not what any of the other unchecked
+claims in this sprint turned out to be.
+
+Two things make that a finding rather than a green tick.
+
+**The screens have data on them.** An empty page passes every rule there is: a table with no rows
+has no header association to get wrong, and a form nobody has submitted has no error to leave
+unannounced. The setup issues a report card, publishes marks and takes a register before anything is
+scanned, and there is a separate case for a login that has just failed — which is when accessibility
+stops being decorative.
+
+**The scan was sabotage-checked**, and the first attempt at that is worth recording. An unlabelled
+input and an image with no alt text were added to the login page, and the suite _passed_ — because
+Playwright was invoked directly rather than through `test:e2e`, so `next start` served the previous
+build. That is precisely the stale-build trap S9-2 added a build step for, walked into by the person
+who added it, four hours later. Run properly, the scan reports both violations by rule, impact and
+selector.
+
+**What this does not cover.** axe finds roughly a third of WCAG issues: the mechanical third —
+contrast, names, roles, labels, landmarks. It cannot tell you whether a heading describes its
+section, whether an error says what to do, or whether the marking grid can be operated by somebody
+who cannot see it. NFR-012 is **measured, not audited**, and the difference belongs in the record.
 
 ## Stretch (only if committed done)
 
