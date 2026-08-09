@@ -22,6 +22,7 @@
     "web-vitals": "^6.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@connected/config": "workspace:*",
     "@connected/types": "workspace:*",
     "@connected/ui": "workspace:*",
