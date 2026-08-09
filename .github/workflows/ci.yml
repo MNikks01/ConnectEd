@@ -70,8 +70,13 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
+      # The API suite runs **with coverage**, which is what enforces NFR-009's thresholds
+      # (`apps/api/vitest.config.ts`). Split rather than doubled: running `pnpm test` and then the
+      # coverage run would execute the same 1150 tests twice for one number.
       - name: Test
-        run: pnpm test
+        run: |
+          pnpm turbo run test --filter='!@connected/api'
+          pnpm --filter @connected/api test:coverage
 
       - name: Build
         run: pnpm build
