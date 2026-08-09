@@ -80,11 +80,11 @@ says everything else is done. The paragraph above says it is not.
 | S9-6  | ◐ **Inventoried and scanned 2026-08-08; a manager still needs a target**            | devops      | M    | `Security/06-secrets.md` names every secret, its blast radius and its source. `secret-scan` runs gitleaks over the whole history on every PR — 143 commits, no findings, sabotage-checked. A secrets manager is S9-0a     |
 | S9-7  | ◐ **Restore proven 2026-08-08; retention is not**                                   | devops      | L    | `scripts/restore-drill.mjs` takes a real dump, restores it, and compares every table's row count. 400,027 rows verified in 5.3s, sabotage-checked. RPO needs continuous archiving, which needs a provider — S9-0a         |
 | S9-8  | Terraform for the chosen target                                                     | devops      | L    | **Gated on S9-0a.** Database, Redis, bucket, networking, secrets                                                                                                                                                          |
-| S9-9  | `infrastructure/CLAUDE.md` corrected                                                | devops      | S    | It documents five directories that do not exist. Either they arrive in this sprint or the file stops claiming them                                                                                                        |
+| S9-9  | ✅ **Done 2026-08-08** — `infrastructure/CLAUDE.md` corrected                       | devops      | S    | It documented six directories and had one. Absent ones are now marked ⏳ and `docker/` describes what is actually in it                                                                                                   |
 | S9-10 | ◐ **Measured on a laptop 2026-08-08; the staging number is still owed**             | backend     | L    | `scripts/load-test.mjs`. Reads ~1,060 rps at p97.5 = 110 ms, writes p97.5 = 78 ms, no failed requests. Comfortably inside NFR-002 and NFR-003 — on a machine with no network in it, which is the caveat, not the footnote |
 | S9-11 | ✅ **Done 2026-08-08** — accessibility measured, and it holds                       | frontend    | M    | `e2e/accessibility.spec.ts` scans 22 populated screens plus a failed form against WCAG 2.1 A/AA. Zero violations; sabotage-checked. The mechanical third only — the rest needs a person, and the spec says so             |
 | S9-12 | ✅ **Done 2026-08-08** — coverage measured, and NFR-009 is met                      | backend     | S    | Services 95.3% lines / **80.8% branches** / 96.9% functions. Thresholds in `vitest.config.ts` now fail the build on regression, and CI runs the API suite with coverage rather than twice                                 |
-| S9-13 | `PRD/10-completeness.md` gains an **NFR half**                                      | tech-writer | M    | Sixteen NFRs, each ✅/◐/⛔ with its evidence — the same standard the functional half already meets. Written last, from what S9-10…12 actually found                                                                       |
+| S9-13 | ✅ **Done 2026-08-09** — `PRD/10-completeness.md` gains its NFR half                | tech-writer | M    | Sixteen requirements, each with evidence or an admission. Four ✅, seven ◐, three ⛔ — and it found three the product's own documents contradict                                                                          |
 
 **Gated on S8-0a — billing** (unchanged since Sprint 7, now explicitly scheduled after this sprint):
 S8-10 the provider port and its fake · S8-11 checkout · S8-12 webhook reconciliation · S8-13 dunning.
@@ -313,13 +313,39 @@ rotation for anything but the signing key. All of it needs a target, which is S9
 which parts are missing rather than describing them as though they exist — the mistake
 `Runbooks/db-restore.md` had been making since Sprint 2.
 
+## What S9-13 found
+
+Writing the sixteen NFRs down with their evidence produced three findings that the functional half
+of the completeness record could never have surfaced, because they are places where the product
+**contradicts its own documents**:
+
+- **NFR-006 — export and erasure do not exist.** No route, no service, nothing. `Security/04-compliance.md`
+  lists both as subject rights the product provides.
+- **NFR-016 — no internationalisation at all**, while `Class.medium` already offers Hindi as a
+  teaching medium. The product models the language and cannot speak it.
+- **NFR-011 — Playwright runs Chromium only, at one viewport.** Two evergreen browsers and 320px
+  have been in the TRD since Sprint 2 and in every Definition of Done since Sprint 1.
+
+**Blocked and unstarted turned out to be different words.** NFR-001 genuinely cannot be measured
+until something is deployed. NFR-011 and NFR-016 are not blocked by anything — a second Playwright
+project is an afternoon, externalising copy is a sprint, and neither is waiting on a decision. They
+were simply never done, and nothing in this repository had ever said so.
+
+**Four of the seven ◐ rows share one cause.** NFR-002, NFR-003, NFR-008 and NFR-014 are half-met in
+exactly the same shape: the mechanism is built and exercised, and the deployed half has nowhere to
+be tested. That is one decision — S9-0a — rather than four problems, and seeing them in a column
+together is what made that obvious.
+
 ## Stretch (only if committed done)
 
-| #     | Item                                                   | Carried from |
-| ----- | ------------------------------------------------------ | ------------ |
-| S9-14 | Retention implemented, once S9-0b is answered          | new          |
-| S9-15 | Product-event analytics sink (`Product/02-metrics.md`) | S8-17        |
-| S9-16 | Push-token registration (FR-NOTIF-004)                 | S8-18        |
+| #     | Item                                                                                                 | Carried from |
+| ----- | ---------------------------------------------------------------------------------------------------- | ------------ |
+| S9-14 | Retention implemented, once S9-0b is answered                                                        | new          |
+| S9-15 | Product-event analytics sink (`Product/02-metrics.md`)                                               | S8-17        |
+| S9-16 | Push-token registration (FR-NOTIF-004)                                                               | S8-18        |
+| S9-17 | **Firefox and WebKit projects, and a 320px viewport** (NFR-011) — an afternoon, and nine sprints old | S9-13        |
+| S9-18 | **Externalise copy, English + Hindi** (NFR-016) — the product already models the medium              | S9-13        |
+| S9-19 | **Export and erasure** (NFR-006) — `Security/04-compliance.md` promises both and neither exists      | S9-13        |
 
 ## Dependencies / risks
 
