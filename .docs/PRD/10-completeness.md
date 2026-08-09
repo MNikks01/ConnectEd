@@ -1,6 +1,6 @@
 # PRD — Completeness
 
-`Status: Accepted` · `Last updated: 2026-08-08`
+`Status: Accepted` · `Last updated: 2026-08-09`
 
 Every functional requirement in this folder, and whether it is built. Written at the point where
 nothing was left that could be built without a decision from outside engineering, so that "what is
@@ -199,9 +199,63 @@ The whole tree at that commit: lint, type-check and build green across 14 tasks;
 FR-ACAD-021 moved from question to built, and the outbox added no requirement because the PRD never
 asked for one. That is the point of the section above it.
 
+## The non-functional half (NFR-001 … 016)
+
+Added 2026-08-09 (S9-13). Until Sprint 9 this document tracked seventy-three functional
+requirements meticulously and **sixteen non-functional ones not at all** — they sat in
+[`../TRD/00-technical-requirements.md`](../TRD/00-technical-requirements.md) as a table of
+sentences, none of which had ever been checked. The heading above this one says "verified, not
+remembered", and it was only ever true of half the product.
+
+Each row below carries its evidence or says it has none. **Where there is a number it came from a
+run**, and where the run happened is part of the number.
+
+| ID      | Requirement                                      | State | Evidence, or what is missing                                                                                                                                                      |
+| ------- | ------------------------------------------------ | :---: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-001 | Availability ≥ 99.9%                             |  ⛔   | Unmeasurable: nothing is deployed, so there is no uptime to observe. S9-0a                                                                                                        |
+| NFR-002 | p95 read < 300 ms, write < 600 ms                |   ◐   | **110 ms and 78 ms at p97.5** — stricter than p95 (S9-10). On a laptop with no network in it; the deployed number is owed                                                         |
+| NFR-003 | 500 RPS baseline                                 |   ◐   | **~1,060 RPS on reads**, same run, same caveat                                                                                                                                    |
+| NFR-004 | Stateless, horizontally scalable                 |  ✅   | Sessions and cache are in Redis, never in process. The worker runs as a **separate process** in CI and in compose — the split ADR-0019 assumes (S7-17, S9-2)                      |
+| NFR-005 | OWASP ASVS L2                                    |   ◐   | A security review exists ([`../Security/05-review-2026-08-05.md`](../Security/05-review-2026-08-05.md)) and found real defects. **ASVS L2 has never been walked as a checklist**  |
+| NFR-006 | argon2id · PII at rest · delete/export           |   ◐   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure do not exist** — no route, no service. `../Security/04-compliance.md` promises both                          |
+| NFR-007 | Transactional writes, idempotent effects         |  ✅   | Academic writes are transactional; the outbox writes events in the same transaction and consumers are idempotent on `eventId` (ADR-0019)                                          |
+| NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network |
+| NFR-009 | ≥ 80% coverage on domain/services                |  ✅   | **Services 95.3% lines, 80.8% branches, 96.9% functions** (S9-12). Thresholds now fail the build on regression                                                                    |
+| NFR-010 | Docker Compose locally · images for deploy       |  ✅   | `docker compose -f infrastructure/docker/compose.yml up` reaches a working sign-in (S9-2); three images pushed per release (S9-1, S9-3)                                           |
+| NFR-011 | Latest 2 evergreen browsers · ≥ 320px            |  ⛔   | **Playwright runs Chromium only, at one viewport.** Firefox, WebKit and every narrow screen are untested. Cheap to fix and nothing has                                            |
+| NFR-012 | WCAG 2.1 AA                                      |   ◐   | **Zero violations** across 22 populated screens and a failed form (S9-11) — the mechanical third that axe can see. Not a human audit                                              |
+| NFR-013 | Strict TS · lint/format gates · ADRs             |  ✅   | Strict everywhere, gates in `verify`, 18 ADRs, seven `CLAUDE.md` files                                                                                                            |
+| NFR-014 | Nightly backups · PITR · RTO ≤ 1h · RPO ≤ 15 min |   ◐   | **Restore proven: 400,027 rows verified in 5.3 s**, sabotage-checked (S9-7). Nothing takes a backup on a schedule, so **RPO is unbounded**; PITR needs a provider                 |
+| NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                     |
+| NFR-016 | Copy externalised · English + Hindi              |  ⛔   | **Not started.** No i18n library, no message catalogue, every string inline — while the product models `medium` per class and offers Hindi as one                                 |
+
+**Four ✅, seven ◐, three ⛔, and two of the ⛔ are cheap.**
+
+### What this half says that the functional half did not
+
+**Three requirements are contradicted by the product's own promises.** NFR-006's export and erasure
+are written into `Security/04-compliance.md` as subject rights; there is no code behind either.
+NFR-016 asks for Hindi while `Class.medium` already offers it as a teaching medium — the product
+models the language and cannot speak it. NFR-011 asks for two evergreen browsers and the suite has
+only ever run one.
+
+**The ⛔ rows are not all the same kind.** NFR-001 cannot be measured until something is deployed and
+is honestly blocked. NFR-011 and NFR-016 are _not blocked by anything_ — a second Playwright project
+and a viewport are an afternoon; externalising copy is a sprint but nothing stands in its way. They
+are unstarted, which is a different word from blocked, and this table is the first place that
+distinction has been written down.
+
+**Seven ◐ rows, and four share one cause.** NFR-002, NFR-003, NFR-008 and NFR-014 are all half-met
+in exactly the same way: the mechanism is built and exercised, and the _deployed_ half of the claim
+has nowhere to be tested. That is one decision — S9-0a — not four problems.
+
 ## What "built" is measured by
 
-Nothing here rests on somebody's recollection. Every scoped endpoint has positive **and** negative
+Nothing here rests on somebody's recollection. **That was true of the functional half before it was
+true of the non-functional one**, and the table above is what closed the gap: sixteen requirements
+that had been asserted since Sprint 2 now each carry a number, a test, or an admission.
+
+Every scoped endpoint has positive **and** negative
 permission tests; the permission-matrix suite asserts all seven roles against the live API for every
 capability in `09-permissions-matrix.md`, and its unimplemented list is empty. Roughly a thousand
 API tests and eighty end-to-end ones, and the habit throughout has been to break each guarantee
