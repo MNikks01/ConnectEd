@@ -141,9 +141,17 @@ jobs:
             sleep 2
           done
 
-      # Chromium only — the suite asserts behaviour, not rendering differences between engines.
-      - name: Install Playwright browser
-        run: pnpm --filter @connected/web exec playwright install --with-deps chromium
+      # **Three engines, not one** (S9-17, NFR-011). The comment that stood here said "Chromium
+      # only — the suite asserts behaviour, not rendering differences between engines", and it was
+      # wrong in a way that cost nine sprints: the first WebKit run failed *every sign-in*, because
+      # a `Secure` cookie over HTTP is kept by Chromium on localhost and dropped by WebKit. That is
+      # behaviour, not rendering.
+      #
+      # Chromium still runs the whole suite; Firefox and WebKit run the specs where engines
+      # genuinely differ — cookies, form submission, and a content security policy with a
+      # per-response nonce. See `playwright.config.ts` for the split.
+      - name: Install Playwright browsers
+        run: pnpm --filter @connected/web exec playwright install --with-deps chromium firefox webkit
 
       - name: Run end-to-end tests
         run: pnpm --filter @connected/web test:e2e

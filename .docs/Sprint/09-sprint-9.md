@@ -336,16 +336,51 @@ exactly the same shape: the mechanism is built and exercised, and the deployed h
 be tested. That is one decision — S9-0a — rather than four problems, and seeing them in a column
 together is what made that obvious.
 
+## What S9-17 found
+
+An afternoon, as estimated, and it found **two real defects in its first run** — which is the
+argument for having done it eight sprints ago.
+
+**WebKit dropped every session cookie.** Registration succeeded, the app redirected to `/home`, and
+the browser bounced straight back to `/login` with nothing in any log. The cause: `secure` was keyed
+to `NODE_ENV === 'production'`, and the end-to-end suite runs a **production build over plain
+HTTP** — deliberately, because testing a development build proves nothing about what ships.
+Chromium treats `localhost` as a secure context and keeps the cookie; **WebKit does not**. Safari
+users would have been unable to sign in at all, and no test could have said so.
+
+The fix is an explicit `SESSION_COOKIE_SECURE`, defaulting to the old behaviour, set to `false` by
+the suite. Same shape as `RATE_LIMIT_ENABLED`: a switch the test environment sets beats behaviour
+inferred from `NODE_ENV`, and the inference is precisely what made the two cases
+indistinguishable.
+
+**`/classes/[id]` was 69px wider than a 320px screen.** Five links in a flex row with no
+`flexWrap` — and the fifth is one S8-7 added to a row that was already tight. The container wraps;
+a non-wrapping flex child inside it does not. "No horizontal scroll ≥ 320px" has been in
+`apps/web/CLAUDE.md` since Sprint 1 and nothing had ever loaded a page at that width.
+
+**One test was Chromium-flavoured and had been silently right.** "Refuses to be framed" asserted on
+the console string _"Refused to display…"_, which is Chromium's wording; Firefox refuses just as
+firmly and says so differently. The console check is now Chromium-only and the assertion that holds
+everywhere — the frame asked for the page and rendered none of it — is the one that gates. It also
+gained a `waitForRequest` armed **before** the frame exists, without which it would pass for a frame
+that never loaded at all.
+
+Both defects sabotage-checked: putting each back fails the run that found it.
+
+The suite is **141 tests** across four projects. Chromium runs everything; Firefox and WebKit run
+the specs where engines actually differ; `narrow` is Chromium at 320px. Running all of it three
+times over would treble the job to re-prove the same assertions about the same server.
+
 ## Stretch (only if committed done)
 
-| #     | Item                                                                                                 | Carried from |
-| ----- | ---------------------------------------------------------------------------------------------------- | ------------ |
-| S9-14 | Retention implemented, once S9-0b is answered                                                        | new          |
-| S9-15 | Product-event analytics sink (`Product/02-metrics.md`)                                               | S8-17        |
-| S9-16 | Push-token registration (FR-NOTIF-004)                                                               | S8-18        |
-| S9-17 | **Firefox and WebKit projects, and a 320px viewport** (NFR-011) — an afternoon, and nine sprints old | S9-13        |
-| S9-18 | **Externalise copy, English + Hindi** (NFR-016) — the product already models the medium              | S9-13        |
-| S9-19 | **Export and erasure** (NFR-006) — `Security/04-compliance.md` promises both and neither exists      | S9-13        |
+| #     | Item                                                                                            | Carried from |
+| ----- | ----------------------------------------------------------------------------------------------- | ------------ |
+| S9-14 | Retention implemented, once S9-0b is answered                                                   | new          |
+| S9-15 | Product-event analytics sink (`Product/02-metrics.md`)                                          | S8-17        |
+| S9-16 | Push-token registration (FR-NOTIF-004)                                                          | S8-18        |
+| S9-17 | ✅ **Done 2026-08-09** — Firefox, WebKit and a 320px viewport (NFR-011)                         | frontend     | S   | Found two defects on the first run: WebKit dropped every session cookie, and `/classes/[id]` overflowed by 69px. Both fixed, both sabotage-checked |
+| S9-18 | **Externalise copy, English + Hindi** (NFR-016) — the product already models the medium         | S9-13        |
+| S9-19 | **Export and erasure** (NFR-006) — `Security/04-compliance.md` promises both and neither exists | S9-13        |
 
 ## Dependencies / risks
 
