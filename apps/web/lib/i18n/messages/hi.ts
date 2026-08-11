@@ -1083,6 +1083,11 @@ const hi: Messages = {
   },
 
   analytics: {
+    weeklyActive: 'साप्ताहिक सक्रिय',
+    weeklyActiveCount: 'पिछले सात दिनों में {total} सत्यापित सदस्यों में से {count} सक्रिय रहे',
+    weeklyActiveRate: 'आपके सत्यापित सदस्यों का {percent}',
+    noActivityYet: 'अभी तक किसी ने साइन इन नहीं किया है।',
+    historyFrom: '{date} से गतिविधि दर्ज की जा रही है।',
     nothingPublished: 'अभी कुछ प्रकाशित नहीं हुआ',
     roleSTUDENT: 'विद्यार्थी',
     rolePARENT: 'अभिभावक',
@@ -1157,6 +1162,7 @@ const hi: Messages = {
     publishing: 'प्रकाशित की जा रही है…',
     published: 'समय-सारणी प्रकाशित हो गई। इस कक्षा के सदस्य अब इसे देख सकते हैं।',
   },
+
   settings: {
     nav: 'सेटिंग्स',
     profile: 'प्रोफ़ाइल',

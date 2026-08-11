@@ -50,8 +50,28 @@ export interface WorkflowBreakdown {
   feedbackByStatus: Record<string, number>;
 }
 
+/**
+ * The north star: weekly active verified members, and the ratio the metric tree targets at ≥ 55%.
+ *
+ * Only computable since S9-15 — `product_event` is the first thing in the product that records
+ * *when* somebody was active, and no operational table could have answered it, because a live row
+ * knows its present state and has forgotten how it got there.
+ */
+export interface ActivityBreakdown {
+  /** Distinct verified members with at least one active day in the last seven. */
+  weeklyActiveMembers: number;
+  /** Against verified members. `null` when the school has none — a ratio over zero is not 0%. */
+  weeklyActiveRate: number | null;
+  /**
+   * How far back the history goes. A school onboarded on Tuesday has no seven-day number yet, and
+   * a figure that silently means "since Tuesday" is worse than one that says so.
+   */
+  since: string;
+}
+
 export interface SchoolAnalyticsResponse {
   window: AnalyticsWindow;
+  activity: ActivityBreakdown;
   membership: MembershipBreakdown;
   structure: StructureBreakdown;
   publishing: PublishingBreakdown;

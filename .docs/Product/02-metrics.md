@@ -1,6 +1,6 @@
 # Success Metrics & KPIs
 
-`Status: Accepted` · `Last updated: 2026-07-28`
+`Status: Accepted` · `Last updated: 2026-08-11`
 
 ## North-star metric
 
@@ -15,6 +15,7 @@ it for academics. Social-only usage is secondary.
 | Activation  | Schools that set up ≥1 class + verify ≥10 members within 7 days | ≥ 70%               |
 | Activation  | Member verification completion rate (request → verified)        | ≥ 85%               |
 | Engagement  | Weekly active verified members / verified members               | ≥ 55%               |
+| _(above)_   | _Computable since S9-15; shown on the school analytics page_    | —                   |
 | Engagement  | Homework read-rate within 24h of publish                        | ≥ 80%               |
 | Engagement  | Median time from homework publish → parent notified             | < 10 s              |
 | Retention   | School month-2 retention                                        | ≥ 90%               |
@@ -28,8 +29,22 @@ it for academics. Social-only usage is secondary.
 - **Product analytics** on the web app (page/route views, feature events, funnels) — see
   [`../Monitoring/`](../Monitoring/) and the analytics-engineer agent.
 - **Server metrics** (Prometheus): request rate, error rate, latency histograms, DB pool saturation.
-- **Business events** emitted from the API domain layer (school.onboarded, member.verified, homework.published,
-  notification.delivered) into an events table + analytics sink.
+- **Business events** emitted from the API domain layer into `product_event` — **built 2026-08-11
+  (S9-15)**. Four types today: `school.onboarded`, `member.verified`, `academic.published` and
+  `account.active`. Each answers a row below; anything that answers none is noise.
+
+  **What building it found: the north star could not be computed.** Nothing in the schema recorded
+  that a member had done anything — the only `lastSeenAt` belonged to a push token and meant "this
+  device registered". Six of the eleven rows below had the same problem, because they have _time_ in
+  them and an operational table knows its present state and has forgotten how it got there.
+
+  `account.active` is stamped where a session is issued — login and every fifteen-minute refresh —
+  and deduped to one row per account per UTC day. It measures sessions rather than intent: somebody
+  who leaves a tab open is counted, which is the honest limit of every weekly-active number.
+
+  **The analytics sink itself is not built**, and cannot be: there is nowhere to ship to until B-1
+  is answered. The table is the half that cannot be backfilled — every week without it is a week of
+  history that does not exist — and a shipper is a small later addition once a destination exists.
 
 ## Funnels to watch
 

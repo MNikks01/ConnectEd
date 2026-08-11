@@ -1461,3 +1461,52 @@ model ErasureRequest {
   @@index([scheduledFor])
   @@map("erasure_request")
 }
+
+// ---------------------------------------------------------------------------
+// Product analytics (S9-15, `.docs/Product/02-metrics.md`)
+// ---------------------------------------------------------------------------
+
+/// An append-only record of the business events the metric tree is defined in terms of.
+///
+/// **Why this is not the outbox.** `outbox_event` already holds every domain event, and reusing it
+/// was the obvious idea. It is wrong because the two have opposite lifetimes: an outbox row exists
+/// to be delivered and is swept once it has been, while an analytics row exists to be counted
+/// months later. One table cannot be both ephemeral and historical, and the sweep would quietly
+/// eat the history.
+///
+/// **Why it is not derived from the operational tables.** Most of the metric tree already is —
+/// `modules/analytics` computes membership, publishing and read rates by querying live rows. What
+/// cannot be computed that way is anything with *time* in it: "active this week", "verified within
+/// seven days of signup", "retained at month two". A live table knows its present state and has
+/// forgotten how it got there.
+///
+/// **No foreign key on `account_id`**, exactly as `audit_log` has none. Erasure must not delete a
+/// school's activity history, and analytics must not be able to resurrect a person: the column
+/// keeps pointing at a tombstone that resolves to nobody (ADR-0020).
+model ProductEvent {
+  id   String @id @default(uuid()) @db.Uuid
+  type String
+
+  /// When it happened, which is not when it was written — a backfill must not look like a spike.
+  occurredAt DateTime @map("occurred_at")
+
+  accountId String? @map("account_id") @db.Uuid
+  schoolId  String? @map("school_id") @db.Uuid
+
+  /// Counts and ids only. **Never free text a person typed**: this table outlives the content it
+  /// describes, and a notice body copied in here would survive the notice being withdrawn.
+  payload Json?
+
+  /// Makes an event idempotent, and is how "active today" becomes one row per person per day
+  /// rather than one per request. Null for events that may legitimately repeat.
+  dedupeKey String? @unique @map("dedupe_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// The three questions asked of this table: what happened lately, what happened at this school,
+  /// and what did this person do.
+  @@index([type, occurredAt])
+  @@index([schoolId, occurredAt])
+  @@index([accountId, occurredAt])
+  @@map("product_event")
+}

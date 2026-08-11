@@ -6,6 +6,7 @@
  * Partially applied, it would leave someone holding academic access with no request explaining
  * why — or a request marked approved that grants nothing.
  */
+import { recordProductEvent } from '../../shared/analytics/product-events.js';
 import { recordEvent } from '../../shared/outbox/index.js';
 import { membershipScopeKey } from '../../shared/db/membership-scope.js';
 import {
@@ -366,6 +367,17 @@ export function createVerificationRepository(db: Db): VerificationRepository {
         });
 
         await recordEvent(tx, event);
+
+        // The activation funnel's second step (S9-15). Approval only: a rejection is a real
+        // outcome and belongs in the *rate*, which the funnel derives from requests submitted
+        // against approvals recorded — counting rejections here would make it ambiguous which
+        // number this table held.
+        await recordProductEvent(tx, {
+          type: 'member.verified',
+          accountId: input.requesterAccountId,
+          schoolId: input.schoolId,
+          payload: { role: input.role },
+        });
       });
     },
 

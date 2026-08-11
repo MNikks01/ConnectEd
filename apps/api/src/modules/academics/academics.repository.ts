@@ -2,6 +2,7 @@
  * Academic content persistence. **The only file in this module that touches Prisma.**
  */
 import { CURSOR_ORDER, cursorFilter, takeFor } from '../../shared/http/pagination.js';
+import { recordProductEvent } from '../../shared/analytics/product-events.js';
 import { recordEvent } from '../../shared/outbox/index.js';
 
 import type { PageRequest } from '../../shared/http/pagination.js';
@@ -128,6 +129,15 @@ export function createAcademicsRepository(db: Db): AcademicsRepository {
 
         const item = toRow(row);
         await recordEvent(tx, toEvent(item));
+
+        // The homework loop's first step (S9-15). The type and the class, and deliberately not the
+        // title: this row outlives the item, and a withdrawn piece of homework should not leave its
+        // name behind in an analytics table.
+        await recordProductEvent(tx, {
+          type: 'academic.published',
+          accountId: input.authorAccountId,
+          payload: { itemType: input.type, classId: input.classId },
+        });
 
         return item;
       });

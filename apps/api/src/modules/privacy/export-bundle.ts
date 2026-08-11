@@ -103,6 +103,7 @@ export async function buildIndividualBundle(db: Db, accountId: string): Promise<
     notificationPrefs,
     media,
     reportsRaised,
+    productEvents,
   ] = await Promise.all([
     db.account.findUniqueOrThrow({
       where: { id: accountId },
@@ -314,6 +315,18 @@ export async function buildIndividualBundle(db: Db, accountId: string): Promise<
       where: { reporterAccountId: accountId },
       select: { subjectType: true, subjectId: true, reason: true, status: true, createdAt: true },
     }),
+    /**
+     * What the product recorded *about* the subject for its own analytics (S9-15).
+     *
+     * Included because a subject access request asks what is held, and "we counted when you were
+     * active" is held. It is also the section most likely to surprise somebody, which is a reason
+     * to show it rather than a reason not to.
+     */
+    db.productEvent.findMany({
+      where: { accountId },
+      select: { type: true, occurredAt: true, schoolId: true, payload: true },
+      orderBy: { occurredAt: 'desc' },
+    }),
   ]);
 
   return assemble(
@@ -342,6 +355,7 @@ export async function buildIndividualBundle(db: Db, accountId: string): Promise<
       notificationPrefs,
       media,
       reportsRaised,
+      analyticsEvents: productEvents,
     },
     [
       ...COMMON_NOTES,
