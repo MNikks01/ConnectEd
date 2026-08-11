@@ -18,6 +18,7 @@ import {
 import { dueSoon, loadDashboard, MAX_CLASSES, unread } from '@/lib/dashboard';
 
 import type { DashboardData } from '@/lib/dashboard';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -26,21 +27,45 @@ import type {
   MyTeachingSubjectResponse,
 } from '@connected/types';
 import type { Metadata } from 'next';
+import type { Translator } from '@/lib/i18n/translate';
 
-export const metadata: Metadata = { title: 'Home · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('home.metaTitle') };
+}
 
 // Personalized and session-dependent — never prerendered or cached.
 export const dynamic = 'force-dynamic';
 
-/** How a membership reads in a sentence, since the role alone is ambiguous for a parent. */
-function membershipLabel(membership: MyMembershipResponse): string {
+/**
+ * How a membership reads in a sentence, since the role alone is ambiguous for a parent.
+ *
+ * The roles are looked up rather than title-cased from the enum. `role.charAt(0) + …toLowerCase()`
+ * produced "Student" in English and would produce "STUDENT" in every other language, because
+ * capitalisation is not a translation and most scripts do not have a case to change.
+ */
+function membershipLabel(membership: MyMembershipResponse, t: Translator): string {
   if (membership.role === 'PARENT') {
-    return membership.childName ? `Parent of ${membership.childName}` : 'Parent';
+    return membership.childName
+      ? t('home.parentOf', { name: membership.childName })
+      : t('home.parent');
   }
-  return membership.role.charAt(0) + membership.role.slice(1).toLowerCase();
+
+  switch (membership.role) {
+    case 'STUDENT':
+      return t('home.student');
+    case 'TEACHER':
+      return t('home.teacher');
+    case 'PRINCIPAL':
+      return t('home.principal');
+    default:
+      return t('home.user');
+  }
 }
 
 export default async function AppHomePage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let memberships: MyMembershipResponse[] = [];
   let teaching: MyTeachingSubjectResponse[] = [];
@@ -79,13 +104,15 @@ export default async function AppHomePage() {
   return (
     <main>
       <PageHeader
-        title={`Hello, ${account.fullName ?? account.schoolName ?? account.email}`}
+        title={t('home.greeting', {
+          name: account.fullName ?? account.schoolName ?? account.email,
+        })}
         description={
           isSchool
-            ? 'You are signed in as an institution.'
+            ? t('home.schoolDescription')
             : classes.length > 0
-              ? 'Your classes, and everything published to them.'
-              : 'You are signed in. Ask your school to verify you to see your classes.'
+              ? t('home.memberDescription')
+              : t('home.unverifiedDescription')
         }
       />
 
@@ -101,20 +128,16 @@ export default async function AppHomePage() {
       {isSchool ? (
         <Card>
           <p style={{ margin: 0 }}>
-            Classes, members, and verification requests live in your{' '}
-            <Link href="/school">school portal</Link>.
+            {t('home.schoolPortalNote')} <Link href="/school">{t('home.schoolPortalLink')}</Link>.
           </p>
         </Card>
       ) : (
         <section>
-          <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Your classes</h2>
+          <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('home.yourClasses')}</h2>
 
           {classes.length === 0 ? (
             <Card>
-              <p style={{ margin: 0 }}>
-                You are not a verified member of any class yet. A class appears here once your
-                school approves your request.
-              </p>
+              <p style={{ margin: 0 }}>{t('home.noClasses')}</p>
             </Card>
           ) : (
             <ul
@@ -125,15 +148,15 @@ export default async function AppHomePage() {
                   <Card>
                     <h3 style={{ margin: 0, fontSize: 'var(--ui-text-base)' }}>
                       <Link href={`/classes/${membership.classId}`}>
-                        {membership.className ?? 'Class'}
+                        {membership.className ?? t('home.classFallback')}
                       </Link>
                     </h3>
 
                     <p className="muted" style={{ margin: '0.25rem 0 0.5rem' }}>
-                      {membership.schoolName ?? 'School'}
+                      {membership.schoolName ?? t('home.schoolFallback')}
                     </p>
 
-                    <Badge tone="info">{membershipLabel(membership)}</Badge>
+                    <Badge tone="info">{membershipLabel(membership, t)}</Badge>
                   </Card>
                 </li>
               ))}
@@ -142,7 +165,7 @@ export default async function AppHomePage() {
 
           {dashboard.truncated ? (
             <p className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-              Work and notices above are drawn from your first {MAX_CLASSES} classes.
+              {t('home.truncated', { count: MAX_CLASSES })}
             </p>
           ) : null}
         </section>
@@ -150,28 +173,28 @@ export default async function AppHomePage() {
 
       <div style={{ marginTop: 'var(--ui-space-5)' }}>
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Your account</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('home.yourAccount')}</h2>
 
           <dl className="summary">
-            <dt>Name</dt>
+            <dt>{t('home.name')}</dt>
             <dd>{account.fullName ?? account.schoolName ?? '—'}</dd>
 
-            <dt>Account type</dt>
+            <dt>{t('home.accountType')}</dt>
             <dd>{account.accountType}</dd>
 
-            <dt>Email</dt>
+            <dt>{t('home.email')}</dt>
             <dd>{account.email}</dd>
 
-            <dt>Role</dt>
-            <dd>{account.role ?? 'Not applicable'}</dd>
+            <dt>{t('home.role')}</dt>
+            <dd>{account.role ?? t('home.notApplicable')}</dd>
 
-            <dt>Handle</dt>
+            <dt>{t('home.handle')}</dt>
             <dd>{account.handle ?? '—'}</dd>
 
-            <dt>Email verified</dt>
+            <dt>{t('home.emailVerifiedLabel')}</dt>
             <dd>
               <Badge tone={account.emailVerified ? 'success' : 'warning'}>
-                {account.emailVerified ? 'Verified' : 'Not yet verified'}
+                {account.emailVerified ? t('home.verified') : t('home.notVerified')}
               </Badge>
             </dd>
           </dl>

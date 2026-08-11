@@ -17,15 +17,19 @@ import {
   reportAction,
   toggleLikeAction,
 } from '@/app/(app)/(member)/actions';
+import { formatShortDate } from '@/lib/i18n/format';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { CommentResponse, PostResponse } from '@connected/types';
 
 function CommentField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="body"
-      label="Add a comment"
+      label={t('post.addComment')}
       as="textarea"
       rows={2}
       required
@@ -36,21 +40,24 @@ function CommentField() {
 }
 
 function ReasonField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="reason"
-      label="What is wrong with this?"
+      label={t('post.reportLabel')}
       as="textarea"
       rows={3}
       required
       maxLength={2000}
       error={useFieldError('reason')}
-      hint="Your school cannot see reports; they go to the platform."
+      hint={t('post.reportHint')}
     />
   );
 }
 
 export function PostCard({ post, comments }: { post: PostResponse; comments?: CommentResponse[] }) {
+  const { t, locale } = useTranslations();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [reporting, setReporting] = useState(false);
@@ -82,11 +89,13 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
         }}
       >
         <Link href={`/accounts/${post.author.accountId}`}>{post.author.displayName}</Link>
-        {post.author.accountType === 'SCHOOL' ? <Badge tone="info">School</Badge> : null}
+        {post.author.accountType === 'SCHOOL' ? (
+          <Badge tone="info">{t('post.schoolBadge')}</Badge>
+        ) : null}
         <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-          {new Date(post.createdAt).toLocaleDateString('en-GB')}
+          {formatShortDate(post.createdAt, locale)}
           {/* Stated, because a post that changed after people read it is not the same post. */}
-          {post.editedAt ? ' · edited' : ''}
+          {post.editedAt ? t('post.edited') : ''}
         </span>
       </div>
 
@@ -113,8 +122,8 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
           }}
         >
           {/* The count is in the label, so a screen reader hears "Liked, 3" rather than an icon. */}
-          {post.liked ? 'Liked' : 'Like'}
-          {post.likeCount > 0 ? `, ${post.likeCount}` : ''}
+          {post.liked ? t('post.liked') : t('post.like')}
+          {post.likeCount > 0 ? t('post.countSuffix', { count: post.likeCount }) : ''}
         </Button>
 
         <Button
@@ -125,7 +134,8 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
           }}
           aria-expanded={showComments}
         >
-          Comments{post.commentCount > 0 ? `, ${post.commentCount}` : ''}
+          {t('post.comments')}
+          {post.commentCount > 0 ? t('post.countSuffix', { count: post.commentCount }) : ''}
         </Button>
 
         {post.mine ? (
@@ -137,7 +147,7 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
               act(() => deletePostAction(post.id));
             }}
           >
-            Delete
+            {t('post.delete')}
           </Button>
         ) : (
           <Button
@@ -148,7 +158,7 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
             }}
             aria-expanded={reporting}
           >
-            Report
+            {t('post.report')}
           </Button>
         )}
       </div>
@@ -157,9 +167,9 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
         <div style={{ marginTop: 'var(--ui-space-3)' }}>
           <ActionForm
             action={reportAction.bind(null, 'POST', post.id)}
-            submitLabel="Send report"
-            pendingLabel="Sending…"
-            successMessage="Reported. Nobody at your school is told."
+            submitLabel={t('post.sendReport')}
+            pendingLabel={t('post.sendingReport')}
+            successMessage={t('post.reported')}
           >
             <ReasonField />
           </ActionForm>
@@ -170,7 +180,7 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
         <div style={{ marginTop: 'var(--ui-space-3)' }}>
           {comments && comments.length > 0 ? (
             <ul
-              aria-label="Comments"
+              aria-label={t('post.commentsList')}
               style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-2)' }}
             >
               {comments.map((comment) => (
@@ -184,16 +194,16 @@ export function PostCard({ post, comments }: { post: PostResponse; comments?: Co
             </ul>
           ) : (
             <p className="muted" style={{ margin: 0 }}>
-              No comments yet.
+              {t('post.noComments')}
             </p>
           )}
 
           <div style={{ marginTop: 'var(--ui-space-3)' }}>
             <ActionForm
               action={commentAction.bind(null, post.id)}
-              submitLabel="Comment"
-              pendingLabel="Posting…"
-              successMessage="Comment added."
+              submitLabel={t('post.comment')}
+              pendingLabel={t('post.posting')}
+              successMessage={t('post.commentAdded')}
               resetOnSuccess
             >
               <CommentField />

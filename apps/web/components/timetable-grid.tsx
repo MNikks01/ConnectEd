@@ -19,23 +19,27 @@
  * arrives at it without the heading above.
  */
 import { Card } from '@connected/ui';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { TimetablePeriodResponse, Weekday } from '@connected/types';
 
-const DAY_NAMES: Record<Weekday, string> = {
-  MONDAY: 'Monday',
-  TUESDAY: 'Tuesday',
-  WEDNESDAY: 'Wednesday',
-  THURSDAY: 'Thursday',
-  FRIDAY: 'Friday',
-  SATURDAY: 'Saturday',
-  SUNDAY: 'Sunday',
+const DAY_NAMES: Record<Weekday, MessageKey> = {
+  MONDAY: 'timetableGrid.MONDAY',
+  TUESDAY: 'timetableGrid.TUESDAY',
+  WEDNESDAY: 'timetableGrid.WEDNESDAY',
+  THURSDAY: 'timetableGrid.THURSDAY',
+  FRIDAY: 'timetableGrid.FRIDAY',
+  SATURDAY: 'timetableGrid.SATURDAY',
+  SUNDAY: 'timetableGrid.SUNDAY',
 };
 
 /** The order a week is read in, which is not the order rows arrive in. */
 const WEEK = Object.keys(DAY_NAMES) as Weekday[];
 
-export function TimetableGrid({ periods }: { periods: TimetablePeriodResponse[] }) {
+export async function TimetableGrid({ periods }: { periods: TimetablePeriodResponse[] }) {
+  const { t } = await getTranslations();
+
   const byDay = WEEK.map((day) => ({
     day,
     periods: periods.filter((period) => period.day === day),
@@ -44,7 +48,7 @@ export function TimetableGrid({ periods }: { periods: TimetablePeriodResponse[] 
   if (byDay.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>This timetable has no periods in it.</p>
+        <p style={{ margin: 0 }}>{t('timetableGrid.empty')}</p>
       </Card>
     );
   }
@@ -54,16 +58,18 @@ export function TimetableGrid({ periods }: { periods: TimetablePeriodResponse[] 
       {byDay.map((entry) => (
         <section key={entry.day}>
           <h2 style={{ fontSize: 'var(--ui-text-lg)', margin: '0 0 var(--ui-space-2)' }}>
-            {DAY_NAMES[entry.day]}
+            {t(DAY_NAMES[entry.day])}
           </h2>
 
           <div className="ui-table__scroll">
             <table className="ui-table">
-              <caption className="ui-visually-hidden">{DAY_NAMES[entry.day]} timetable</caption>
+              <caption className="ui-visually-hidden">
+                {t('timetableGrid.dayTimetable', { day: t(DAY_NAMES[entry.day]) })}
+              </caption>
               <thead>
                 <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">Subject</th>
+                  <th scope="col">{t('timetableGrid.colTime')}</th>
+                  <th scope="col">{t('timetableGrid.colSubject')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -73,7 +79,7 @@ export function TimetableGrid({ periods }: { periods: TimetablePeriodResponse[] 
                       {period.startsAt}–{period.endsAt}
                     </td>
                     {/* A break is not a lesson, and saying so plainly beats an empty cell. */}
-                    <td>{period.subjectName ?? period.label ?? 'Unnamed period'}</td>
+                    <td>{period.subjectName ?? period.label ?? t('timetableGrid.unnamed')}</td>
                   </tr>
                 ))}
               </tbody>

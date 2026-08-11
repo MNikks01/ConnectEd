@@ -6,17 +6,23 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { ApiError } from '@/lib/api-client';
+import { formatShortDate } from '@/lib/i18n/format';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { NoticeResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Notice · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('noticeDetail.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function NoticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { t, locale } = await getTranslations();
 
   let notice: NoticeResponse;
   try {
@@ -30,14 +36,15 @@ export default async function NoticePage({ params }: { params: Promise<{ id: str
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href="/notices">← All notices</Link>
+        <Link href="/notices">{t('noticeDetail.back')}</Link>
       </p>
 
       <PageHeader
         title={notice.title}
-        description={`${notice.authorName ?? 'School'} · ${new Date(
-          notice.createdAt,
-        ).toLocaleDateString('en-GB')}`}
+        description={t('noticeDetail.byline', {
+          author: notice.authorName ?? t('noticeDetail.schoolFallback'),
+          date: formatShortDate(notice.createdAt, locale),
+        })}
       />
 
       <Card as="article">
@@ -50,7 +57,7 @@ export default async function NoticePage({ params }: { params: Promise<{ id: str
           className="muted"
           style={{ marginTop: 'var(--ui-space-4)', fontSize: 'var(--ui-text-sm)' }}
         >
-          Read by {notice.readCount}
+          {t('noticeDetail.readBy', { count: notice.readCount })}
         </p>
       )}
     </main>

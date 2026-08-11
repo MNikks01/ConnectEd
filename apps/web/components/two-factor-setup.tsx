@@ -12,6 +12,7 @@
  * nobody closes it and then discovers what they have lost.
  */
 import { Button, Card, Field } from '@connected/ui';
+import { useTranslations } from './locale-provider';
 import { useEffect, useState, useTransition } from 'react';
 import QRCode from 'qrcode';
 
@@ -59,6 +60,8 @@ function QrCode({ uri }: { uri: string }) {
 }
 
 export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
+  const { t } = useTranslations();
+
   const [enrolment, setEnrolment] = useState<Enrolment | undefined>();
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | undefined>();
   const [code, setCode] = useState('');
@@ -68,12 +71,10 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
   if (recoveryCodes) {
     return (
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Save these somewhere safe</h2>
-        <p>
-          Each of these works once, in place of a code from your app. They are shown now and never
-          again — if you lose your phone without them, only a colleague with database access can get
-          you back in.
-        </p>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('twoFactor.codesHeading')}
+        </h2>
+        <p>{t('twoFactor.codesBody')}</p>
         <ul style={{ fontFamily: 'monospace', columns: 2, listStyle: 'none', padding: 0 }}>
           {recoveryCodes.map((recovery) => (
             <li key={recovery}>{recovery}</li>
@@ -84,7 +85,7 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
             setRecoveryCodes(undefined);
           }}
         >
-          I have written them down
+          {t('twoFactor.codesDone')}
         </Button>
       </Card>
     );
@@ -93,7 +94,7 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
   if (enabled) {
     return (
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Two-factor is on</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('twoFactor.onHeading')}</h2>
         {error ? (
           <p className="ui-field__error" role="alert">
             {error}
@@ -105,7 +106,7 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
         </p>
         <Field
           name="code"
-          label="Code from your authenticator"
+          label={t('twoFactor.code')}
           value={code}
           onChange={(event) => {
             setCode(event.target.value);
@@ -124,7 +125,7 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
             });
           }}
         >
-          Turn off two-factor
+          {t('twoFactor.turnOff')}
         </Button>
       </Card>
     );
@@ -133,7 +134,9 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
   if (enrolment) {
     return (
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Scan this, then prove it</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('twoFactor.scanHeading')}
+        </h2>
         {error ? (
           <p className="ui-field__error" role="alert">
             {error}
@@ -143,18 +146,17 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
         <QrCode uri={enrolment.otpauthUri} />
 
         <p className="muted">
-          Or type this key in by hand: <code>{enrolment.secret}</code>
+          {t('twoFactor.typeKey')} <code>{enrolment.secret}</code>
         </p>
 
         <p>
           {/* Said before the code is asked for, so nobody wonders why it is not on yet. */}
-          Nothing changes until you enter a code below. If the scan did not work, this is where you
-          will find out.
+          {t('twoFactor.nothingChanges')}
         </p>
 
         <Field
           name="code"
-          label="Code from your authenticator"
+          label={t('twoFactor.code')}
           value={code}
           onChange={(event) => {
             setCode(event.target.value);
@@ -175,12 +177,12 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
                 setEnrolment(undefined);
                 setCode('');
               } else {
-                setError(result.message ?? 'That code is not right. Try the next one.');
+                setError(result.message ?? t('twoFactor.wrongCode'));
               }
             });
           }}
         >
-          Turn on two-factor
+          {t('twoFactor.turnOn')}
         </Button>
       </Card>
     );
@@ -188,16 +190,13 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
 
   return (
     <Card as="section">
-      <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Two-factor is off</h2>
+      <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('twoFactor.offHeading')}</h2>
       {error ? (
         <p className="ui-field__error" role="alert">
           {error}
         </p>
       ) : null}
-      <p>
-        Your account can approve members and reach every family at the school. A password alone is
-        one thing somebody can guess or reuse from somewhere else.
-      </p>
+      <p>{t('twoFactor.offBody')}</p>
       <Button
         loading={pending}
         onClick={() => {
@@ -209,7 +208,7 @@ export function TwoFactorSetup({ enabled }: { enabled: boolean }) {
           });
         }}
       >
-        Set up two-factor
+        {t('twoFactor.setUp')}
       </Button>
     </Card>
   );

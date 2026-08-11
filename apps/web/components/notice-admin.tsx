@@ -12,37 +12,51 @@ import { useState, useTransition } from 'react';
 
 import { deleteNoticeAction, publishNoticeAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { formatShortDate } from '@/lib/i18n/format';
+import { useTranslations } from './locale-provider';
 
 import type { NoticeResponse } from '@connected/types';
 
 function TitleField() {
+  const { t } = useTranslations();
+
   return (
-    <Field name="title" label="Title" required maxLength={200} error={useFieldError('title')} />
+    <Field
+      name="title"
+      label={t('noticeAdmin.title')}
+      required
+      maxLength={200}
+      error={useFieldError('title')}
+    />
   );
 }
 
 function BodyField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="body"
-      label="Notice"
+      label={t('noticeAdmin.notice')}
       as="textarea"
       rows={5}
       required
       maxLength={10_000}
       error={useFieldError('body')}
-      hint="Everyone verified at the school is notified."
+      hint={t('noticeAdmin.noticeHint')}
     />
   );
 }
 
 export function NoticeComposer({ schoolId }: { schoolId: string }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={publishNoticeAction.bind(null, schoolId)}
-      submitLabel="Publish notice"
-      pendingLabel="Publishing…"
-      successMessage="Notice published. Everyone at the school has been notified."
+      submitLabel={t('noticeAdmin.submit')}
+      pendingLabel={t('noticeAdmin.publishing')}
+      successMessage={t('noticeAdmin.published')}
       resetOnSuccess
     >
       <TitleField />
@@ -65,13 +79,15 @@ export function NoticeComposer({ schoolId }: { schoolId: string }) {
  * failures did not.
  */
 export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
+  const { t, locale } = useTranslations();
+
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<NoticeResponse | undefined>();
 
   if (notices.length === 0) {
-    return <p className="muted">No notices yet. The first one goes out from the form below.</p>;
+    return <p className="muted">{t('noticeAdmin.none')}</p>;
   }
 
   return (
@@ -80,8 +96,11 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
         {notices.map((notice) => (
           <li key={notice.id} className="ui-card">
             <p className="muted" style={{ margin: 0, fontSize: 'var(--ui-text-sm)' }}>
-              {new Date(notice.createdAt).toLocaleDateString('en-GB')} ·{' '}
-              {notice.authorName ?? 'School'} · read by {notice.readCount ?? 0}
+              {t('noticeAdmin.meta', {
+                date: formatShortDate(notice.createdAt, locale),
+                author: notice.authorName ?? t('noticeAdmin.schoolFallback'),
+                count: notice.readCount ?? 0,
+              })}
             </p>
 
             <h3 style={{ margin: '0.25rem 0 0.5rem', fontSize: 'var(--ui-text-base)' }}>
@@ -97,7 +116,7 @@ export function NoticeList({ notices }: { notices: NoticeResponse[] }) {
                 setConfirming(notice);
               }}
             >
-              Withdraw
+              {t('noticeAdmin.withdraw')}
             </Button>
           </li>
         ))}

@@ -10,17 +10,22 @@ import { notFound, redirect } from 'next/navigation';
 
 import { SyllabusPanel } from '@/components/syllabus-panel';
 import { ApiError } from '@/lib/api-client';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { MyMembershipResponse, SyllabusCoverageResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Syllabus · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('syllabusPage.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function SyllabusPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { t } = await getTranslations();
 
   let coverage: SyllabusCoverageResponse[];
   let isTeacher = false;
@@ -46,21 +51,21 @@ export default async function SyllabusPage({ params }: { params: Promise<{ id: s
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/classes/${id}`}>{t('syllabusPage.backToClass')}</Link>
       </p>
 
-      <PageHeader title="Syllabus coverage" description="How far each subject has got." />
+      <PageHeader title={t('syllabusPage.title')} description={t('syllabusPage.description')} />
 
       {coverage.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>This class has no subjects yet.</p>
+          <p style={{ margin: 0 }}>{t('syllabusPage.noSubjects')}</p>
         </Card>
       ) : (
         <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
           {coverage.map((subject) => (
             <Card as="section" key={subject.subjectId}>
               <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
-                {subject.subjectName ?? 'Subject'}
+                {subject.subjectName ?? t('syllabusPage.subjectFallback')}
               </h2>
               <SyllabusPanel coverage={subject} canRecord={isTeacher} />
             </Card>

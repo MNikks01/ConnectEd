@@ -18,24 +18,27 @@ import { Field } from '@connected/ui';
 
 import { decideReportAction } from '@/app/(app)/admin/actions';
 import { ActionForm } from './action-form';
+import { useTranslations } from './locale-provider';
 
 const DECISIONS = [
-  { value: 'ACTIONED', label: 'Remove it' },
-  { value: 'DISMISSED', label: 'Leave it' },
-  { value: 'REVIEWED', label: 'Needs a second look' },
+  { value: 'ACTIONED', label: 'reportDecision.remove' },
+  { value: 'DISMISSED', label: 'reportDecision.leave' },
+  { value: 'REVIEWED', label: 'reportDecision.secondLook' },
 ];
 
 export function ReportDecision({ reportId, removable }: { reportId: string; removable: boolean }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={decideReportAction.bind(null, reportId)}
-      submitLabel="Record decision"
-      pendingLabel="Recording…"
-      successMessage="Recorded."
+      submitLabel={t('reportDecision.submit')}
+      pendingLabel={t('reportDecision.recording')}
+      successMessage={t('reportDecision.recorded')}
     >
       <Field
         name="decision"
-        label="Decision"
+        label={t('reportDecision.decision')}
         as="select"
         required
         options={DECISIONS.filter(
@@ -43,20 +46,16 @@ export function ReportDecision({ reportId, removable }: { reportId: string; remo
           // worse than an absent one: it teaches a reviewer that the control is decorative.
           (decision) => decision.value !== 'ACTIONED' || removable,
         )}
-        hint={
-          removable
-            ? 'Removing takes the content down immediately.'
-            : 'This kind of report cannot be removed from here — suspending an account is not a queue action.'
-        }
+        hint={removable ? t('reportDecision.removableHint') : t('reportDecision.notRemovableHint')}
       />
 
       <Field
         name="note"
-        label="Note"
+        label={t('reportDecision.note')}
         as="textarea"
         rows={3}
         maxLength={2000}
-        hint="Recorded against your account in the audit trail. Nobody outside the team sees it."
+        hint={t('reportDecision.noteHint')}
       />
     </ActionForm>
   );

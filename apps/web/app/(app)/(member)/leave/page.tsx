@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation';
 
 import { ApplyForChildForm, ApplyForSelfForm } from '@/components/leave-forms';
 import { LeaveHistory } from '@/components/leave-queue';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -20,11 +21,16 @@ import type {
 } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Leave · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('leavePage.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function LeavePage() {
+  const { t } = await getTranslations();
+
   let memberships: MyMembershipResponse[];
   let mine: LeaveApplicationResponse[];
   let classTeacherOf: MyClassTeacherResponse[];
@@ -47,7 +53,10 @@ export default async function LeavePage() {
     ...new Map(
       memberships
         .filter((membership) => membership.role === 'TEACHER')
-        .map((membership) => [membership.schoolId, membership.schoolName ?? 'Your school']),
+        .map((membership) => [
+          membership.schoolId,
+          membership.schoolName ?? t('leavePage.yourSchool'),
+        ]),
     ).entries(),
   ].map(([id, name]) => ({ id, name }));
 
@@ -57,32 +66,33 @@ export default async function LeavePage() {
   return (
     <main>
       <PageHeader
-        title="Leave"
-        description="Apply, and see where your applications got to."
+        title={t('leavePage.title')}
+        description={t('leavePage.description')}
         {...(decides
-          ? { actions: <Link href="/leave/approvals">Applications to decide</Link> }
+          ? { actions: <Link href="/leave/approvals">{t('leavePage.toDecide')}</Link> }
           : {})}
       />
 
       {children.length === 0 && teacherAt.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>
-            Leave is for parents applying on behalf of a child, and for teachers applying for
-            themselves. Neither applies to you yet.
-          </p>
+          <p style={{ margin: 0 }}>{t('leavePage.notEligible')}</p>
         </Card>
       ) : (
         <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
           {children.length > 0 ? (
             <Card as="section">
-              <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Apply for your child</h2>
+              <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+                {t('leavePage.applyForChild')}
+              </h2>
               <ApplyForChildForm children={children} />
             </Card>
           ) : null}
 
           {teacherAt.length > 0 ? (
             <Card as="section">
-              <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Apply for yourself</h2>
+              <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+                {t('leavePage.applyForSelf')}
+              </h2>
               <ApplyForSelfForm schools={teacherAt} />
             </Card>
           ) : null}
@@ -90,7 +100,7 @@ export default async function LeavePage() {
       )}
 
       <section style={{ marginTop: 'var(--ui-space-5)' }}>
-        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Your applications</h2>
+        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('leavePage.yourApplications')}</h2>
         <LeaveHistory applications={mine} />
       </section>
     </main>

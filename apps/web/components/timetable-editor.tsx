@@ -24,28 +24,42 @@ import { useState } from 'react';
 
 import { publishTimetableAction } from '@/app/(app)/school/actions';
 import { ActionForm } from './action-form';
+import type { MessageKey, Translator } from '@/lib/i18n/translate';
+import { useTranslations } from './locale-provider';
 
 import type { SubjectResponse, TimetablePeriodInput, Weekday } from '@connected/types';
 
-const DAYS: { value: Weekday; label: string }[] = [
-  { value: 'MONDAY', label: 'Monday' },
-  { value: 'TUESDAY', label: 'Tuesday' },
-  { value: 'WEDNESDAY', label: 'Wednesday' },
-  { value: 'THURSDAY', label: 'Thursday' },
-  { value: 'FRIDAY', label: 'Friday' },
-  { value: 'SATURDAY', label: 'Saturday' },
-  { value: 'SUNDAY', label: 'Sunday' },
+const DAYS: { value: Weekday; label: MessageKey }[] = [
+  { value: 'MONDAY', label: 'timetableEditor.MONDAY' },
+  { value: 'TUESDAY', label: 'timetableEditor.TUESDAY' },
+  { value: 'WEDNESDAY', label: 'timetableEditor.WEDNESDAY' },
+  { value: 'THURSDAY', label: 'timetableEditor.THURSDAY' },
+  { value: 'FRIDAY', label: 'timetableEditor.FRIDAY' },
+  { value: 'SATURDAY', label: 'timetableEditor.SATURDAY' },
+  { value: 'SUNDAY', label: 'timetableEditor.SUNDAY' },
 ];
 
 /** The value in the subject picker that means "this period is not a lesson". */
 const OTHER = 'other';
 
-function describe(period: TimetablePeriodInput, subjects: SubjectResponse[]): string {
+/**
+ * Not a component, so it takes the translator rather than calling the hook.
+ *
+ * It briefly did call it, which React caught immediately: a hook in a plain helper runs a
+ * different number of times per render depending on how many periods are in the list, and error
+ * #310 is what that looks like from the outside.
+ */
+function describe(
+  period: TimetablePeriodInput,
+  subjects: SubjectResponse[],
+  t: Translator,
+): string {
   const what =
     period.label ??
     subjects.find((subject) => subject.id === period.subjectId)?.name ??
-    'Unknown subject';
-  const day = DAYS.find((entry) => entry.value === period.day)?.label ?? period.day;
+    t('timetableEditor.unknownSubject');
+  const dayKey = DAYS.find((entry) => entry.value === period.day)?.label;
+  const day = dayKey ? t(dayKey) : period.day;
 
   return `${day}, ${period.startsAt}–${period.endsAt}: ${what}`;
 }
@@ -57,6 +71,8 @@ export function TimetableEditor({
   classId: string;
   subjects: SubjectResponse[];
 }) {
+  const { t } = useTranslations();
+
   const [draft, setDraft] = useState<TimetablePeriodInput[]>([]);
   const [day, setDay] = useState<Weekday>('MONDAY');
   const [startsAt, setStartsAt] = useState('09:00');
@@ -75,7 +91,7 @@ export function TimetableEditor({
     const trimmed = label.trim();
 
     if (isOther && trimmed.length === 0) {
-      setProblem('Give this period a name, like Break or Assembly.');
+      setProblem(t('timetableEditor.nameRequired'));
       return;
     }
 
@@ -98,7 +114,9 @@ export function TimetableEditor({
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
       <Card>
-        <h3 style={{ marginTop: 0, fontSize: 'var(--ui-text-base)' }}>Add a period</h3>
+        <h3 style={{ marginTop: 0, fontSize: 'var(--ui-text-base)' }}>
+          {t('timetableEditor.addHeading')}
+        </h3>
 
         <div
           style={{
@@ -109,16 +127,16 @@ export function TimetableEditor({
         >
           <Field
             name="day"
-            label="Day"
+            label={t('timetableEditor.day')}
             as="select"
-            options={DAYS.map((entry) => ({ value: entry.value, label: entry.label }))}
+            options={DAYS.map((entry) => ({ value: entry.value, label: t(entry.label) }))}
             value={day}
             onChange={(event) => setDay(event.target.value as Weekday)}
           />
 
           <Field
             name="startsAt"
-            label="Starts"
+            label={t('timetableEditor.starts')}
             type="time"
             value={startsAt}
             onChange={(event) => setStartsAt(event.target.value)}
@@ -126,7 +144,7 @@ export function TimetableEditor({
 
           <Field
             name="endsAt"
-            label="Ends"
+            label={t('timetableEditor.ends')}
             type="time"
             value={endsAt}
             onChange={(event) => setEndsAt(event.target.value)}
@@ -134,11 +152,11 @@ export function TimetableEditor({
 
           <Field
             name="subjectId"
-            label="Subject"
+            label={t('timetableEditor.subject')}
             as="select"
             options={[
               ...subjects.map((subject) => ({ value: subject.id, label: subject.name })),
-              { value: OTHER, label: 'Something else (break, assembly…)' },
+              { value: OTHER, label: t('timetableEditor.somethingElse') },
             ]}
             value={subjectId}
             onChange={(event) => setSubjectId(event.target.value)}
@@ -150,11 +168,11 @@ export function TimetableEditor({
               // "Period name", not "Name": the subjects panel on the same page has a "Subject
               // name" field, and two fields whose labels are prefixes of one another are ambiguous
               // to a person reading the page as well as to a test selecting on it.
-              label="Period name"
+              label={t('timetableEditor.periodName')}
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               maxLength={60}
-              hint="Break, Assembly, Games…"
+              hint={t('timetableEditor.periodNameHint')}
             />
           ) : null}
         </div>
@@ -191,7 +209,7 @@ export function TimetableEditor({
                 key={`${period.day}-${period.startsAt}-${String(index)}`}
                 style={{ display: 'flex', gap: 'var(--ui-space-2)', alignItems: 'center' }}
               >
-                <span style={{ flex: 1 }}>{describe(period, subjects)}</span>
+                <span style={{ flex: 1 }}>{describe(period, subjects, t)}</span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -209,9 +227,9 @@ export function TimetableEditor({
 
       <ActionForm
         action={publishTimetableAction.bind(null, classId)}
-        submitLabel="Publish timetable"
-        pendingLabel="Publishing…"
-        successMessage="Timetable published. Members of this class can see it now."
+        submitLabel={t('timetableEditor.submit')}
+        pendingLabel={t('timetableEditor.publishing')}
+        successMessage={t('timetableEditor.published')}
       >
         {/*
          * The draft travels as JSON in a hidden field. A Server Action takes a FormData, and a week

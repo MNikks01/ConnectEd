@@ -10,17 +10,22 @@ import { Badge, Button, Card, Dialog } from '@connected/ui';
 import { useState, useTransition } from 'react';
 
 import { decideLeaveAction } from '@/app/(app)/(member)/actions';
+import { formatCalendarDay } from '@/lib/i18n/format';
+import { useTranslations } from './locale-provider';
 
+import type { Locale } from '@/lib/i18n/locales';
+import type { MessageKey } from '@/lib/i18n/translate';
 import type { LeaveApplicationResponse } from '@connected/types';
 
-function dateRange(leave: LeaveApplicationResponse): string {
-  const format = (value: string) =>
-    new Date(`${value}T00:00:00Z`).toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      timeZone: 'UTC',
-    });
+/** Waiting, accepted, rejected — words from the catalogue, never a lowercased enum. */
+const STATUS_LABEL: Record<string, MessageKey> = {
+  RECEIVED: 'leaveQueue.statusRECEIVED',
+  ACCEPTED: 'leaveQueue.statusACCEPTED',
+  REJECTED: 'leaveQueue.statusREJECTED',
+};
+
+function dateRange(leave: LeaveApplicationResponse, locale: Locale): string {
+  const format = (value: string) => formatCalendarDay(value, locale);
 
   return leave.startDate === leave.endDate
     ? format(leave.startDate)
@@ -34,6 +39,7 @@ export function LeaveQueue({
   applications: LeaveApplicationResponse[];
   emptyMessage: string;
 }) {
+  const { t, locale } = useTranslations();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<LeaveApplicationResponse | undefined>();
@@ -69,11 +75,11 @@ export function LeaveQueue({
           <li key={leave.id}>
             <Card>
               <p className="muted" style={{ margin: 0, fontSize: 'var(--ui-text-sm)' }}>
-                {dateRange(leave)}
+                {dateRange(leave, locale)}
               </p>
 
               <h3 style={{ margin: '0.25rem 0 0.5rem', fontSize: 'var(--ui-text-base)' }}>
-                {leave.childName ?? leave.applicantName ?? 'Applicant'}
+                {leave.childName ?? leave.applicantName ?? t('leaveQueue.applicantFallback')}
                 {leave.className ? ` · ${leave.className}` : ''}
               </h3>
 
@@ -89,7 +95,7 @@ export function LeaveQueue({
                     decide(leave, 'ACCEPT');
                   }}
                 >
-                  Accept
+                  {t('leaveQueue.accept')}
                 </Button>
 
                 <Button
@@ -99,7 +105,7 @@ export function LeaveQueue({
                     setConfirming(leave);
                   }}
                 >
-                  Reject
+                  {t('leaveQueue.reject')}
                 </Button>
               </div>
             </Card>
@@ -109,7 +115,7 @@ export function LeaveQueue({
 
       <Dialog
         open={confirming !== undefined}
-        title="Reject this application?"
+        title={t('leaveQueue.rejectTitle')}
         onClose={() => {
           setConfirming(undefined);
         }}
@@ -121,7 +127,7 @@ export function LeaveQueue({
                 setConfirming(undefined);
               }}
             >
-              Cancel
+              {t('leaveQueue.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -130,15 +136,12 @@ export function LeaveQueue({
                 if (confirming) decide(confirming, 'REJECT');
               }}
             >
-              Reject application
+              {t('leaveQueue.rejectConfirm')}
             </Button>
           </>
         }
       >
-        <p style={{ margin: 0 }}>
-          The applicant is told. A rejected application cannot be reopened — they would have to
-          apply again.
-        </p>
+        <p style={{ margin: 0 }}>{t('leaveQueue.rejectExplained')}</p>
       </Dialog>
     </>
   );
@@ -146,10 +149,12 @@ export function LeaveQueue({
 
 /** The applicant's own list: status, not buttons. */
 export function LeaveHistory({ applications }: { applications: LeaveApplicationResponse[] }) {
+  const { t, locale } = useTranslations();
+
   if (applications.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>You have not applied for any leave.</p>
+        <p style={{ margin: 0 }}>{t('leaveQueue.noneApplied')}</p>
       </Card>
     );
   }
@@ -177,10 +182,10 @@ export function LeaveHistory({ applications }: { applications: LeaveApplicationR
                       : 'info'
                 }
               >
-                {leave.status === 'RECEIVED' ? 'Waiting' : leave.status.toLowerCase()}
+                {t(STATUS_LABEL[leave.status] as MessageKey)}
               </Badge>
               <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                {dateRange(leave)}
+                {dateRange(leave, locale)}
               </span>
             </div>
 

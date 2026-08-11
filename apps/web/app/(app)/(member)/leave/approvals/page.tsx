@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { LeaveQueue } from '@/components/leave-queue';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -19,11 +20,16 @@ import type {
 } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Approvals · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('approvals.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function LeaveApprovalsPage() {
+  const { t } = await getTranslations();
+
   let classes: MyClassTeacherResponse[];
   let principalSchools: { id: string; name: string }[];
 
@@ -38,7 +44,7 @@ export default async function LeaveApprovalsPage() {
       ...new Map(
         memberships
           .filter((membership) => membership.role === 'PRINCIPAL')
-          .map((m) => [m.schoolId, m.schoolName ?? 'Your school']),
+          .map((m) => [m.schoolId, m.schoolName ?? t('approvals.yourSchool')]),
       ).entries(),
     ].map(([id, name]) => ({ id, name }));
   } catch (error) {
@@ -71,33 +77,29 @@ export default async function LeaveApprovalsPage() {
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href="/leave">← Your leave</Link>
+        <Link href="/leave">{t('approvals.back')}</Link>
       </p>
 
-      <PageHeader title="Applications to decide" />
+      <PageHeader title={t('approvals.title')} />
 
       {classQueues.length === 0 && teacherQueues.length === 0 ? (
-        <p>
-          You are not a class teacher or a principal, so no applications wait on you. If that looks
-          wrong, your school allocates class teachers from its portal.
-        </p>
+        <p>{t('approvals.notAnApprover')}</p>
       ) : null}
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         {classQueues.map(({ allocation, applications }) => (
           <section key={allocation.classId}>
             <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{allocation.className}</h2>
-            <LeaveQueue
-              applications={applications}
-              emptyMessage="No leave waiting for this class."
-            />
+            <LeaveQueue applications={applications} emptyMessage={t('approvals.noClassLeave')} />
           </section>
         ))}
 
         {teacherQueues.map(({ school, applications }) => (
           <section key={school.id}>
-            <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Teacher leave · {school.name}</h2>
-            <LeaveQueue applications={applications} emptyMessage="No teacher leave waiting." />
+            <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>
+              {t('approvals.teacherLeaveHeading', { school: school.name })}
+            </h2>
+            <LeaveQueue applications={applications} emptyMessage={t('approvals.noTeacherLeave')} />
           </section>
         ))}
       </div>

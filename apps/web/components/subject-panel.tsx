@@ -4,17 +4,20 @@ import { Field, Table } from '@connected/ui';
 
 import { createSubjectAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { SubjectResponse } from '@connected/types';
 
 function SubjectNameField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="name"
-      label="Subject name"
+      label={t('subjectPanel.name')}
       required
       error={useFieldError('name')}
-      hint="Shown to teachers when they declare what they teach."
+      hint={t('subjectPanel.nameHint')}
     />
   );
 }
@@ -26,12 +29,20 @@ export function SubjectPanel({
   classId: string;
   subjects: SubjectResponse[];
 }) {
+  const { t } = useTranslations();
+
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
       <Table
-        caption="Subjects in this class"
+        caption={t('subjectPanel.caption')}
         captionVisible={false}
-        columns={[{ key: 'name', header: 'Name', render: (s: SubjectResponse) => s.name }]}
+        columns={[
+          {
+            key: 'name',
+            header: t('subjectPanel.colName'),
+            render: (s: SubjectResponse) => s.name,
+          },
+        ]}
         rows={subjects}
         rowKey={(subject) => subject.id}
         empty="No subjects yet. Add the first one below."
@@ -39,9 +50,9 @@ export function SubjectPanel({
 
       <ActionForm
         action={createSubjectAction.bind(null, classId)}
-        submitLabel="Add subject"
-        pendingLabel="Adding…"
-        successMessage="Subject added."
+        submitLabel={t('subjectPanel.submit')}
+        pendingLabel={t('subjectPanel.adding')}
+        successMessage={t('subjectPanel.added')}
         resetOnSuccess
       >
         <SubjectNameField />

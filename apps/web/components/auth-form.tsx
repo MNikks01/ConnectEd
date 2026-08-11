@@ -11,6 +11,8 @@ import { Alert, Button, Field } from '@connected/ui';
 import { useRouter } from 'next/navigation';
 import { createContext, useContext, useState, type FormEvent, type ReactNode } from 'react';
 
+import { useTranslations } from './locale-provider';
+
 import type { ErrorEnvelope } from '@connected/types';
 
 /** Field-level messages from the API's 422 `details`, keyed by field name. */
@@ -34,6 +36,7 @@ export function AuthForm({
 }: AuthFormProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const { t } = useTranslations();
   const [formError, setFormError] = useState<string | undefined>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -69,9 +72,9 @@ export function AuthForm({
       }
 
       // The API's copy is already written to be safe to display and free of internals.
-      setFormError(error?.message ?? 'Something went wrong. Please try again.');
+      setFormError(error?.message ?? t('authForm.somethingWentWrong'));
     } catch {
-      setFormError('Could not reach the server. Check your connection and try again.');
+      setFormError(t('authForm.unreachable'));
     } finally {
       setPending(false);
     }

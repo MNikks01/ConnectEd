@@ -1,6 +1,8 @@
 'use client';
 
 import { Badge, Button, Dialog, Table, verificationTone } from '@connected/ui';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { useTranslations } from './locale-provider';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
@@ -17,6 +19,8 @@ export function VerificationQueue({
   requests: VerificationRequestResponse[];
   status: string;
 }) {
+  const { t } = useTranslations();
+
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -86,7 +90,7 @@ export function VerificationQueue({
 
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
-      <nav aria-label="Filter by status">
+      <nav aria-label={t('verificationQueue.filterNav')}>
         <ul className="filter-tabs">
           {FILTERS.map((value) => (
             <li key={value}>
@@ -94,7 +98,10 @@ export function VerificationQueue({
                 href={`/school/verifications?status=${value}`}
                 aria-current={status === value ? 'page' : undefined}
               >
-                {value.charAt(0) + value.slice(1).toLowerCase()}
+                {/* Looked up, not title-cased. `charAt(0) + slice(1).toLowerCase()` is an
+                    English rule about capitals, and it leaves "PENDING" untouched in scripts that
+                    have none. */}
+                {t(`verificationQueue.status${value}` as MessageKey)}
               </Link>
             </li>
           ))}
@@ -132,7 +139,7 @@ export function VerificationQueue({
                 setSummary(undefined);
               }}
             />
-            <span>Select all pending on this page</span>
+            <span>{t('verificationQueue.selectAll')}</span>
           </label>
 
           {selected.size > 0 ? (
@@ -144,7 +151,7 @@ export function VerificationQueue({
                   decideSelected('APPROVE');
                 }}
               >
-                Approve {selected.size}
+                {t('verificationQueue.approveSelected', { count: selected.size })}
               </Button>
               <Button
                 size="sm"
@@ -154,7 +161,7 @@ export function VerificationQueue({
                   decideSelected('REJECT');
                 }}
               >
-                Reject {selected.size}
+                {t('verificationQueue.rejectSelected', { count: selected.size })}
               </Button>
             </>
           ) : null}
@@ -162,7 +169,9 @@ export function VerificationQueue({
       ) : null}
 
       <Table
-        caption={`${status.charAt(0)}${status.slice(1).toLowerCase()} verification requests`}
+        caption={t('verificationQueue.caption', {
+          status: t(`verificationQueue.status${status}` as MessageKey),
+        })}
         captionVisible={false}
         columns={[
           {
@@ -182,10 +191,10 @@ export function VerificationQueue({
           },
           {
             key: 'requester',
-            header: 'Requester',
+            header: t('verificationQueue.colRequester'),
             render: (request: VerificationRequestResponse) => (
               <>
-                <div>{request.requesterName ?? 'Unknown'}</div>
+                <div>{request.requesterName ?? t('verificationQueue.unknown')}</div>
                 {request.requesterHandle ? (
                   <div className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
                     @{request.requesterHandle}
@@ -196,12 +205,12 @@ export function VerificationQueue({
           },
           {
             key: 'role',
-            header: 'Role',
+            header: t('verificationQueue.colRole'),
             render: (request: VerificationRequestResponse) => request.role,
           },
           {
             key: 'scope',
-            header: 'Scope',
+            header: t('verificationQueue.colScope'),
             render: (request: VerificationRequestResponse) =>
               request.childName
                 ? `${request.childName} · ${request.className ?? '—'}`
@@ -209,14 +218,14 @@ export function VerificationQueue({
           },
           {
             key: 'status',
-            header: 'Status',
+            header: t('verificationQueue.colStatus'),
             render: (request: VerificationRequestResponse) => (
               <Badge tone={verificationTone(request.status)}>{request.status}</Badge>
             ),
           },
           {
             key: 'actions',
-            header: 'Actions',
+            header: t('verificationQueue.colActions'),
             align: 'end',
             render: (request: VerificationRequestResponse) =>
               request.status === 'PENDING' ? (
@@ -228,7 +237,7 @@ export function VerificationQueue({
                       decide(request, 'APPROVE');
                     }}
                   >
-                    Approve
+                    {t('verificationQueue.approve')}
                   </Button>
                   <Button
                     size="sm"
@@ -238,11 +247,11 @@ export function VerificationQueue({
                       setConfirming(request);
                     }}
                   >
-                    Reject
+                    {t('verificationQueue.reject')}
                   </Button>
                 </div>
               ) : (
-                <span className="muted">Decided</span>
+                <span className="muted">{t('verificationQueue.decided')}</span>
               ),
           },
         ]}
@@ -250,8 +259,8 @@ export function VerificationQueue({
         rowKey={(request) => request.id}
         empty={
           status === 'PENDING'
-            ? 'Nothing waiting. New requests appear here as members apply.'
-            : `No ${status.toLowerCase()} requests.`
+            ? t('verificationQueue.emptyPending')
+            : t('verificationQueue.emptyOther')
         }
       />
 
@@ -260,10 +269,12 @@ export function VerificationQueue({
         onClose={() => {
           setConfirming(undefined);
         }}
-        title="Reject this request?"
+        title={t('verificationQueue.rejectTitle')}
         description={
           confirming
-            ? `${confirming.requesterName ?? 'This person'} will not get access, and will be able to apply again.`
+            ? t('verificationQueue.rejectBody', {
+                name: confirming.requesterName ?? t('verificationQueue.thisPerson'),
+              })
             : undefined
         }
         footer={
@@ -282,7 +293,7 @@ export function VerificationQueue({
                 if (confirming) decide(confirming, 'REJECT');
               }}
             >
-              Reject request
+              {t('verificationQueue.rejectConfirm')}
             </Button>
           </>
         }

@@ -10,14 +10,20 @@ import { redirect } from 'next/navigation';
 
 import { TermForm } from '@/components/term-form';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, TermResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Terms · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolTerms.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolTermsPage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let terms: TermResponse[];
 
@@ -33,17 +39,15 @@ export default async function SchoolTermsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Terms"
-        description="The periods a report card covers. Ranges may not overlap, because an assessment has to belong to one term or none."
-      />
+      <PageHeader title={t('schoolTerms.title')} description={t('schoolTerms.description')} />
 
-      <section aria-label="Your terms" style={{ marginBottom: 'var(--ui-space-5)' }}>
+      <section
+        aria-label={t('schoolTerms.listLabel')}
+        style={{ marginBottom: 'var(--ui-space-5)' }}
+      >
         {terms.length === 0 ? (
           <Card>
-            <p style={{ margin: 0 }}>
-              You have not set up any terms yet. Until you do, nobody can issue a report card.
-            </p>
+            <p style={{ margin: 0 }}>{t('schoolTerms.none')}</p>
           </Card>
         ) : (
           <Card>
@@ -51,16 +55,16 @@ export default async function SchoolTermsPage() {
               <thead>
                 <tr>
                   <th scope="col" style={{ textAlign: 'left' }}>
-                    Term
+                    {t('schoolTerms.colTerm')}
                   </th>
                   <th scope="col" style={{ textAlign: 'left' }}>
-                    From
+                    {t('schoolTerms.colFrom')}
                   </th>
                   <th scope="col" style={{ textAlign: 'left' }}>
-                    To
+                    {t('schoolTerms.colTo')}
                   </th>
                   <th scope="col" style={{ textAlign: 'left' }}>
-                    Status
+                    {t('schoolTerms.colStatus')}
                   </th>
                 </tr>
               </thead>
@@ -73,9 +77,7 @@ export default async function SchoolTermsPage() {
                     {/* Said plainly, and with the reason: the dates are printed on documents
                         families are holding, so moving them would change what those documents
                         claim (FR-GRADE-031). */}
-                    <td>
-                      {term.frozen ? 'Cards issued — dates are now fixed' : 'No cards issued yet'}
-                    </td>
+                    <td>{term.frozen ? t('schoolTerms.frozen') : t('schoolTerms.notFrozen')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -85,7 +87,9 @@ export default async function SchoolTermsPage() {
       </section>
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-3)' }}>Add a term</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-3)' }}>
+          {t('schoolTerms.addHeading')}
+        </h2>
         <TermForm schoolId={account.id} />
       </Card>
     </>

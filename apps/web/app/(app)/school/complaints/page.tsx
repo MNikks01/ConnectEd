@@ -7,18 +7,23 @@ import { redirect } from 'next/navigation';
 
 import { FeedbackQueue } from '@/components/feedback-forms';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, FeedbackResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Complaints · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolComplaints.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
-const FILTERS = [
-  { value: '', label: 'All' },
-  { value: 'OPEN', label: 'Not yet read' },
-  { value: 'UNDER_REVIEW', label: 'Being looked at' },
-  { value: 'RESOLVED', label: 'Resolved' },
+const FILTERS: { value: string; label: MessageKey }[] = [
+  { value: '', label: 'schoolComplaints.all' },
+  { value: 'OPEN', label: 'schoolComplaints.open' },
+  { value: 'UNDER_REVIEW', label: 'schoolComplaints.underReview' },
+  { value: 'RESOLVED', label: 'schoolComplaints.resolved' },
 ];
 
 export default async function SchoolComplaintsPage({
@@ -26,6 +31,8 @@ export default async function SchoolComplaintsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { status = '' } = await searchParams;
 
   let items: FeedbackResponse[];
@@ -47,11 +54,14 @@ export default async function SchoolComplaintsPage({
   return (
     <>
       <PageHeader
-        title="Complaints and suggestions"
-        description="From parents and staff. The person who raised each one is named."
+        title={t('schoolComplaints.title')}
+        description={t('schoolComplaints.description')}
       />
 
-      <nav aria-label="Status" style={{ marginBottom: 'var(--ui-space-4)' }}>
+      <nav
+        aria-label={t('schoolComplaints.statusNav')}
+        style={{ marginBottom: 'var(--ui-space-4)' }}
+      >
         <ul className="filter-tabs">
           {FILTERS.map((filter) => (
             <li key={filter.value || 'all'}>
@@ -61,7 +71,7 @@ export default async function SchoolComplaintsPage({
                 }
                 aria-current={filter.value === status ? 'page' : undefined}
               >
-                {filter.label}
+                {t(filter.label)}
               </Link>
             </li>
           ))}

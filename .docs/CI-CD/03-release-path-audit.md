@@ -65,13 +65,42 @@ to open PRs — a larger permission than this needs. Finding #1 removes the cons
 
 ### 4. A renamed job silently blocks every pull request
 
-Branch protection requires five checks **by name**: `verify`, `e2e`, `observability-config`,
-`changeset-check`, `analyze (javascript-typescript)`. Rename a job — or change the CodeQL matrix
-language, which is what generates that last name — and the required check never reports. GitHub
-shows it as _expected_, indefinitely. Nothing errors; PRs simply stop being mergeable.
+Branch protection requires eight checks **by name**: `verify`, `e2e`, `observability-config`,
+`changeset-check`, `analyze (javascript-typescript)`, `secret-scan`, `restore-drill`, `images`.
+Rename a job — or change the CodeQL matrix language, which is what generates that fifth name — and
+the required check never reports. GitHub shows it as _expected_, indefinitely. Nothing errors; PRs
+simply stop being mergeable.
 
 **Accepted risk**, recorded here because the symptom points nowhere near the cause. If it happens,
 the fix is to update the required-checks list, not to debug CI.
+
+### 4b. A cancelled post-merge run reported as no run at all — **fixed 2026-08-11**
+
+This one is not a hypothetical: it happened, and a defect reached a release because of it.
+
+`ci.yml` set `cancel-in-progress: true` for every ref. On 2026-08-09 two pull requests merged
+**seventeen seconds apart**; the second merge's `development` run cancelled the first's. A cancelled
+check reports as _absent_, not as failed, so nothing anywhere said the branch had gone red — and it
+had: `/school/classes` scrolled sideways at 320px, and the next release inherited it.
+
+Three things were wrong at once, and all three are now fixed:
+
+| Problem                                                                                                               | Fix                                                                         |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Post-merge runs cancelled each other, destroying the record of whether a merge was good                               | `cancel-in-progress` is now true **only for `pull_request`** events         |
+| `strict: false` — a green pull request could describe a base that had since moved                                     | **`strict: true`** on `main` and `development`: branches must be up to date |
+| `secret-scan`, `restore-drill` and `images` ran but were **not required**, so a cancelled or failed one was invisible | All three are now required checks                                           |
+
+**The distinction worth keeping.** Superseding a _pull request_ run is correct — only the latest push
+to a proposal is worth checking. A **post-merge** run is not a check on a proposal; it is the record
+of whether a merge was good, and it must run to completion even when the next merge is already on
+its way.
+
+**What is still not covered.** `enforce_admins` remains **off**, deliberately: with one collaborator
+and zero required approvals, CI is the only gate, and an infrastructure outage in a required job
+would otherwise freeze the repository with no way in. It is one API call to turn on the day there is
+a second person — and it is the setting to reach for first if a red merge ever happens by hand
+rather than by cancellation.
 
 ### 5. The split-process deployment is never exercised — a real gap
 

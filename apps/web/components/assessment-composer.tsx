@@ -15,14 +15,17 @@ import { Field } from '@connected/ui';
 
 import { createAssessmentAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { MyTeachingSubjectResponse } from '@connected/types';
 
 function SubjectField({ subjects }: { subjects: MyTeachingSubjectResponse[] }) {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="subjectId"
-      label="Subject"
+      label={t('assessmentComposer.subject')}
       as="select"
       required
       error={useFieldError('subjectId')}
@@ -35,60 +38,68 @@ function SubjectField({ subjects }: { subjects: MyTeachingSubjectResponse[] }) {
 }
 
 function KindField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="kind"
-      label="Kind"
+      label={t('assessmentComposer.kind')}
       as="select"
       required
       error={useFieldError('kind')}
       options={[
-        { value: 'TEST', label: 'Test' },
-        { value: 'EXAM', label: 'Exam' },
-        { value: 'ASSIGNMENT', label: 'Assignment' },
-        { value: 'PRACTICAL', label: 'Practical' },
+        { value: 'TEST', label: t('assessmentComposer.kindTEST') },
+        { value: 'EXAM', label: t('assessmentComposer.kindEXAM') },
+        { value: 'ASSIGNMENT', label: t('assessmentComposer.kindASSIGNMENT') },
+        { value: 'PRACTICAL', label: t('assessmentComposer.kindPRACTICAL') },
       ]}
     />
   );
 }
 
 function TitleField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="title"
-      label="Assessment name"
+      label={t('assessmentComposer.name')}
       required
       maxLength={200}
       error={useFieldError('title')}
-      hint="What the class will see it called, like “Fractions test”."
+      hint={t('assessmentComposer.nameHint')}
     />
   );
 }
 
 function MaxScoreField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="maxScore"
-      label="Out of"
+      label={t('assessmentComposer.outOf')}
       required
       inputMode="decimal"
       error={useFieldError('maxScore')}
-      hint="The total every mark is read against."
+      hint={t('assessmentComposer.outOfHint')}
     />
   );
 }
 
 function OccurredOnField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="occurredOn"
-      label="Date sat"
+      label={t('assessmentComposer.dateSat')}
       type="date"
       required
       error={useFieldError('occurredOn')}
       // The day it was sat, not the day it is being entered — a teacher marking on Sunday is
       // recording Friday's test, and a report card ordered by the wrong date is wrong quietly.
-      hint="The day the class sat it, not today."
+      hint={t('assessmentComposer.dateSatHint')}
     />
   );
 }
@@ -100,18 +111,20 @@ export function AssessmentComposer({
   classId: string;
   subjects: MyTeachingSubjectResponse[];
 }) {
+  const { t } = useTranslations();
+
   if (subjects.length === 0) {
     // Not an empty form nobody can submit: a teacher with no subject in this class has nothing to
     // assess, and saying so is more use than a disabled control.
-    return <p>You are not allocated to a subject in this class, so there is nothing to assess.</p>;
+    return <p>{t('assessmentComposer.noSubjects')}</p>;
   }
 
   return (
     <ActionForm
       action={(formData) => createAssessmentAction(classId, formData)}
-      submitLabel="Create assessment"
-      pendingLabel="Creating…"
-      successMessage="Created. Enter the marks when you are ready — nobody sees them until you publish."
+      submitLabel={t('assessmentComposer.submit')}
+      pendingLabel={t('assessmentComposer.creating')}
+      successMessage={t('assessmentComposer.created')}
     >
       <SubjectField subjects={subjects} />
       <KindField />

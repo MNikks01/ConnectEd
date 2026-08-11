@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge, Button, Dialog, Table } from '@connected/ui';
+import { useTranslations } from './locale-provider';
 import { useState, useTransition } from 'react';
 
 import { revokeMemberAction } from '@/app/(app)/school/actions';
@@ -14,6 +15,8 @@ export function MemberRoster({
   schoolId: string;
   members: SchoolMemberResponse[];
 }) {
+  const { t } = useTranslations();
+
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -41,15 +44,15 @@ export function MemberRoster({
       ) : null}
 
       <Table
-        caption="Verified members"
+        caption={t('roster.caption')}
         captionVisible={false}
         columns={[
           {
             key: 'person',
-            header: 'Member',
+            header: t('roster.colMember'),
             render: (member: SchoolMemberResponse) => (
               <>
-                <div>{member.fullName ?? 'Unknown'}</div>
+                <div>{member.fullName ?? t('roster.unknown')}</div>
                 {member.handle ? (
                   <div className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
                     @{member.handle}
@@ -60,20 +63,20 @@ export function MemberRoster({
           },
           {
             key: 'role',
-            header: 'Role',
+            header: t('roster.colRole'),
             render: (member: SchoolMemberResponse) => <Badge tone="info">{member.role}</Badge>,
           },
           {
             key: 'scope',
-            header: 'Scope',
+            header: t('roster.colScope'),
             render: (member: SchoolMemberResponse) =>
               member.childName
                 ? `${member.childName} · ${member.className ?? '—'}`
-                : (member.className ?? 'School-wide'),
+                : (member.className ?? t('roster.schoolWide')),
           },
           {
             key: 'actions',
-            header: 'Actions',
+            header: t('roster.colActions'),
             align: 'end',
             render: (member: SchoolMemberResponse) => (
               <Button
@@ -84,7 +87,7 @@ export function MemberRoster({
                   setConfirming(member);
                 }}
               >
-                Remove
+                {t('roster.remove')}
               </Button>
             ),
           },
@@ -99,10 +102,12 @@ export function MemberRoster({
         onClose={() => {
           setConfirming(undefined);
         }}
-        title="Remove this member?"
+        title={t('roster.removeTitle')}
         description={
           confirming
-            ? `${confirming.fullName ?? 'This person'} loses access to this school immediately and would have to be verified again.`
+            ? t('roster.removeBody', {
+                name: confirming.fullName ?? t('roster.thisPerson'),
+              })
             : undefined
         }
         footer={
@@ -113,7 +118,7 @@ export function MemberRoster({
                 setConfirming(undefined);
               }}
             >
-              Cancel
+              {t('roster.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -121,7 +126,7 @@ export function MemberRoster({
                 if (confirming) revoke(confirming);
               }}
             >
-              Remove member
+              {t('roster.removeConfirm')}
             </Button>
           </>
         }
