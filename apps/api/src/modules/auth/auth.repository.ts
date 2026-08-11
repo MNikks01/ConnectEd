@@ -2,6 +2,8 @@
  * Auth persistence. **The only file in this module that touches Prisma** (`apps/api/CLAUDE.md`
  * rule 1) — the service depends on this interface, not on the client.
  */
+import { recordAccountActive, recordProductEvent } from '../../shared/analytics/product-events.js';
+
 import type { Db } from '../../shared/db/index.js';
 import type { LoginThrottle } from '../../generated/prisma/client.js';
 
@@ -205,32 +207,46 @@ export function createAuthRepository(db: Db): AuthRepository {
      * The plan is `connect`ed by code rather than looked up first: if the catalogue is missing,
      * registration fails loudly here instead of quietly producing a school nothing can price.
      */
-    createSchool: (input: CreateSchoolInput) =>
-      db.account.create({
-        data: {
-          email: input.email,
-          type: 'SCHOOL',
-          credential: { create: { passwordHash: input.passwordHash, algo: input.algo } },
-          schoolProfile: {
-            create: {
-              name: input.name,
-              subscription: {
-                create: {
-                  status: 'TRIALING',
-                  periodStart: input.trial.periodStart,
-                  periodEnd: input.trial.periodEnd,
-                  plan: { connect: { code: input.trial.planCode } },
+    /**
+     * A school, its profile, its trial, and the activation funnel's first step — one transaction,
+     * because a school that exists without an onboarding event is a hole in every later cohort.
+     */
+    createSchool: async (input: CreateSchoolInput) =>
+      db.$transaction(async (tx) => {
+        const account = await tx.account.create({
+          data: {
+            email: input.email,
+            type: 'SCHOOL',
+            credential: { create: { passwordHash: input.passwordHash, algo: input.algo } },
+            schoolProfile: {
+              create: {
+                name: input.name,
+                subscription: {
+                  create: {
+                    status: 'TRIALING',
+                    periodStart: input.trial.periodStart,
+                    periodEnd: input.trial.periodEnd,
+                    plan: { connect: { code: input.trial.planCode } },
+                  },
                 },
+                ...(input.adminName ? { adminName: input.adminName } : {}),
+                ...(input.phone ? { phone: input.phone } : {}),
+                ...(input.city ? { city: input.city } : {}),
+                ...(input.state ? { state: input.state } : {}),
+                ...(input.country ? { country: input.country } : {}),
               },
-              ...(input.adminName ? { adminName: input.adminName } : {}),
-              ...(input.phone ? { phone: input.phone } : {}),
-              ...(input.city ? { city: input.city } : {}),
-              ...(input.state ? { state: input.state } : {}),
-              ...(input.country ? { country: input.country } : {}),
             },
           },
-        },
-        select: { id: true },
+          select: { id: true },
+        });
+
+        await recordProductEvent(tx, {
+          type: 'school.onboarded',
+          accountId: account.id,
+          schoolId: account.id,
+        });
+
+        return account;
       }),
 
     findRefreshToken: async (tokenHash: string) => {
@@ -259,8 +275,21 @@ export function createAuthRepository(db: Db): AuthRepository {
       };
     },
 
+    /**
+     * The session write, and the activity stamp that rides with it (S9-15).
+     *
+     * One transaction because they are one fact: a session was issued to this account, today. If
+     * the stamp could fail on its own the north-star metric would undercount silently, which is
+     * the failure mode of every analytics pipeline that treats its writes as best-effort.
+     *
+     * `recordAccountActive` is deduped per account per UTC day, so this costs one extra insert on
+     * a first sign-in and a no-op on the ninety-six refreshes that follow it.
+     */
     storeRefreshToken: async (input: StoreRefreshTokenInput) => {
-      await db.refreshToken.create({ data: input });
+      await db.$transaction(async (tx) => {
+        await tx.refreshToken.create({ data: input });
+        await recordAccountActive(tx, input.accountId);
+      });
     },
 
     /**

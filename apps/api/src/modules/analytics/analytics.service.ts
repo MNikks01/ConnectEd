@@ -81,6 +81,14 @@ export function createAnalyticsService({
           ),
           verifiedMembers: row.verifiedMembers,
         },
+        activity: {
+          weeklyActiveMembers: row.weeklyActiveMembers,
+          // Null rather than 0 when a school has no verified members: a ratio over an empty
+          // denominator is not zero percent, it is not a ratio.
+          weeklyActiveRate:
+            row.verifiedMembers > 0 ? row.weeklyActiveMembers / row.verifiedMembers : null,
+          since: row.historyFrom,
+        },
         workflows: { leaveByStatus: row.leaveByStatus, feedbackByStatus: row.feedbackByStatus },
       };
     },

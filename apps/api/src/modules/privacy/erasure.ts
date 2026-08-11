@@ -194,6 +194,13 @@ export async function eraseAccount(
   // ---------------------------------------------------------------------
   // 3. Severance. Two updates, and everything else is left exactly as it is.
   // ---------------------------------------------------------------------
+  //
+  // `product_event` is severed rather than deleted, and it is worth saying why out loud because
+  // the instinct runs the other way. It is a durable record of *when* this person was active, and
+  // deleting it would rewrite the school's own history — one member erasing themselves would
+  // retroactively lower every weekly-active figure the school had ever been shown. The rows carry
+  // no content, only counts and ids, and the id they carry stops resolving to a person the moment
+  // the account is scrubbed below. Same reasoning, and the same shape, as `audit_log`.
 
   // The school keeps its record that somebody held a place; `REVOKED` is the state it already uses
   // for a member who has left, so every fan-out, roll and roster excludes them without a single

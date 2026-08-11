@@ -24,6 +24,8 @@ export interface AnalyticsRow {
   noticeReads: number;
   academicReads: number;
   verifiedMembers: number;
+  weeklyActiveMembers: number;
+  historyFrom: string;
   leaveByStatus: Record<string, number>;
   feedbackByStatus: Record<string, number>;
 }
@@ -44,6 +46,11 @@ function tally<T extends string>(
 export function createAnalyticsRepository(db: Db): AnalyticsRepository {
   return {
     gather: async ({ schoolId, from }) => {
+      // "Weekly active" is defined as a week, whatever window the rest of the page is showing.
+      // Rescaling it to a 90-day selector would produce a number with the same name and a
+      // different meaning, which is how a dashboard starts lying quietly.
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
       // Concurrent because they are independent reads on a pool, not statements in one
       // transaction. A school's dashboard is one request; eleven sequential round trips would be
       // eleven times the latency for no consistency the reader could perceive.
@@ -58,6 +65,8 @@ export function createAnalyticsRepository(db: Db): AnalyticsRepository {
         academicReads,
         leave,
         feedback,
+        weeklyActive,
+        earliestEvent,
       ] = await Promise.all([
         db.membership.groupBy({
           by: ['role'],
@@ -112,6 +121,37 @@ export function createAnalyticsRepository(db: Db): AnalyticsRepository {
           where: { schoolId, createdAt: { gte: from } },
           _count: { _all: true },
         }),
+        /**
+         * The north star (S9-15). Distinct accounts with an `account.active` row in the last
+         * seven days, restricted to this school's verified members — a person active at another
+         * school is not this school's active member.
+         *
+         * Seven days regardless of the window the rest of the page is showing: "weekly active" is
+         * defined as a week, and rescaling it to a 90-day selector would produce a number with the
+         * same name and a different meaning.
+         */
+        db.productEvent.findMany({
+          where: {
+            type: 'account.active',
+            occurredAt: { gte: weekAgo },
+            accountId: {
+              in: (
+                await db.membership.findMany({
+                  where: { schoolId, status: 'VERIFIED' },
+                  select: { accountId: true },
+                  distinct: ['accountId'],
+                })
+              ).map((row) => row.accountId),
+            },
+          },
+          select: { accountId: true },
+          distinct: ['accountId'],
+        }),
+        /** The earliest thing recorded, so the figure can say how much history it has. */
+        db.productEvent.findFirst({
+          orderBy: { occurredAt: 'asc' },
+          select: { occurredAt: true },
+        }),
       ]);
 
       const membershipByRole = tally(membership, (row: { role: string }) => row.role);
@@ -127,6 +167,8 @@ export function createAnalyticsRepository(db: Db): AnalyticsRepository {
         noticeReads,
         academicReads,
         verifiedMembers,
+        weeklyActiveMembers: weeklyActive.length,
+        historyFrom: (earliestEvent?.occurredAt ?? weekAgo).toISOString(),
         leaveByStatus: tally(leave, (row: { status: string }) => row.status),
         feedbackByStatus: tally(feedback, (row: { status: string }) => row.status),
       };
