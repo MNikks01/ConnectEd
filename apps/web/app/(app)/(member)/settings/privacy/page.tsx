@@ -9,15 +9,22 @@ import { Card, PageHeader } from '@connected/ui';
 import { redirect } from 'next/navigation';
 
 import { PrivacyPanel } from '@/components/privacy-panel';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { DataExportResponse, PrivacyStatusResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Your data · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('privacy.metaTitle') };
+}
+
 export const dynamic = 'force-dynamic';
 
 export default async function PrivacyPage() {
+  const { t } = await getTranslations();
+
   let status: PrivacyStatusResponse;
   let exports: DataExportResponse[];
 
@@ -36,28 +43,23 @@ export default async function PrivacyPage() {
 
   return (
     <>
-      <PageHeader
-        title="Your data"
-        description="A copy of everything we hold about you, and the way to have it deleted."
-      />
+      <PageHeader title={t('privacy.title')} description={t('privacy.description')} />
 
       <PrivacyPanel status={status} exports={exports} />
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>What we cannot undo</h2>
-        <p>
-          {/* Said here rather than left to a privacy notice nobody opens. The product should
-              describe what it can actually do — implying more is the failure worth avoiding. */}
-          Deleting your account does not reach a backup taken before it ran, a copy of your data you
-          have already downloaded, or a report somebody else has raised about you. Marks, registers
-          and report cards stay with your school: they are its records as much as yours, and in most
-          places it is required to keep them.
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          What goes is <strong>you</strong> — your profile, your handle, your posts and comments,
-          your messages, and your sign-in. Anything the school keeps afterwards shows{' '}
-          <em>“A former member”</em> where your name used to be.
-        </p>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('privacy.limitsHeading')}
+        </h2>
+        {/* Said here rather than left to a privacy notice nobody opens. The product should describe
+            what it can actually do — implying more is the failure worth avoiding.
+
+            The emphasis that used to be markup inside this paragraph is gone, and deliberately: a
+            translator cannot move a <strong> that is welded to an English word order, and a
+            sentence that has to be split into three fragments to keep one bold word is a sentence
+            no translator can render. */}
+        <p>{t('privacy.limitsBody')}</p>
+        <p style={{ marginBottom: 0 }}>{t('privacy.limitsWhatGoes')}</p>
       </Card>
     </>
   );

@@ -10,18 +10,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const TABS = [
-  { href: '/settings/profile', label: 'Profile' },
-  { href: '/settings/notifications', label: 'Notifications' },
-  { href: '/settings/security', label: 'Security' },
-  { href: '/settings/privacy', label: 'Your data' },
+import { useTranslations } from './locale-provider';
+
+import type { MessageKey } from '@/lib/i18n/translate';
+
+const TABS: { href: string; label: MessageKey }[] = [
+  { href: '/settings/profile', label: 'settings.profile' },
+  { href: '/settings/notifications', label: 'settings.notifications' },
+  { href: '/settings/security', label: 'settings.security' },
+  { href: '/settings/privacy', label: 'settings.privacy' },
 ];
 
 export function SettingsNav() {
+  const { t } = useTranslations();
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Settings">
+    <nav aria-label={t('settings.nav')}>
       <ul
         style={{
           listStyle: 'none',
@@ -37,7 +42,7 @@ export function SettingsNav() {
         {TABS.map((tab) => (
           <li key={tab.href}>
             <Link href={tab.href} aria-current={pathname === tab.href ? 'page' : undefined}>
-              {tab.label}
+              {t(tab.label)}
             </Link>
           </li>
         ))}

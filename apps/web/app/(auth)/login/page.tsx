@@ -1,10 +1,19 @@
 import Link from 'next/link';
 
+import { LocaleSwitcher } from '@/components/locale-switcher';
 import { LoginForm } from '@/components/login-form';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Sign in · GetConnected' };
+/**
+ * The tab title is generated per request so it follows the locale too — a page whose body is Hindi
+ * and whose tab says "Sign in" is half-translated in the one place a person keeps looking.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('login.metaTitle') };
+}
 
 export default async function LoginPage({
   searchParams,
@@ -12,27 +21,30 @@ export default async function LoginPage({
   searchParams: Promise<{ expired?: string }>;
 }) {
   const { expired } = await searchParams;
+  const { t } = await getTranslations();
 
   return (
     <main className="auth-shell">
       <div className="card auth-card">
-        <h1>Sign in</h1>
-        <p className="muted">Welcome back to GetConnected.</p>
+        <h1>{t('login.title')}</h1>
+        <p className="muted">{t('login.welcome')}</p>
 
         {expired ? (
           <p className="form-error" role="status">
-            Your session expired. Please sign in again.
+            {t('login.sessionExpired')}
           </p>
         ) : null}
 
         <LoginForm />
 
         <p className="muted">
-          No account yet? <Link href="/register">Create one</Link>.
+          {t('login.noAccount')} <Link href="/register">{t('login.createOne')}</Link>.
         </p>
         <p className="muted" style={{ fontSize: '0.85rem' }}>
-          School accounts sign in here on the web. They cannot be used in the mobile app.
+          {t('login.schoolWebOnly')}
         </p>
+
+        <LocaleSwitcher />
       </div>
     </main>
   );

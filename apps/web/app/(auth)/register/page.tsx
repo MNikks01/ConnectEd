@@ -1,10 +1,15 @@
 import Link from 'next/link';
 
 import { AuthForm, FormField } from '@/components/auth-form';
+import { LocaleSwitcher } from '@/components/locale-switcher';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Create an account · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('register.metaTitle') };
+}
 
 /**
  * Rendered per request, for the same reason as the landing page: the content security policy's
@@ -14,44 +19,51 @@ export const metadata: Metadata = { title: 'Create an account · GetConnected' }
  */
 export const dynamic = 'force-dynamic';
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const { t } = await getTranslations();
+
   return (
     <main className="auth-shell">
       <div className="card auth-card">
-        <h1>Create an account</h1>
-        <p className="muted">
-          You will start as a general member. Academic roles are requested afterwards and confirmed
-          by your school.
-        </p>
+        <h1>{t('register.title')}</h1>
+        <p className="muted">{t('register.intro')}</p>
 
         <AuthForm
           action="/api/auth/register"
-          submitLabel="Create account"
-          pendingLabel="Creating account…"
+          submitLabel={t('register.submit')}
+          pendingLabel={t('register.submitting')}
           redirectTo="/home"
         >
-          <FormField name="fullName" label="Full name" autoComplete="name" required />
+          <FormField name="fullName" label={t('register.fullName')} autoComplete="name" required />
           <FormField
             name="handle"
-            label="Handle"
+            label={t('register.handle')}
             autoComplete="username"
             required
-            hint="Lowercase letters, numbers, dots, and underscores."
+            hint={t('register.handleHint')}
           />
-          <FormField name="email" label="Email" type="email" autoComplete="email" required />
+          <FormField
+            name="email"
+            label={t('register.email')}
+            type="email"
+            autoComplete="email"
+            required
+          />
           <FormField
             name="password"
-            label="Password"
+            label={t('register.password')}
             type="password"
             autoComplete="new-password"
             required
-            hint="At least 12 characters. A memorable phrase beats a short complicated one."
+            hint={t('register.passwordHint')}
           />
         </AuthForm>
 
         <p className="muted">
-          Already have an account? <Link href="/login">Sign in</Link>.
+          {t('register.haveAccount')} <Link href="/login">{t('register.signIn')}</Link>.
         </p>
+
+        <LocaleSwitcher />
       </div>
     </main>
   );

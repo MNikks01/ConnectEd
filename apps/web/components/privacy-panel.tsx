@@ -27,16 +27,24 @@ import {
   requestErasureAction,
   requestExportAction,
 } from '@/app/(app)/(member)/actions';
+import { useTranslations } from '@/components/locale-provider';
 
+import type { MessageKey, Translator } from '@/lib/i18n/translate';
+import type { Locale } from '@/lib/i18n/locales';
 import type { StatusTone } from '@connected/ui';
 import type { DataExportResponse, PrivacyStatusResponse } from '@connected/types';
 
-const STATUS_LABEL: Record<DataExportResponse['status'], string> = {
-  PENDING: 'Being prepared',
-  BUILDING: 'Being prepared',
-  READY: 'Ready to download',
-  FAILED: 'Failed',
-  EXPIRED: 'Expired',
+/**
+ * `PENDING` and `BUILDING` deliberately share one label. The distinction is real to the worker and
+ * meaningless to the person waiting, and inventing two words for it would only invite a translator
+ * to find two that differ.
+ */
+const STATUS_LABEL: Record<DataExportResponse['status'], MessageKey> = {
+  PENDING: 'privacy.statusPending',
+  BUILDING: 'privacy.statusPending',
+  READY: 'privacy.statusReady',
+  FAILED: 'privacy.statusFailed',
+  EXPIRED: 'privacy.statusExpired',
 };
 
 function toneFor(status: DataExportResponse['status']): StatusTone {
@@ -46,19 +54,29 @@ function toneFor(status: DataExportResponse['status']): StatusTone {
   return 'info';
 }
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
+/**
+ * The locale is passed rather than left to `undefined`. `undefined` means "whatever the browser is
+ * set to", which on a shared staffroom machine is not the language the person chose in this
+ * product — a Hindi page with an English date on it, from the one call that looked harmless.
+ */
+function formatDate(value: string, locale: Locale): string {
+  return new Date(value).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 }
 
-function formatSize(bytes: number | null): string {
+/** The unit is part of the sentence, so it comes from the catalogue rather than being appended. */
+function formatSize(bytes: number | null, t: Translator, locale: Locale): string {
   if (bytes === null) return '';
-  if (bytes < 1024) return `${String(bytes)} bytes`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+  const number = (value: number, digits = 0) =>
+    value.toLocaleString(locale, { maximumFractionDigits: digits });
+
+  if (bytes < 1024) return t('privacy.bytes', { count: number(bytes) });
+  if (bytes < 1024 * 1024) return t('privacy.kilobytes', { count: number(bytes / 1024) });
+  return t('privacy.megabytes', { count: number(bytes / (1024 * 1024), 1) });
 }
 
 export function PrivacyPanel({
@@ -68,6 +86,7 @@ export function PrivacyPanel({
   status: PrivacyStatusResponse;
   exports: DataExportResponse[];
 }) {
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
@@ -90,7 +109,7 @@ export function PrivacyPanel({
         // below reflect what actually happened rather than what was optimistically assumed.
         router.refresh();
       } else {
-        setError(result.message ?? 'Something went wrong.');
+        setError(result.message ?? t('common.somethingWentWrong'));
       }
     });
   }
@@ -101,35 +120,30 @@ export function PrivacyPanel({
       {message ? <Alert tone="success">{message}</Alert> : null}
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Download your data</h2>
-        <p>
-          One file containing your profile, your memberships, your marks, your attendance, your
-          report cards, and everything you have written. It takes a moment to prepare, and the link
-          works for seven days.
-        </p>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('privacy.exportHeading')}
+        </h2>
+        <p>{t('privacy.exportIntro')}</p>
 
         <Button
           loading={pending}
           disabled={outstanding || erasure !== null}
           onClick={() => {
-            act(
-              () => requestExportAction(),
-              'We are preparing your file. This page will show it when it is ready.',
-            );
+            act(() => requestExportAction(), t('privacy.requestedNotice'));
           }}
         >
-          Request a copy
+          {t('privacy.requestCopy')}
         </Button>
 
         {erasure ? (
           <p className="muted" style={{ marginBottom: 0 }}>
-            Not while your account is scheduled for deletion — cancel that first.
+            {t('privacy.notWhileErasing')}
           </p>
         ) : null}
 
         {exports.length === 0 ? (
           <p className="muted" style={{ marginBottom: 0 }}>
-            You have not asked for a copy before.
+            {t('privacy.noExportsYet')}
           </p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
@@ -143,12 +157,17 @@ export function PrivacyPanel({
                   alignItems: 'center',
                 }}
               >
-                <Badge tone={toneFor(row.status)}>{STATUS_LABEL[row.status]}</Badge>
-                <span>Requested {formatDate(row.requestedAt)}</span>
+                <Badge tone={toneFor(row.status)}>{t(STATUS_LABEL[row.status])}</Badge>
+                <span>
+                  {t('privacy.requestedOn', { date: formatDate(row.requestedAt, locale) })}
+                </span>
 
                 {row.status === 'READY' && row.expiresAt ? (
                   <span className="muted">
-                    {formatSize(row.sizeBytes)} · available until {formatDate(row.expiresAt)}
+                    {t('privacy.availableUntil', {
+                      size: formatSize(row.sizeBytes, t, locale),
+                      date: formatDate(row.expiresAt, locale),
+                    })}
                   </span>
                 ) : null}
 
@@ -172,12 +191,12 @@ export function PrivacyPanel({
                           // would leave it in the page source and in browser history.
                           window.location.assign(result.url);
                         } else {
-                          setError(result.message ?? 'That file could not be fetched.');
+                          setError(result.message ?? t('privacy.downloadFailed'));
                         }
                       });
                     }}
                   >
-                    Download
+                    {t('privacy.download')}
                   </Button>
                 ) : null}
               </li>
@@ -187,49 +206,40 @@ export function PrivacyPanel({
       </Card>
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Delete your account</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('privacy.eraseHeading')}</h2>
 
         {!status.mayErase ? (
-          <p style={{ marginBottom: 0 }}>
-            {/* Explained rather than hidden, for the same reason the security page explains who may
-                enrol in 2FA: a bare absence reads as a missing feature. */}
-            A school account cannot be deleted here. Its classes, registers and report cards belong
-            to its pupils and their families as much as to the institution, so closing one is a
-            conversation rather than a button. Get in touch and we will walk through it.
-          </p>
+          // Explained rather than hidden, for the same reason the security page explains who may
+          // enrol in 2FA: a bare absence reads as a missing feature.
+          <p style={{ marginBottom: 0 }}>{t('privacy.schoolCannotErase')}</p>
         ) : erasure ? (
           <>
             <Alert tone="warning">
-              Your account is scheduled for deletion on{' '}
-              <strong>{formatDate(erasure.scheduledFor)}</strong>. Until then everything works
-              normally, and you can stop it.
+              {t('privacy.scheduledOn', { date: formatDate(erasure.scheduledFor, locale) })}
             </Alert>
 
             <Button
               variant="secondary"
               loading={pending}
               onClick={() => {
-                act(() => cancelErasureAction(), 'Your account will not be deleted.');
+                act(() => cancelErasureAction(), t('privacy.cancelledNotice'));
               }}
             >
-              Keep my account
+              {t('privacy.keepAccount')}
             </Button>
           </>
         ) : (
           <>
-            <p>
-              We will wait <strong>30 days</strong> before deleting anything, and you can change
-              your mind at any point in that time. After that it cannot be undone.
-            </p>
+            <p>{t('privacy.graceExplained')}</p>
 
             <Field
-              label="Type ERASE to confirm"
+              label={t('privacy.confirmLabel')}
               name="confirm"
               value={confirm}
               onChange={(event) => {
                 setConfirm(event.target.value);
               }}
-              hint="A deliberate speed bump before the one thing on this site that cannot be reversed."
+              hint={t('privacy.confirmHint')}
             />
 
             <Button
@@ -237,14 +247,11 @@ export function PrivacyPanel({
               loading={pending}
               disabled={confirm !== 'ERASE'}
               onClick={() => {
-                act(
-                  () => requestErasureAction(confirm),
-                  'Your account is scheduled for deletion. You can stop it at any point in the next 30 days.',
-                );
+                act(() => requestErasureAction(confirm), t('privacy.scheduledNotice'));
                 setConfirm('');
               }}
             >
-              Schedule deletion
+              {t('privacy.scheduleDeletion')}
             </Button>
           </>
         )}

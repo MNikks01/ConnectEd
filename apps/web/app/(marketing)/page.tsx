@@ -12,26 +12,33 @@
 import { Card } from '@connected/ui';
 import Link from 'next/link';
 
+import { LocaleSwitcher } from '@/components/locale-switcher';
+import { getTranslations } from '@/lib/i18n/server';
+
 export const dynamic = 'force-dynamic';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { t } = await getTranslations();
+
   return (
     <main>
-      <h1>GetConnected</h1>
-      <p className="muted">
-        The school-community platform connecting students, parents, teachers, and schools.
-      </p>
+      <h1>{t('marketing.title')}</h1>
+      <p className="muted">{t('marketing.tagline')}</p>
 
       <Card>
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Get started</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('marketing.getStarted')}</h2>
         <p>
-          <Link href="/login">Sign in</Link> or <Link href="/register">create an account</Link>.
+          <Link href="/login">{t('marketing.signIn')}</Link> {t('marketing.or')}{' '}
+          <Link href="/register">{t('marketing.createAccount')}</Link>.
         </p>
         <p className="muted" style={{ fontSize: 'var(--ui-text-sm)', marginBottom: 0 }}>
-          Schools use the web portal. Students, parents, and teachers can use the web or the mobile
-          app.
+          {t('marketing.webOnlyNote')}
         </p>
       </Card>
+
+      {/* On the landing page rather than only behind a sign-in: somebody deciding whether this
+          product speaks their language has not got an account yet. */}
+      <LocaleSwitcher />
     </main>
   );
 }

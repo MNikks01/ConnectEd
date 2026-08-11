@@ -10,18 +10,25 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { useTranslations } from './locale-provider';
 import { LogoutButton } from './logout-button';
 
-const LINKS = [
-  { href: '/home', label: 'Home' },
-  { href: '/notices', label: 'Notices' },
-  { href: '/events', label: 'Events' },
-  { href: '/leave', label: 'Leave' },
-  { href: '/complaints', label: 'Complaints' },
-  { href: '/social', label: 'Social' },
-  { href: '/messages', label: 'Messages' },
-  { href: '/notifications', label: 'Notifications' },
-  { href: '/settings/notifications', label: 'Settings' },
+import type { MessageKey } from '@/lib/i18n/translate';
+
+/**
+ * The label is a key, not a word. Everything else about the list — order, hrefs, the bell — is the
+ * same in every language; only the rendering changes, and it changes in one place below.
+ */
+const LINKS: { href: string; label: MessageKey }[] = [
+  { href: '/home', label: 'nav.home' },
+  { href: '/notices', label: 'nav.notices' },
+  { href: '/events', label: 'nav.events' },
+  { href: '/leave', label: 'nav.leave' },
+  { href: '/complaints', label: 'nav.complaints' },
+  { href: '/social', label: 'nav.social' },
+  { href: '/messages', label: 'nav.messages' },
+  { href: '/notifications', label: 'nav.notifications' },
+  { href: '/settings/notifications', label: 'nav.settings' },
 ];
 
 export function MemberNav({
@@ -34,12 +41,15 @@ export function MemberNav({
   /** ConnectEd staff (ADR-0017). Adds one link; the API authorizes every call independently. */
   isPlatformAdmin?: boolean;
 }) {
+  const { t } = useTranslations();
   const pathname = usePathname();
 
   // Appended rather than woven in: the console is a staff tool that happens to be reached from a
   // member session, and putting it between Social and Messages would suggest it is part of the
   // product a school bought.
-  const links = isPlatformAdmin ? [...LINKS, { href: '/admin/reports', label: 'Reports' }] : LINKS;
+  const links = isPlatformAdmin
+    ? [...LINKS, { href: '/admin/reports', label: 'nav.reports' as MessageKey }]
+    : LINKS;
 
   return (
     <div className="school-nav">
@@ -48,7 +58,7 @@ export function MemberNav({
         <span className="muted school-nav__role">GetConnected</span>
       </div>
 
-      <nav aria-label="Main">
+      <nav aria-label={t('nav.main')}>
         <ul className="school-nav__list">
           {links.map((link) => {
             // Settings is a set of pages under one link, so the tab stays current on all of
@@ -56,8 +66,11 @@ export function MemberNav({
             const section = link.href.startsWith('/settings') ? '/settings' : link.href;
             const active = pathname === section || pathname.startsWith(`${section}/`);
             const bell = link.href === '/notifications';
+            const text = t(link.label);
+            // Interpolated from the catalogue rather than concatenated: word order is not universal,
+            // and "3 unread, Notifications" is the correct order in some languages.
             const label =
-              bell && unreadCount > 0 ? `${link.label}, ${unreadCount} unread` : link.label;
+              bell && unreadCount > 0 ? t('nav.unread', { label: text, count: unreadCount }) : text;
 
             return (
               <li key={link.href}>
@@ -66,7 +79,7 @@ export function MemberNav({
                   aria-current={active ? 'page' : undefined}
                   aria-label={label}
                 >
-                  {link.label}
+                  {text}
                   {bell && unreadCount > 0 ? (
                     <span className="badge-count" aria-hidden="true">
                       {unreadCount > 99 ? '99+' : unreadCount}

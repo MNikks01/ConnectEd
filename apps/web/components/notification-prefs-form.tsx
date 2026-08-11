@@ -15,16 +15,18 @@ import { Button } from '@connected/ui';
 import { useState, useTransition } from 'react';
 
 import { updateNotificationPrefsAction } from '@/app/(app)/(member)/actions';
+import { useTranslations } from '@/components/locale-provider';
 
+import type { MessageKey } from '@/lib/i18n/translate';
 import type { NotificationPrefResponse } from '@connected/types';
 
-const LABELS: Record<string, string> = {
-  ACADEMIC: 'Homework, assignments and projects',
-  NOTICE: 'School notices',
-  EVENT: 'Events',
-  LEAVE: 'Leave applications and decisions',
-  SOCIAL: 'Follows, connections, likes and comments',
-  MESSAGE: 'Direct messages',
+const LABELS: Record<string, MessageKey> = {
+  ACADEMIC: 'notificationPrefs.academic',
+  NOTICE: 'notificationPrefs.notice',
+  EVENT: 'notificationPrefs.event',
+  LEAVE: 'notificationPrefs.leaveCategory',
+  SOCIAL: 'notificationPrefs.socialCategory',
+  MESSAGE: 'notificationPrefs.message',
 };
 
 export function NotificationPrefsForm({
@@ -32,6 +34,7 @@ export function NotificationPrefsForm({
 }: {
   preferences: NotificationPrefResponse[];
 }) {
+  const { t } = useTranslations();
   const [current, setCurrent] = useState(preferences);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | undefined>();
@@ -66,17 +69,20 @@ export function NotificationPrefsForm({
                   toggle(preference.category);
                 }}
               />
-              <span>{LABELS[preference.category] ?? preference.category}</span>
+              <span>
+                {/* The category falls back to its own code rather than to English: an untranslated
+                    key is a bug to notice, and "MESSAGE" is at least unambiguous about being one. */}
+                {preference.category in LABELS
+                  ? t(LABELS[preference.category] as MessageKey)
+                  : preference.category}
+              </span>
             </label>
           </li>
         ))}
       </ul>
 
-      <p className="muted">
-        {/* Said plainly. An absence with no explanation reads as a bug. */}
-        You will always be told about a verification decision and anything to do with your school’s
-        subscription — those are answers to things you asked for, not announcements.
-      </p>
+      {/* Said plainly. An absence with no explanation reads as a bug. */}
+      <p className="muted">{t('notificationPrefs.alwaysTold')}</p>
 
       <Button
         loading={pending}
@@ -84,12 +90,12 @@ export function NotificationPrefsForm({
           setError(undefined);
           startTransition(async () => {
             const result = await updateNotificationPrefsAction(current);
-            if (result.ok) setMessage('Saved.');
+            if (result.ok) setMessage(t('notificationPrefs.saved'));
             else setError(result.message);
           });
         }}
       >
-        Save preferences
+        {t('notificationPrefs.save')}
       </Button>
     </div>
   );
