@@ -121,6 +121,26 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
   app.disable('x-powered-by');
 
   app.use(helmet());
+
+  /**
+   * Nothing this API returns to an authenticated caller may be cached (ASVS 8.1.1, found walking
+   * L2 on 2026-08-11).
+   *
+   * Helmet has not set cache headers since v4, so every authorized JSON response — a register, a
+   * mark, a child's report card — went out with no directives at all. What decides whether a
+   * shared cache keeps it is then heuristic freshness, which is a decision made by a proxy nobody
+   * in this project configured, about data belonging to children.
+   *
+   * `no-store` rather than `no-cache`: the latter permits storage and requires revalidation, and
+   * "stored but revalidated" is still a copy on a machine between us and the reader.
+   *
+   * The unversioned operational endpoints are exempt — `/healthz` and `/readyz` carry no personal
+   * data and are polled hard — and JWKS sets its own long `max-age` deliberately, further down.
+   */
+  app.use(API_PREFIX, (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.use(
     cors({
       origin: config.WEB_ORIGIN,

@@ -190,6 +190,44 @@ Answer when convenient. Each is recorded in its PRD as an open question.
 
 ---
 
+### B-14 — Should a password be checked against known breaches?
+
+**Blocks:** nothing today. Raised by the ASVS L2 walk on 2026-08-11 (requirement 2.1.7), the one
+finding of five that is not mine to settle — see
+[`Security/07-asvs-l2.md`](../Security/07-asvs-l2.md).
+
+**The gap.** The password rules are otherwise deliberate and good: 12 characters minimum, no
+composition rules, argon2id at the recommended floor, and the reset flow reuses the registration
+schema so it cannot become the weak way in. What is missing is the check that catches the failure
+that actually happens — a 14-character password that is already in a wordlist.
+
+**Why it is yours.** The standard implementation is Have I Been Pwned's range API, and it puts a
+**third party in the authentication path of a product handling children's data**:
+
+- the first five characters of a SHA-1 of the password go to an external service on every
+  registration, login and password change (k-anonymity — the password never leaves, but the
+  request does);
+- it needs a timeout and a decision about failure: **fail open**, and the check is advisory; **fail
+  closed**, and an outage of somebody else's service locks every user out;
+- it becomes a sub-processor with a data-processing record (`Security/04-compliance.md`).
+
+**Three options, and a recommendation.**
+
+| Option                           | What it costs                                        | Coverage                 |
+| -------------------------------- | ---------------------------------------------------- | ------------------------ |
+| **HIBP range API** (recommended) | A third party in the auth path; a fail-open decision | Best available           |
+| A bundled top-100k wordlist      | ~1 MB in the image; no third party; goes stale       | Catches the common cases |
+| Accept the gap                   | Nothing                                              | None                     |
+
+**Recommendation: the wordlist, and revisit at real scale.** It removes the third party entirely,
+catches the passwords that are actually reused, and needs no failure policy. HIBP is better and its
+cost is one that reads differently when the users are children.
+
+**What I do once it lands:** the check goes in the shared password schema, so registration, reset
+and change get it in one place and cannot drift apart.
+
+---
+
 ## Accounts and access only you can create
 
 None of these are decisions; they are things with your name on the bill.
@@ -227,28 +265,29 @@ Worth doing before B-1, not after: infrastructure is where a second reader is wo
 
 Listed so the boundary is clear. None of these need you.
 
-| #    | What                                              | State                                                                                                                         |
-| ---- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| B-9  | **Export and erasure** (NFR-006)                  | ✅ **Built 2026-08-11.** Both flows live — see [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) and ADR-0020 |
-| B-10 | **Internationalisation** (NFR-016)                | Not started. `Class.medium` already offers Hindi; the product models the language and cannot speak it                         |
-| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                   |
-| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | A security review exists and found real defects; the standard has never been walked formally                                  |
-| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                            |
+| #    | What                                              | State                                                                                                                          |
+| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| B-9  | **Export and erasure** (NFR-006)                  | ✅ **Built 2026-08-11.** Both flows live — see [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) and ADR-0020  |
+| B-10 | **Internationalisation** (NFR-016)                | Not started. `Class.medium` already offers Hindi; the product models the language and cannot speak it                          |
+| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                    |
+| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | ✅ **Walked 2026-08-11** — five findings, four fixed, one is B-14 above. [`Security/07-asvs-l2.md`](../Security/07-asvs-l2.md) |
+| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                             |
 
 ---
 
 ## Summary
 
-| Item | What                   | Urgency                                                 |
-| ---- | ---------------------- | ------------------------------------------------------- |
-| B-1  | Where production runs  | **Highest.** Unblocks two sprint items and four NFRs    |
-| B-8  | A second reviewer      | **High**, and higher still before B-1 lands             |
-| B-4  | Retention              | **Rising.** Costs more every term, has a legal edge     |
-| B-3  | Mail transport         | Deferred by you; FR-AUTH-009 is built and undeliverable |
-| B-2  | Payment provider       | Deferred by you                                         |
-| B-5  | Plan limits and prices | Whenever — provisional numbers are enforced today       |
-| B-6  | Four product questions | Whenever                                                |
-| B-7  | Accounts and DNS       | As each of B-1 … B-3 is answered                        |
+| Item | What                    | Urgency                                                 |
+| ---- | ----------------------- | ------------------------------------------------------- |
+| B-1  | Where production runs   | **Highest.** Unblocks two sprint items and four NFRs    |
+| B-8  | A second reviewer       | **High**, and higher still before B-1 lands             |
+| B-4  | Retention               | **Rising.** Costs more every term, has a legal edge     |
+| B-3  | Mail transport          | Deferred by you; FR-AUTH-009 is built and undeliverable |
+| B-2  | Payment provider        | Deferred by you                                         |
+| B-5  | Plan limits and prices  | Whenever — provisional numbers are enforced today       |
+| B-6  | Four product questions  | Whenever                                                |
+| B-14 | Breached-password check | **New.** Whenever — the gap is recorded, not unknown    |
+| B-7  | Accounts and DNS        | As each of B-1 … B-3 is answered                        |
 
 The engineering position is straightforward: **there is no unblocked feature work left that anybody
 asked for.** What remains is a deployment, two integrations behind your deferrals, and — since

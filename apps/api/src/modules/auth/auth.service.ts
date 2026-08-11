@@ -169,9 +169,20 @@ function generateRecoveryCode(): string {
  *
  * Not a blanket "everyone may": every enrolled account is one more person who can be locked out by
  * a lost phone, and offering it where it buys little is how a support burden is created.
+ *
+ * **Platform admins are the third case, and they were missing** (ASVS 4.3.1, found walking L2 on
+ * 2026-08-11). `isPlatformAdmin` is a column independent of `type` and `role`, so ConnectEd staff
+ * holding the moderation queue — the most privileged surface in the product (ADR-0017), which
+ * reads reports *about* people at schools — could not enrol at all unless they happened also to be
+ * a school account or a principal. The one interface the standard singles out for MFA was the one
+ * that could not have it.
+ *
+ * It is checked from the database rather than from the actor for the same reason the queue's own
+ * policy is: a claim is only as trustworthy as the narrowest place that mints one, and the
+ * integration suite signs its own tokens.
  */
-function mayEnrolInTwoFactor(actor: Actor): boolean {
-  return actor.accountType === 'SCHOOL' || actor.role === 'PRINCIPAL';
+function mayEnrolInTwoFactor(actor: Actor, isPlatformAdmin: boolean): boolean {
+  return actor.accountType === 'SCHOOL' || actor.role === 'PRINCIPAL' || isPlatformAdmin;
 }
 
 function backoffFor(failedCount: number): Date | null {
@@ -492,8 +503,15 @@ export function createAuthService({
     },
 
     startTwoFactorEnrolment: async (actor) => {
-      if (!mayEnrolInTwoFactor(actor)) {
-        throw new ForbiddenError('Two-factor authentication is for school and principal accounts.');
+      // Read first: eligibility now depends on `isPlatformAdmin`, which is deliberately not a
+      // token claim (ADR-0017).
+      const account = await repository.findActorAccount(actor.accountId);
+      if (!account) throw new UnauthenticatedError();
+
+      if (!mayEnrolInTwoFactor(actor, account.isPlatformAdmin)) {
+        throw new ForbiddenError(
+          'Two-factor authentication is for school, principal and ConnectEd staff accounts.',
+        );
       }
 
       if (!secretBox) {
@@ -501,9 +519,6 @@ export function createAuthService({
         // plaintext credentials is worse than one that says it is unavailable.
         throw new DependencyUnavailableError('Two-factor authentication is not configured.');
       }
-
-      const account = await repository.findActorAccount(actor.accountId);
-      if (!account) throw new UnauthenticatedError();
 
       const secret = generateTotpSecret();
       await repository.startTwoFactorEnrolment(actor.accountId, secretBox.seal(secret));
