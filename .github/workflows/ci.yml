@@ -9,9 +9,19 @@ on:
   push:
     branches: [development]
 
+# Superseding a *pull request* run is right: only the latest push to a branch is worth checking,
+# and the older run is answering a question nobody is asking any more.
+#
+# Superseding a **push to `development`** is not, and it cost this repository a red base. Two pull
+# requests merged seventeen seconds apart on 2026-08-09; the second merge's run cancelled the
+# first's, and a cancelled check reports as *absent* rather than as failed — so nothing anywhere
+# said the branch had gone red, and the next release inherited a defect nobody had been told about.
+#
+# A post-merge run is not a check on a proposal, it is the record of whether a merge was good. It
+# runs to completion even when another merge is already on its way.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Read-only by default. CI only ever checks out and runs tests; a token that can also write to the
 # repository is a token a compromised dependency can write to the repository with. Jobs that need
