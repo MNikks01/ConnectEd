@@ -19,7 +19,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "//postinstall": "The client is generated into src/ and gitignored, so it must be rebuilt after install \u2014 CI type-checks before anything else could generate it.",
+    "//postinstall": "The client is generated into src/ and gitignored, so it must be rebuilt after install — CI type-checks before anything else could generate it.",
     "postinstall": "prisma generate",
     "worker": "node dist/worker.js",
     "worker:dev": "tsx watch --env-file-if-exists=.env src/worker.ts",
