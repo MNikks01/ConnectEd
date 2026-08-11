@@ -15,27 +15,32 @@ import { Field } from '@connected/ui';
 
 import { createTermAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 function NameField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="name"
-      label="Name"
+      label={t('termForm.name')}
       required
       maxLength={60}
       error={useFieldError('name')}
       // Free text on purpose: "Term 1", "Michaelmas", "First Semester" are all somebody's real
       // answer, and a fixed list would be wrong for most of them.
-      hint="Whatever your school calls it — “Term 1”, “Michaelmas”."
+      hint={t('termForm.nameHint')}
     />
   );
 }
 
 function StartField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="startDate"
-      label="First day"
+      label={t('termForm.firstDay')}
       type="date"
       required
       error={useFieldError('startDate')}
@@ -44,25 +49,29 @@ function StartField() {
 }
 
 function EndField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="endDate"
-      label="Last day"
+      label={t('termForm.lastDay')}
       type="date"
       required
       error={useFieldError('endDate')}
-      hint="Terms may not overlap — an assessment has to belong to one term or none."
+      hint={t('termForm.lastDayHint')}
     />
   );
 }
 
 export function TermForm({ schoolId }: { schoolId: string }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={(formData) => createTermAction(schoolId, formData)}
-      submitLabel="Add the term"
-      pendingLabel="Adding…"
-      successMessage="Added. Class teachers can now issue report cards against it."
+      submitLabel={t('termForm.submit')}
+      pendingLabel={t('termForm.adding')}
+      successMessage={t('termForm.added')}
     >
       <NameField />
       <StartField />

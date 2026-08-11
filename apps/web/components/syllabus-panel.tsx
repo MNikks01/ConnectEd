@@ -11,27 +11,33 @@ import { Field } from '@connected/ui';
 
 import { recordSyllabusAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { formatShortDate } from '@/lib/i18n/format';
+import { useTranslations } from './locale-provider';
 
 import type { SyllabusCoverageResponse } from '@connected/types';
 
 function TopicField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="topic"
-      label="Topic"
+      label={t('syllabusPanel.topic')}
       required
       maxLength={200}
       error={useFieldError('topic')}
-      hint="Recording the same topic again updates it."
+      hint={t('syllabusPanel.topicHint')}
     />
   );
 }
 
 function PercentField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="percent"
-      label="Covered (%)"
+      label={t('syllabusPanel.covered')}
       type="number"
       min={0}
       max={100}
@@ -66,13 +72,18 @@ export function SyllabusPanel({
   coverage: SyllabusCoverageResponse;
   canRecord: boolean;
 }) {
+  const { t, locale } = useTranslations();
+
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
       <div>
         <p style={{ margin: '0 0 var(--ui-space-2)' }}>
           <strong>{coverage.overallPercent}%</strong> covered overall
         </p>
-        <CoverageBar percent={coverage.overallPercent} label={coverage.subjectName ?? 'Subject'} />
+        <CoverageBar
+          percent={coverage.overallPercent}
+          label={coverage.subjectName ?? t('syllabusPanel.subjectFallback')}
+        />
       </div>
 
       {coverage.topics.length === 0 ? (
@@ -97,8 +108,7 @@ export function SyllabusPanel({
               <CoverageBar percent={topic.percent} label={topic.topic} />
 
               <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: 'var(--ui-text-sm)' }}>
-                {topic.updatedByName ?? 'Staff'} ·{' '}
-                {new Date(topic.updatedAt).toLocaleDateString('en-GB')}
+                {topic.updatedByName ?? 'Staff'} · {formatShortDate(topic.updatedAt, locale)}
               </p>
             </li>
           ))}
@@ -108,9 +118,9 @@ export function SyllabusPanel({
       {canRecord ? (
         <ActionForm
           action={recordSyllabusAction.bind(null, coverage.subjectId)}
-          submitLabel="Record coverage"
-          pendingLabel="Recording…"
-          successMessage="Coverage recorded."
+          submitLabel={t('syllabusPanel.submit')}
+          pendingLabel={t('syllabusPanel.recording')}
+          successMessage={t('syllabusPanel.recorded')}
           resetOnSuccess
         >
           <TopicField />

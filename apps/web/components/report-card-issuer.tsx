@@ -16,14 +16,17 @@ import { Card, Field } from '@connected/ui';
 
 import { issueReportCardsAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { ReportCardResponse, TermResponse } from '@connected/types';
 
 function TermField({ terms, selected }: { terms: TermResponse[]; selected: string }) {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="termId"
-      label="Term"
+      label={t('reportCardIssuer.term')}
       as="select"
       required
       defaultValue={selected}
@@ -47,6 +50,8 @@ export function ReportCardIssuer({
   selectedTermId: string;
   cards: ReportCardResponse[];
 }) {
+  const { t } = useTranslations();
+
   if (terms.length === 0) {
     // Not a disabled button: a class teacher cannot fix this, and saying who can is more use than
     // a control that does nothing.
@@ -65,27 +70,21 @@ export function ReportCardIssuer({
   return (
     <ActionForm
       action={(formData) => issueReportCardsAction(classId, formData)}
-      submitLabel={issued ? 'Reissue the class' : 'Issue the class'}
-      pendingLabel={issued ? 'Reissuing…' : 'Issuing…'}
-      successMessage={
-        issued
-          ? 'Reissued. Each card now says which one it replaced.'
-          : 'Issued. These cards keep these numbers even if a mark is corrected later.'
-      }
+      submitLabel={issued ? t('reportCardIssuer.reissue') : t('reportCardIssuer.issue')}
+      pendingLabel={issued ? t('reportCardIssuer.reissuing') : t('reportCardIssuer.issuing')}
+      successMessage={issued ? t('reportCardIssuer.reissued') : t('reportCardIssuer.issued')}
     >
       <p style={{ color: 'var(--ui-color-text-muted)', marginTop: 0 }}>
-        {issued
-          ? 'This class already has cards for this term. Issuing again replaces them, and every new card records the date of the one it replaced.'
-          : 'Issuing takes a copy of every number. A mark corrected afterwards will not change a card that has already gone out.'}
+        {issued ? t('reportCardIssuer.reissueNote') : t('reportCardIssuer.firstIssueNote')}
       </p>
 
       <TermField terms={terms} selected={selectedTermId} />
 
       {issued ? (
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend style={{ padding: 0, fontWeight: 600 }}>Comments</legend>
+          <legend style={{ padding: 0, fontWeight: 600 }}>{t('reportCardIssuer.comments')}</legend>
           <p style={{ color: 'var(--ui-color-text-muted)', marginTop: 0 }}>
-            The one typed thing on a card. The family reads it.
+            {t('reportCardIssuer.commentsNote')}
           </p>
 
           <div style={{ display: 'grid', gap: 'var(--ui-space-3)' }}>

@@ -9,20 +9,32 @@ import { useState, useTransition } from 'react';
 
 import { createEventAction, deleteEventAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { formatDateTime } from '@/lib/i18n/format';
+import { useTranslations } from './locale-provider';
 
 import type { EventResponse } from '@connected/types';
 
 function TitleField() {
+  const { t } = useTranslations();
+
   return (
-    <Field name="title" label="Title" required maxLength={200} error={useFieldError('title')} />
+    <Field
+      name="title"
+      label={t('eventAdmin.title')}
+      required
+      maxLength={200}
+      error={useFieldError('title')}
+    />
   );
 }
 
 function BodyField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="body"
-      label="Details"
+      label={t('eventAdmin.details')}
       as="textarea"
       rows={4}
       required
@@ -33,10 +45,12 @@ function BodyField() {
 }
 
 function WhenField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="eventAt"
-      label="When"
+      label={t('eventAdmin.when')}
       type="datetime-local"
       required
       error={useFieldError('eventAt')}
@@ -45,12 +59,14 @@ function WhenField() {
 }
 
 export function EventComposer({ schoolId }: { schoolId: string }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={createEventAction.bind(null, schoolId)}
-      submitLabel="Add event"
-      pendingLabel="Adding…"
-      successMessage="Event added. Everyone at the school has been notified."
+      submitLabel={t('eventAdmin.submit')}
+      pendingLabel={t('eventAdmin.adding')}
+      successMessage={t('eventAdmin.added')}
       resetOnSuccess
     >
       <TitleField />
@@ -74,13 +90,15 @@ export function EventComposer({ schoolId }: { schoolId: string }) {
  * failures did not.
  */
 export function EventList({ events }: { events: EventResponse[] }) {
+  const { t, locale } = useTranslations();
+
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState<EventResponse | undefined>();
 
   if (events.length === 0) {
-    return <p className="muted">Nothing scheduled. Add the first event below.</p>;
+    return <p className="muted">{t('eventAdmin.none')}</p>;
   }
 
   return (
@@ -89,13 +107,7 @@ export function EventList({ events }: { events: EventResponse[] }) {
         {events.map((event) => (
           <li key={event.id} className="ui-card">
             <p className="muted" style={{ margin: 0, fontSize: 'var(--ui-text-sm)' }}>
-              {new Date(event.eventAt).toLocaleString('en-GB', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDateTime(event.eventAt, locale)}
             </p>
 
             <h3 style={{ margin: '0.25rem 0 0.5rem', fontSize: 'var(--ui-text-base)' }}>

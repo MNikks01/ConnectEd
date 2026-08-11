@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Usage against a plan limit.
  *
@@ -5,6 +7,8 @@
  * reading "2 of 5 classes" already knows everything the bar conveys, and a `<meter>` announced
  * three different ways across three screen readers conveys less.
  */
+import { useTranslations } from './locale-provider';
+
 import type { PlanLimitsResponse, UsageResponse } from '@connected/types';
 
 interface Row {
@@ -14,12 +18,14 @@ interface Row {
 }
 
 function UsageRow({ label, used, allowed }: Row) {
+  const { t } = useTranslations();
+
   // An unlimited plan gets no bar at all: a bar with nothing to fill implies a ceiling.
   if (allowed === null) {
     return (
       <div>
         <p style={{ margin: 0 }}>
-          <strong>{label}</strong> — {used}, with no limit on your plan
+          <strong>{label}</strong> — {t('planUsage.unlimited', { used })}
         </p>
       </div>
     );
@@ -33,8 +39,8 @@ function UsageRow({ label, used, allowed }: Row) {
   return (
     <div>
       <p style={{ margin: '0 0 var(--ui-space-1)' }}>
-        <strong>{label}</strong> — {used} of {allowed}
-        {full ? ' · full' : ''}
+        <strong>{label}</strong> — {t('planUsage.ofAllowed', { used, allowed })}
+        {full ? t('planUsage.full') : ''}
       </p>
 
       <div
@@ -61,10 +67,12 @@ function UsageRow({ label, used, allowed }: Row) {
 }
 
 export function PlanUsage({ limits, usage }: { limits: PlanLimitsResponse; usage: UsageResponse }) {
+  const { t } = useTranslations();
+
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
-      <UsageRow label="Classes" used={usage.classes} allowed={limits.classes} />
-      <UsageRow label="Members" used={usage.members} allowed={limits.members} />
+      <UsageRow label={t('planUsage.classes')} used={usage.classes} allowed={limits.classes} />
+      <UsageRow label={t('planUsage.members')} used={usage.members} allowed={limits.members} />
     </div>
   );
 }

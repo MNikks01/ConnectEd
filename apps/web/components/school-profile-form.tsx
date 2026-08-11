@@ -4,6 +4,7 @@ import { Field } from '@connected/ui';
 
 import { updateSchoolProfileAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { SchoolProfileResponse } from '@connected/types';
 
@@ -42,27 +43,50 @@ export function SchoolProfileForm({
   schoolId: string;
   profile: SchoolProfileResponse;
 }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={updateSchoolProfileAction.bind(null, schoolId)}
-      submitLabel="Save changes"
-      pendingLabel="Saving…"
-      successMessage="Profile updated."
+      submitLabel={t('schoolProfileForm.submit')}
+      pendingLabel={t('schoolProfileForm.saving')}
+      successMessage={t('schoolProfileForm.saved')}
     >
-      <ProfileField name="name" label="School name" defaultValue={profile.name} />
-      <ProfileField name="adminName" label="Administrator" defaultValue={profile.adminName} />
-      <ProfileField name="phone" label="Phone" type="tel" defaultValue={profile.phone} />
-      <ProfileField name="city" label="City" defaultValue={profile.city} />
-      <ProfileField name="state" label="State" defaultValue={profile.state} />
-      <ProfileField name="country" label="Country" defaultValue={profile.country} />
+      <ProfileField name="name" label={t('schoolProfileForm.name')} defaultValue={profile.name} />
+      <ProfileField
+        name="adminName"
+        label={t('schoolProfileForm.adminName')}
+        defaultValue={profile.adminName}
+      />
+      <ProfileField
+        name="phone"
+        label={t('schoolProfileForm.phone')}
+        type="tel"
+        defaultValue={profile.phone}
+      />
+      <ProfileField name="city" label={t('schoolProfileForm.city')} defaultValue={profile.city} />
+      <ProfileField
+        name="state"
+        label={t('schoolProfileForm.state')}
+        defaultValue={profile.state}
+      />
+      <ProfileField
+        name="country"
+        label={t('schoolProfileForm.country')}
+        defaultValue={profile.country}
+      />
       <ProfileField
         name="establishmentYear"
-        label="Established"
+        label={t('schoolProfileForm.established')}
         type="number"
         defaultValue={profile.establishmentYear}
-        hint="The year the school opened."
+        hint={t('schoolProfileForm.establishedHint')}
       />
-      <ProfileField name="affiliation" label="Affiliation" defaultValue={profile.affiliation} />
+      <ProfileField
+        name="affiliation"
+        label={t('schoolProfileForm.affiliation')}
+        defaultValue={profile.affiliation}
+      />
     </ActionForm>
   );
 }

@@ -12,54 +12,70 @@ import { Field } from '@connected/ui';
 
 import { publishAcademicItemAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { useTranslations } from './locale-provider';
 
-const TYPE_LABELS: Record<string, string> = {
-  [AcademicItemType.HOMEWORK]: 'Homework',
-  [AcademicItemType.ASSIGNMENT]: 'Assignment',
-  [AcademicItemType.PROJECT]: 'Project',
+const TYPE_LABELS: Record<string, MessageKey> = {
+  [AcademicItemType.HOMEWORK]: 'publishForm.typeHOMEWORK',
+  [AcademicItemType.ASSIGNMENT]: 'publishForm.typeASSIGNMENT',
+  [AcademicItemType.PROJECT]: 'publishForm.typePROJECT',
 };
 
 function TypeField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="type"
-      label="Type"
+      label={t('publishForm.type')}
       as="select"
       required
       error={useFieldError('type')}
       options={Object.values(AcademicItemType).map((value) => ({
         value,
-        label: TYPE_LABELS[value] ?? value,
+        label: value in TYPE_LABELS ? t(TYPE_LABELS[value] as MessageKey) : value,
       }))}
     />
   );
 }
 
 function SubjectField({ subjects }: { subjects: SubjectResponse[] }) {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="subjectId"
-      label="Subject"
+      label={t('publishForm.subject')}
       as="select"
       required
       error={useFieldError('subjectId')}
-      hint="You can only publish to a subject your school has allocated to you."
+      hint={t('publishForm.subjectHint')}
       options={subjects.map((subject) => ({ value: subject.id, label: subject.name }))}
     />
   );
 }
 
 function TitleField() {
+  const { t } = useTranslations();
+
   return (
-    <Field name="title" label="Title" required maxLength={200} error={useFieldError('title')} />
+    <Field
+      name="title"
+      label={t('publishForm.title')}
+      required
+      maxLength={200}
+      error={useFieldError('title')}
+    />
   );
 }
 
 function BodyField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="body"
-      label="Details"
+      label={t('publishForm.details')}
       as="textarea"
       rows={5}
       required
@@ -70,13 +86,15 @@ function BodyField() {
 }
 
 function DueField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="dueAt"
-      label="Due"
+      label={t('publishForm.due')}
       type="datetime-local"
       error={useFieldError('dueAt')}
-      hint="Optional."
+      hint={t('publishForm.dueHint')}
     />
   );
 }
@@ -88,12 +106,14 @@ export function PublishItemForm({
   classId: string;
   subjects: SubjectResponse[];
 }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={publishAcademicItemAction.bind(null, classId)}
-      submitLabel="Publish"
-      pendingLabel="Publishing…"
-      successMessage="Published. Everyone in the class has been notified."
+      submitLabel={t('publishForm.submit')}
+      pendingLabel={t('publishForm.publishing')}
+      successMessage={t('publishForm.published')}
       resetOnSuccess
     >
       <TypeField />

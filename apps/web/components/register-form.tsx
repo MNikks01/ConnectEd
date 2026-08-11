@@ -15,21 +15,25 @@ import { Card } from '@connected/ui';
 
 import { takeRegisterAction } from '@/app/(app)/(member)/actions';
 import { ActionForm } from './action-form';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { useTranslations } from './locale-provider';
 
 import type { AttendanceState, RegisterResponse } from '@connected/types';
 
 const STATES: { value: AttendanceState; label: string }[] = [
-  { value: 'PRESENT', label: 'Present' },
-  { value: 'ABSENT', label: 'Absent' },
-  { value: 'LATE', label: 'Late' },
-  { value: 'EXCUSED', label: 'Excused' },
+  { value: 'PRESENT', label: 'registerForm.present' },
+  { value: 'ABSENT', label: 'registerForm.absent' },
+  { value: 'LATE', label: 'registerForm.late' },
+  { value: 'EXCUSED', label: 'registerForm.excused' },
 ];
 
 export function RegisterForm({ register }: { register: RegisterResponse }) {
+  const { t } = useTranslations();
+
   if (register.entries.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>This class has no verified pupils yet, so there is no register.</p>
+        <p style={{ margin: 0 }}>{t('registerForm.noPupils')}</p>
       </Card>
     );
   }
@@ -37,14 +41,12 @@ export function RegisterForm({ register }: { register: RegisterResponse }) {
   return (
     <ActionForm
       action={(formData) => takeRegisterAction(register.classId, register.onDate, formData)}
-      submitLabel={register.takenAt ? 'Save changes' : 'Take the register'}
-      pendingLabel="Saving…"
-      successMessage="Saved."
+      submitLabel={register.takenAt ? t('registerForm.save') : t('registerForm.take')}
+      pendingLabel={t('registerForm.saving')}
+      successMessage={t('registerForm.saved')}
     >
       <p style={{ color: 'var(--ui-color-text-muted)' }}>
-        {register.takenAt
-          ? 'This register has been taken. Changes to it are recorded.'
-          : 'Nobody has taken this register yet.'}
+        {register.takenAt ? t('registerForm.alreadyTaken') : t('registerForm.notTaken')}
       </p>
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
@@ -76,7 +78,7 @@ export function RegisterForm({ register }: { register: RegisterResponse }) {
                     value={state.value}
                     defaultChecked={entry.state === state.value}
                   />
-                  <span>{state.label}</span>
+                  <span>{t(state.label as MessageKey)}</span>
                 </label>
               ))}
             </div>

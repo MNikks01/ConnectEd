@@ -4,28 +4,30 @@ import { ClassLevel, Medium, Section } from '@connected/types';
 
 import { createClassAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { useTranslations } from './locale-provider';
 
 /**
  * The taxonomy is closed, so these are selects rather than free text. The API would reject an
  * invalid value anyway; offering only valid ones means the user never has to discover that.
  */
-const LEVEL_LABELS: Record<string, string> = {
-  PRE_NURSERY: 'Pre-Nursery',
-  NURSERY: 'Nursery',
-  KG1: 'KG-1',
-  KG2: 'KG-2',
-  CLASS_1: 'Class 1',
-  CLASS_2: 'Class 2',
-  CLASS_3: 'Class 3',
-  CLASS_4: 'Class 4',
-  CLASS_5: 'Class 5',
-  CLASS_6: 'Class 6',
-  CLASS_7: 'Class 7',
-  CLASS_8: 'Class 8',
-  CLASS_9: 'Class 9',
-  CLASS_10: 'Class 10',
-  CLASS_11: 'Class 11',
-  CLASS_12: 'Class 12',
+const LEVEL_LABELS: Record<string, MessageKey> = {
+  PRE_NURSERY: 'classForm.levelPRE_NURSERY',
+  NURSERY: 'classForm.levelNURSERY',
+  KG1: 'classForm.levelKG1',
+  KG2: 'classForm.levelKG2',
+  CLASS_1: 'classForm.levelCLASS_1',
+  CLASS_2: 'classForm.levelCLASS_2',
+  CLASS_3: 'classForm.levelCLASS_3',
+  CLASS_4: 'classForm.levelCLASS_4',
+  CLASS_5: 'classForm.levelCLASS_5',
+  CLASS_6: 'classForm.levelCLASS_6',
+  CLASS_7: 'classForm.levelCLASS_7',
+  CLASS_8: 'classForm.levelCLASS_8',
+  CLASS_9: 'classForm.levelCLASS_9',
+  CLASS_10: 'classForm.levelCLASS_10',
+  CLASS_11: 'classForm.levelCLASS_11',
+  CLASS_12: 'classForm.levelCLASS_12',
 };
 
 function Select({
@@ -69,32 +71,34 @@ function Select({
 }
 
 export function ClassCreateForm({ schoolId }: { schoolId: string }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={createClassAction.bind(null, schoolId)}
-      submitLabel="Add class"
-      pendingLabel="Adding…"
-      successMessage="Class added."
+      submitLabel={t('classForm.submit')}
+      pendingLabel={t('classForm.adding')}
+      successMessage={t('classForm.added')}
     >
       <Select
         name="medium"
-        label="Medium"
+        label={t('classForm.medium')}
         options={Object.values(Medium).map((value) => ({
           value,
-          label: value === 'ENGLISH' ? 'English' : 'Hindi',
+          label: value === 'ENGLISH' ? t('classForm.english') : t('classForm.hindi'),
         }))}
       />
       <Select
         name="level"
-        label="Level"
+        label={t('classForm.level')}
         options={Object.values(ClassLevel).map((value) => ({
           value,
-          label: LEVEL_LABELS[value] ?? value,
+          label: value in LEVEL_LABELS ? t(LEVEL_LABELS[value] as MessageKey) : value,
         }))}
       />
       <Select
         name="section"
-        label="Section"
+        label={t('classForm.section')}
         options={Object.values(Section).map((value) => ({ value, label: value }))}
       />
     </ActionForm>

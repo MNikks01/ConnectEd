@@ -20,6 +20,7 @@ import {
   publishMarksAction,
 } from '@/app/(app)/(member)/actions';
 import { ActionForm } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { AssessmentWithMarksResponse, StaffMarkResponse } from '@connected/types';
 
@@ -34,6 +35,8 @@ function markFor(marks: StaffMarkResponse[], accountId: string): StaffMarkRespon
 }
 
 export function MarkEntry({ assessment, classId, roster }: Props) {
+  const { t } = useTranslations();
+
   const published = assessment.publishedAt !== null;
   const [confirming, setConfirming] = useState(false);
 
@@ -66,12 +69,12 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
               action={(formData) =>
                 correctMarkAction(assessment.id, classId, mark.studentAccountId, formData)
               }
-              submitLabel={`Correct ${mark.studentName}’s mark`}
-              pendingLabel="Correcting…"
-              successMessage="Corrected. The change has been recorded."
+              submitLabel={t('markEntry.correctFor', { name: mark.studentName })}
+              pendingLabel={t('markEntry.correcting')}
+              successMessage={t('markEntry.corrected')}
             >
               <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
-                <span>New score for {mark.studentName}</span>
+                <span>{t('markEntry.newScoreFor', { name: mark.studentName })}</span>
                 <input
                   name="score"
                   defaultValue={mark.score ?? ''}
@@ -81,7 +84,7 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                 />
               </label>
               <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
-                <span>Remark for {mark.studentName} — the family will see this</span>
+                <span>{t('markEntry.remarkFor', { name: mark.studentName })}</span>
                 <input
                   name="remark"
                   defaultValue={mark.remark ?? ''}
@@ -90,7 +93,7 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                 />
               </label>
               <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
-                <span>Staff note for {mark.studentName} — not shown to the family</span>
+                <span>{t('markEntry.staffNoteFor', { name: mark.studentName })}</span>
                 <input
                   name="staffNote"
                   defaultValue={mark.staffNote ?? ''}
@@ -109,9 +112,9 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
     <>
       <ActionForm
         action={(formData) => enterMarksAction(assessment.id, classId, formData)}
-        submitLabel="Save draft"
-        pendingLabel="Saving…"
-        successMessage="Saved. Nobody can see these yet."
+        submitLabel={t('markEntry.saveDraft')}
+        pendingLabel={t('markEntry.saving')}
+        successMessage={t('markEntry.savedDraft')}
       >
         <p style={{ color: 'var(--ui-color-text-muted)' }}>
           Out of {assessment.maxScore}. Leave a box empty for a pupil who was not marked — that is
@@ -138,7 +141,7 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                   <span>{pupil.name}</span>
                   <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
                     <span style={{ fontSize: 'var(--ui-font-size-1)' }}>
-                      Remark for {pupil.name} — the pupil and their parents will see this
+                      {t('markEntry.remarkForPupil', { name: pupil.name })}
                     </span>
                     <input
                       name={`remark-${pupil.accountId}`}
@@ -151,7 +154,7 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                     {/* Labelled for who reads it, not for what it is. "Private note" tells a
                         teacher nothing about who "private" excludes. */}
                     <span style={{ fontSize: 'var(--ui-font-size-1)' }}>
-                      Staff note for {pupil.name} — not shown to the family
+                      {t('markEntry.staffNoteFor', { name: pupil.name })}
                     </span>
                     <input
                       name={`staff-note-${pupil.accountId}`}
@@ -165,7 +168,7 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
                 <label style={{ display: 'grid', gap: 'var(--ui-space-1)' }}>
                   {/* Named for the pupil, so a screen reader announces whose box this is rather
                       than "Score" thirty times. */}
-                  <span>Score for {pupil.name}</span>
+                  <span>{t('markEntry.scoreFor', { name: pupil.name })}</span>
                   <input
                     name={`score-${pupil.accountId}`}
                     defaultValue={existing?.score ?? ''}
@@ -181,22 +184,25 @@ export function MarkEntry({ assessment, classId, roster }: Props) {
       </ActionForm>
 
       <Card>
-        <h3 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-2)' }}>Publish</h3>
-        <p style={{ marginTop: 0 }}>
-          Publishing shows every mark to its pupil and their parents at the same moment. After that,
-          changes are made one at a time and recorded.
-        </p>
+        <h3 style={{ marginTop: 0, fontSize: 'var(--ui-font-size-2)' }}>
+          {t('markEntry.publishHeading')}
+        </h3>
+        <p style={{ marginTop: 0 }}>{t('markEntry.publishExplained')}</p>
 
         {confirming ? (
           <ActionForm
             action={() => publishMarksAction(assessment.id, classId)}
-            submitLabel="Yes, publish these marks"
-            pendingLabel="Publishing…"
-            successMessage="Published. The class has been notified."
+            submitLabel={t('markEntry.publishConfirm')}
+            pendingLabel={t('markEntry.publishing')}
+            successMessage={t('markEntry.published')}
           >
             <p style={{ margin: 0 }}>
-              Publish {assessment.title} to {roster.length}{' '}
-              {roster.length === 1 ? 'pupil' : 'pupils'}?
+              {t(
+                roster.length === 1
+                  ? 'markEntry.publishQuestionOne'
+                  : 'markEntry.publishQuestionMany',
+                { title: assessment.title, count: roster.length },
+              )}
             </p>
           </ActionForm>
         ) : (
