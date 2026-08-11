@@ -210,26 +210,40 @@ remembered", and it was only ever true of half the product.
 Each row below carries its evidence or says it has none. **Where there is a number it came from a
 run**, and where the run happened is part of the number.
 
-| ID      | Requirement                                      | State | Evidence, or what is missing                                                                                                                                                      |
-| ------- | ------------------------------------------------ | :---: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NFR-001 | Availability ≥ 99.9%                             |  ⛔   | Unmeasurable: nothing is deployed, so there is no uptime to observe. S9-0a                                                                                                        |
-| NFR-002 | p95 read < 300 ms, write < 600 ms                |   ◐   | **110 ms and 78 ms at p97.5** — stricter than p95 (S9-10). On a laptop with no network in it; the deployed number is owed                                                         |
-| NFR-003 | 500 RPS baseline                                 |   ◐   | **~1,060 RPS on reads**, same run, same caveat                                                                                                                                    |
-| NFR-004 | Stateless, horizontally scalable                 |  ✅   | Sessions and cache are in Redis, never in process. The worker runs as a **separate process** in CI and in compose — the split ADR-0019 assumes (S7-17, S9-2)                      |
-| NFR-005 | OWASP ASVS L2                                    |   ◐   | A security review exists ([`../Security/05-review-2026-08-05.md`](../Security/05-review-2026-08-05.md)) and found real defects. **ASVS L2 has never been walked as a checklist**  |
-| NFR-006 | argon2id · PII at rest · delete/export           |   ◐   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure do not exist** — no route, no service. `../Security/04-compliance.md` promises both                          |
-| NFR-007 | Transactional writes, idempotent effects         |  ✅   | Academic writes are transactional; the outbox writes events in the same transaction and consumers are idempotent on `eventId` (ADR-0019)                                          |
-| NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network |
-| NFR-009 | ≥ 80% coverage on domain/services                |  ✅   | **Services 95.3% lines, 80.8% branches, 96.9% functions** (S9-12). Thresholds now fail the build on regression                                                                    |
-| NFR-010 | Docker Compose locally · images for deploy       |  ✅   | `docker compose -f infrastructure/docker/compose.yml up` reaches a working sign-in (S9-2); three images pushed per release (S9-1, S9-3)                                           |
-| NFR-011 | Latest 2 evergreen browsers · ≥ 320px            |  ✅   | Chromium, Firefox and WebKit in CI, plus a 320px project (S9-17). Its first run found two defects: WebKit dropped every session cookie, and one page overflowed by 69px           |
-| NFR-012 | WCAG 2.1 AA                                      |   ◐   | **Zero violations** across 22 populated screens and a failed form (S9-11) — the mechanical third that axe can see. Not a human audit                                              |
-| NFR-013 | Strict TS · lint/format gates · ADRs             |  ✅   | Strict everywhere, gates in `verify`, 18 ADRs, seven `CLAUDE.md` files                                                                                                            |
-| NFR-014 | Nightly backups · PITR · RTO ≤ 1h · RPO ≤ 15 min |   ◐   | **Restore proven: 400,027 rows verified in 5.3 s**, sabotage-checked (S9-7). Nothing takes a backup on a schedule, so **RPO is unbounded**; PITR needs a provider                 |
-| NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                     |
-| NFR-016 | Copy externalised · English + Hindi              |  ⛔   | **Not started.** No i18n library, no message catalogue, every string inline — while the product models `medium` per class and offers Hindi as one                                 |
+| ID      | Requirement                                      | State | Evidence, or what is missing                                                                                                                                                                                    |
+| ------- | ------------------------------------------------ | :---: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-001 | Availability ≥ 99.9%                             |  ⛔   | Unmeasurable: nothing is deployed, so there is no uptime to observe. S9-0a                                                                                                                                      |
+| NFR-002 | p95 read < 300 ms, write < 600 ms                |   ◐   | **110 ms and 78 ms at p97.5** — stricter than p95 (S9-10). On a laptop with no network in it; the deployed number is owed                                                                                       |
+| NFR-003 | 500 RPS baseline                                 |   ◐   | **~1,060 RPS on reads**, same run, same caveat                                                                                                                                                                  |
+| NFR-004 | Stateless, horizontally scalable                 |  ✅   | Sessions and cache are in Redis, never in process. The worker runs as a **separate process** in CI and in compose — the split ADR-0019 assumes (S7-17, S9-2)                                                    |
+| NFR-005 | OWASP ASVS L2                                    |   ◐   | A security review exists ([`../Security/05-review-2026-08-05.md`](../Security/05-review-2026-08-05.md)) and found real defects. **ASVS L2 has never been walked as a checklist**                                |
+| NFR-006 | argon2id · PII at rest · delete/export           |  ✅   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure now exist** end to end (S9-19, [`14-export-and-erasure.md`](./14-export-and-erasure.md), ADR-0020)                                         |
+| NFR-007 | Transactional writes, idempotent effects         |  ✅   | Academic writes are transactional; the outbox writes events in the same transaction and consumers are idempotent on `eventId` (ADR-0019)                                                                        |
+| NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network                               |
+| NFR-009 | ≥ 80% coverage on domain/services                |  ✅   | **Services 95.3% lines, 80.8% branches, 96.9% functions** (S9-12). Thresholds now fail the build on regression                                                                                                  |
+| NFR-010 | Docker Compose locally · images for deploy       |  ✅   | `docker compose -f infrastructure/docker/compose.yml up` reaches a working sign-in (S9-2); three images pushed per release (S9-1, S9-3)                                                                         |
+| NFR-011 | Latest 2 evergreen browsers · ≥ 320px            |  ✅   | Chromium, Firefox and WebKit in CI, plus a 320px project (S9-17). Its first run found two defects: WebKit dropped every session cookie, and one page overflowed by 69px                                         |
+| NFR-012 | WCAG 2.1 AA                                      |   ◐   | **Zero violations** across 22 populated screens and a failed form (S9-11) — the mechanical third that axe can see. Not a human audit                                                                            |
+| NFR-013 | Strict TS · lint/format gates · ADRs             |  ✅   | Strict everywhere, gates in `verify`, 18 ADRs, seven `CLAUDE.md` files                                                                                                                                          |
+| NFR-014 | Nightly backups · PITR · RTO ≤ 1h · RPO ≤ 15 min |   ◐   | **Restore proven: 400,027 rows verified in 5.3 s**, sabotage-checked (S9-7). Nothing takes a backup on a schedule, so **RPO is unbounded**; PITR needs a provider                                               |
+| NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                                                   |
+| NFR-016 | Copy externalised · English + Hindi              |   ◐   | **Mechanism done and proven** (S9-18, ADR-0021): typed catalogue, cookie locale, `<html lang>`, 4 browser tests. **15 of 99 page/component files externalised**, and the Hindi has had no native-speaker review |
 
-**Five ✅, seven ◐, two ⛔.** NFR-011 was one of the cheap ⛔ rows and is now green — its first run found two defects (S9-17), which is the argument for the other cheap one.
+**Six ✅, seven ◐, one ⛔** — NFR-006 moved from ◐ to ✅ with S9-19, and NFR-016 from ⛔ to ◐ with
+S9-18. NFR-006 is the only row here that was a promise the product had made in writing rather than
+a target it had set itself.
+
+**NFR-016's ◐ is doing real work and should not be read as nearly-done.** Two separate things are
+incomplete and they are incomplete in different ways. The remaining 84 files are mechanical: the
+mechanism is proven, the pattern is established, and finishing them is time rather than thought.
+The Hindi is not mechanical — it was written by the same person who wrote the English, and register
+and politeness level are exactly what a school notices. The row moves to ✅ when both are done, and
+the second one needs a person this project does not currently have.
+
+The paragraph below is kept as it was written on 2026-08-09, because the record of what the table
+found is worth more than a tidy table. Two of the three contradictions it names are now closed:
+NFR-011 by S9-17 and NFR-006 by S9-19. **NFR-016 is the one that is left**, and it is still not
+blocked by anything.
 
 ### What this half says that the functional half did not
 

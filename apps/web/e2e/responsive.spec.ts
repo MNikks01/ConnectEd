@@ -85,6 +85,7 @@ test.describe('at 320px', () => {
       `/classes/${classId}/register`,
       `/classes/${classId}/report-cards`,
       '/settings/profile',
+      '/settings/privacy',
     ]) {
       await page.goto(path);
       await expectNoHorizontalOverflow(page, path);
@@ -120,5 +121,33 @@ test.describe('at 320px', () => {
       await page.goto(path);
       await expectNoHorizontalOverflow(page, path);
     }
+  });
+
+  /**
+   * A school with **nothing in it**, which the fixture above is not.
+   *
+   * An empty table is wider than a populated one at this width: the "no classes yet" cell spans
+   * every column and does not wrap, where real rows do. The suite had checked only the populated
+   * case, so the widest version of this page had never been measured — and it is also the first
+   * page a school sees, before it has created anything at all.
+   *
+   * This is the case that found the grid-track defect: a class table's min-content width made its
+   * column 321px inside a 288px page, because a grid item's automatic minimum size is
+   * content-based and `overflow-x` on the table's own scroll container cannot shrink its parent.
+   *
+   * **It does not reproduce on macOS**, and that is worth saying rather than leaving somebody to
+   * conclude the test is redundant when it passes locally with the fix reverted. The margin is a
+   * handful of pixels and it is decided by font metrics: CI's Linux fonts are wider, the failure
+   * is real there, and it had already gone red on `development` twice before anybody looked. The
+   * same shape as S9-17's WebKit cookie — an environment-dependent defect the machine it was
+   * written on cannot see.
+   */
+  test('a school with no classes yet does not scroll sideways', async ({ page }) => {
+    const empty = await createSchool('emptyportal');
+
+    await signIn(page, empty.email);
+    await page.goto('/school/classes');
+
+    await expectNoHorizontalOverflow(page, '/school/classes with no classes');
   });
 });

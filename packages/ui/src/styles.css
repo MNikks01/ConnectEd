@@ -206,6 +206,15 @@ select.ui-field__input {
   overflow-x: auto;
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
+  /* `overflow-x: auto` stops *this* element widening the page and stops exactly there. A wide
+     table inside a grid or flex **item** still pushes that item out: an item's automatic minimum
+     size is content-based, and the table's min-content leaks through any plain block in between.
+     That is what scrolled `/school/classes` sideways at 320px — a 288px grid column holding a
+     321px item — and it is why callers that place a table in a grid or flex layout must give the
+     item `min-width: 0` (or the track `minmax(0, 1fr)`). These two lines are the half this
+     component can defend on its own. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ui-table {

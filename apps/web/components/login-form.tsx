@@ -16,9 +16,12 @@ import { Button, Field } from '@connected/ui';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
+import { useTranslations } from '@/components/locale-provider';
+
 import type { ErrorEnvelope } from '@connected/types';
 
 export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -33,8 +36,10 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
   }
 
   async function messageFrom(response: Response): Promise<string> {
+    // The API's message wins when there is one: it is the specific thing that went wrong, and it
+    // is already localised or will be by whoever localises the API. The fallback is ours.
     const body = (await response.json().catch(() => undefined)) as ErrorEnvelope | undefined;
-    return body?.error.message ?? 'Something went wrong. Please try again.';
+    return body?.error.message ?? t('common.somethingWentWrong');
   }
 
   function done(): void {
@@ -69,7 +74,7 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
 
       done();
     } catch {
-      setError('Could not reach the server. Check your connection and try again.');
+      setError(t('login.unreachable'));
     } finally {
       setPending(false);
     }
@@ -95,7 +100,7 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
 
       done();
     } catch {
-      setError('Could not reach the server. Check your connection and try again.');
+      setError(t('login.unreachable'));
     } finally {
       setPending(false);
     }
@@ -115,11 +120,11 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
           </p>
         ) : null}
 
-        <p>Enter the code from your authenticator app.</p>
+        <p>{t('login.codePrompt')}</p>
 
         <Field
           name="code"
-          label="Code"
+          label={t('login.code')}
           inputMode="numeric"
           autoComplete="one-time-code"
           // Focused, because the person is already holding their phone and the next thing they do
@@ -128,12 +133,10 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
           required
         />
 
-        <p className="muted">
-          Lost your phone? Use one of the recovery codes you saved when you turned this on.
-        </p>
+        <p className="muted">{t('login.lostPhone')}</p>
 
         <Button type="submit" loading={pending} fullWidth>
-          {pending ? 'Checking…' : 'Sign in'}
+          {pending ? t('login.checking') : t('login.submit')}
         </Button>
       </form>
     );
@@ -152,17 +155,17 @@ export function LoginForm({ redirectTo = '/home' }: { redirectTo?: string }) {
         </p>
       ) : null}
 
-      <Field name="email" label="Email" type="email" autoComplete="email" required />
+      <Field name="email" label={t('login.email')} type="email" autoComplete="email" required />
       <Field
         name="password"
-        label="Password"
+        label={t('login.password')}
         type="password"
         autoComplete="current-password"
         required
       />
 
       <Button type="submit" loading={pending} fullWidth>
-        {pending ? 'Signing in…' : 'Sign in'}
+        {pending ? t('login.submitting') : t('login.submit')}
       </Button>
     </form>
   );

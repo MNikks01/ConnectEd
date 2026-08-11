@@ -24,6 +24,7 @@ import {
   correctMarkSchema,
   takeRegisterSchema,
   issueReportCardsSchema,
+  requestErasureSchema,
 } from '@connected/types';
 import { revalidatePath } from 'next/cache';
 
@@ -528,4 +529,58 @@ export async function issueReportCardsAction(
     () => callAsUser(`/classes/${classId}/report-cards`, { method: 'POST', body: parsed.data }),
     [`/classes/${classId}/report-cards`, `/classes/${classId}`],
   );
+}
+
+// ---------------------------------------------------------------------------
+// Subject rights — export and erasure (`.docs/PRD/14-export-and-erasure.md`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask for a copy of everything (FR-DSR-001).
+ *
+ * Revalidates the page rather than returning the row: the request is accepted, not finished, and
+ * what the page should show is whatever the server now says — not what this call optimistically
+ * assumed. The same reasoning as everything else here, with more at stake, because "ready" and
+ * "requested" are visibly different things to the person waiting.
+ */
+export async function requestExportAction(): Promise<ActionResult> {
+  return run(() => callAsUser('/me/exports', { method: 'POST' }), ['/settings/privacy']);
+}
+
+/**
+ * Mint a download URL (FR-DSR-004).
+ *
+ * The URL is returned to the caller rather than redirected to, and it is never rendered into the
+ * page: it is a credential with a five-minute life, and an `href` would leave it in the page source
+ * and in the browser's history long after it stopped being useful to its owner.
+ */
+export async function downloadExportAction(
+  exportId: string,
+): Promise<ActionResult & { url?: string }> {
+  try {
+    const result = await callAsUser<{ url: string }>(`/me/exports/${exportId}/download`, {
+      method: 'POST',
+    });
+
+    // The count changed, so the list is stale.
+    revalidatePath('/settings/privacy');
+    return { ok: true, url: result.url };
+  } catch (error) {
+    return { ok: false, message: apiErrorMessage(error) };
+  }
+}
+
+/** Schedule erasure (FR-DSR-020 … 022). The API is the gate; `confirm` is validated there too. */
+export async function requestErasureAction(confirm: string): Promise<ActionResult> {
+  const parsed = requestErasureSchema.safeParse({ confirm });
+  if (!parsed.success) return invalid(parsed.error);
+
+  return run(
+    () => callAsUser('/me/erasure', { method: 'POST', body: parsed.data }),
+    ['/settings/privacy'],
+  );
+}
+
+export async function cancelErasureAction(): Promise<ActionResult> {
+  return run(() => callAsUser('/me/erasure', { method: 'DELETE' }), ['/settings/privacy']);
 }

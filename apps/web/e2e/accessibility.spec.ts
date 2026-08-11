@@ -143,6 +143,7 @@ test.describe('accessibility', () => {
       '/notifications',
       '/settings/profile',
       '/settings/notifications',
+      '/settings/privacy',
     ]) {
       await page.goto(path);
       await scan(page, path);

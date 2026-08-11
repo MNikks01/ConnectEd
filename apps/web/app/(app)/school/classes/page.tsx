@@ -37,7 +37,18 @@ export default async function ClassesPage() {
         description="Every class is a medium, level, and section. Subjects and the class teacher are set inside each one."
       />
 
-      <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
+      {/* `minmax(0, 1fr)`, not the default `auto`. A grid item's automatic minimum size is
+          content-based, so the class table's min-content width — which is wider than 320px once
+          the fonts are CI's rather than macOS's — made this column 321px inside a 288px page and
+          scrolled the whole document sideways. The track has to be told it may shrink; the
+          `overflow-x` on the table's own scroll container cannot do it from the inside. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          gap: 'var(--ui-space-5)',
+        }}
+      >
         <ClassTable classes={classes} />
 
         <Card as="section">

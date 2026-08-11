@@ -9,15 +9,22 @@ import { Card, PageHeader } from '@connected/ui';
 import { redirect } from 'next/navigation';
 
 import { TwoFactorSetup } from '@/components/two-factor-setup';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { CurrentAccountResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Security · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('security.metaTitle') };
+}
+
 export const dynamic = 'force-dynamic';
 
 export default async function SecurityPage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
 
   try {
@@ -31,20 +38,18 @@ export default async function SecurityPage() {
 
   return (
     <>
-      <PageHeader title="Security" description="How you prove it is you." />
+      <PageHeader title={t('security.title')} description={t('security.description')} />
 
       {mayEnrol ? (
         <TwoFactorSetup enabled={account.twoFactorEnabled} />
       ) : (
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Two-factor authentication</h2>
-          <p style={{ marginBottom: 0 }}>
-            {/* Explained rather than hidden. Every enrolled account is one more person who can be
-                locked out by a lost phone, so it is offered where it buys the most. */}
-            Available to school accounts and principals — the accounts that can approve members and
-            reach every family at a school. Yours does neither, so a password and a strong one is
-            enough.
-          </p>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('security.twoFactorHeading')}
+          </h2>
+          {/* Explained rather than hidden. Every enrolled account is one more person who can be
+              locked out by a lost phone, so it is offered where it buys the most. */}
+          <p style={{ marginBottom: 0 }}>{t('security.notAvailable')}</p>
         </Card>
       )}
     </>

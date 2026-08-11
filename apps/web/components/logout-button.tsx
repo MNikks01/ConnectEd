@@ -4,7 +4,10 @@ import { Button } from '@connected/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { useTranslations } from './locale-provider';
+
 export function LogoutButton() {
+  const { t } = useTranslations();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -21,7 +24,7 @@ export function LogoutButton() {
 
   return (
     <Button variant="secondary" loading={pending} onClick={() => void onClick()}>
-      Sign out
+      {t('common.signOut')}
     </Button>
   );
 }

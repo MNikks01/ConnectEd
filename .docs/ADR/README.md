@@ -41,3 +41,5 @@ Date: YYYY-MM-DD
 | [0017](./0017-platform-admin-role.md)        | A platform-admin role, for moderation and nothing else  | Accepted |
 | [0018](./0018-multiple-principals.md)        | A school may have more than one principal               | Accepted |
 | [0019](./0019-transactional-outbox.md)       | A domain event commits with the change that produced it | Accepted |
+| [0020](./0020-erasure-by-tombstone.md)       | Erasure keeps the account row and empties it            | Accepted |
+| [0021](./0021-locale-in-a-cookie.md)         | The locale is a cookie; the catalogue is TypeScript     | Accepted |

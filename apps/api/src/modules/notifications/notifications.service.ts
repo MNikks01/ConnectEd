@@ -337,6 +337,18 @@ export function createNotificationsService({
           });
           return;
 
+        case 'privacy.export.ready':
+          // To the one person who asked for it, and saying nothing about what is in it — the
+          // bundle is behind an authorized download and a notification is not a side channel.
+          await deliver({
+            recipientAccountId: event.accountId,
+            type: 'privacy.export.ready',
+            category: 'ACCOUNT',
+            payload: { exportId: event.exportId, expiresAt: event.expiresAt },
+            eventId: event.eventId,
+          });
+          return;
+
         case 'membership.revoked':
           await deliver({
             recipientAccountId: event.accountId,
