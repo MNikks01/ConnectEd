@@ -4,6 +4,7 @@ import { Alert } from '@connected/ui';
 
 import { allocateClassTeacherAction } from '@/app/(app)/school/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { ClassTeacherResponse, SchoolMemberResponse } from '@connected/types';
 
@@ -16,13 +17,14 @@ import type { ClassTeacherResponse, SchoolMemberResponse } from '@connected/type
  * anything new.
  */
 function TeacherSelect({ teachers }: { teachers: SchoolMemberResponse[] }) {
+  const { t } = useTranslations();
   const error = useFieldError('teacherAccountId');
   const errorId = 'teacherAccountId-error';
 
   return (
     <div className="ui-field">
       <label className="ui-field__label" htmlFor="teacherAccountId">
-        Teacher
+        {t('classTeacherForm.teacher')}
       </label>
       <select
         id="teacherAccountId"
@@ -55,28 +57,30 @@ export function ClassTeacherForm({
   current?: ClassTeacherResponse;
   teachers: SchoolMemberResponse[];
 }) {
+  const { t } = useTranslations();
+
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
       {current ? (
-        <Alert tone="success" title="Current class teacher">
+        <Alert tone="success" title={t('classTeacherForm.currentTitle')}>
           {current.teacherName ?? current.teacherAccountId}
         </Alert>
       ) : (
-        <Alert tone="warning" title="No class teacher">
-          Student and parent leave for this class cannot be approved until one is allocated.
+        <Alert tone="warning" title={t('classTeacherForm.noneTitle')}>
+          {t('classTeacherForm.noneBody')}
         </Alert>
       )}
 
       {teachers.length === 0 ? (
-        <Alert tone="info" title="No teachers to allocate">
-          Verify a teacher for this school first — they appear here once approved.
+        <Alert tone="info" title={t('classTeacherForm.noTeachersTitle')}>
+          {t('classTeacherForm.noTeachersBody')}
         </Alert>
       ) : (
         <ActionForm
           action={allocateClassTeacherAction.bind(null, classId)}
-          submitLabel={current ? 'Replace class teacher' : 'Allocate class teacher'}
-          pendingLabel="Saving…"
-          successMessage="Class teacher allocated."
+          submitLabel={current ? t('classTeacherForm.replace') : t('classTeacherForm.allocate')}
+          pendingLabel={t('classTeacherForm.saving')}
+          successMessage={t('classTeacherForm.allocated')}
         >
           <TeacherSelect teachers={teachers} />
         </ActionForm>

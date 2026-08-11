@@ -13,11 +13,15 @@ import { notFound, redirect } from 'next/navigation';
 import { ReportCardView } from '@/components/report-card';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, ReportCardResponse, TermResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Report cards · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolReportCards.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolClassReportCardsPage({
@@ -27,6 +31,8 @@ export default async function SchoolClassReportCardsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ termId?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { id } = await params;
   const { termId } = await searchParams;
   const back = `/school/classes/${id}/report-cards`;
@@ -65,26 +71,26 @@ export default async function SchoolClassReportCardsPage({
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/school/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/school/classes/${id}`}>{t('schoolReportCards.back')}</Link>
       </p>
 
       <PageHeader
-        title="Report cards"
-        description="What this class's families were given, exactly as it was issued."
+        title={t('schoolReportCards.title')}
+        description={t('schoolReportCards.description')}
       />
 
       {terms.length === 0 ? (
         <Card>
           <p style={{ margin: 0 }}>
-            You have not set up any terms yet, so nothing can have been issued.{' '}
-            <Link href="/school/terms">Add a term</Link>.
+            {t('schoolReportCards.noTerms')}{' '}
+            <Link href="/school/terms">{t('schoolReportCards.addTerm')}</Link>.
           </p>
         </Card>
       ) : (
         <>
           {terms.length > 1 ? (
             <form method="get" style={{ marginBottom: 'var(--ui-space-4)' }}>
-              <label htmlFor="term-picker">Term shown</label>{' '}
+              <label htmlFor="term-picker">{t('schoolReportCards.termShown')}</label>{' '}
               <select id="term-picker" name="termId" defaultValue={selected}>
                 {terms.map((term) => (
                   <option key={term.id} value={term.id}>
@@ -92,7 +98,7 @@ export default async function SchoolClassReportCardsPage({
                   </option>
                 ))}
               </select>{' '}
-              <button type="submit">Show</button>
+              <button type="submit">{t('schoolReportCards.show')}</button>
             </form>
           ) : null}
 

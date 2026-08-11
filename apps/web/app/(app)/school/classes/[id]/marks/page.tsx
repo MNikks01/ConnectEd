@@ -12,11 +12,16 @@ import { notFound, redirect } from 'next/navigation';
 
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { AssessmentResponse, AssessmentWithMarksResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Marks · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolMarks.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +30,8 @@ export default async function SchoolClassMarksPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { id } = await params;
 
   let assessments: AssessmentResponse[];
@@ -57,17 +64,14 @@ export default async function SchoolClassMarksPage({
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/school/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/school/classes/${id}`}>{t('schoolMarks.back')}</Link>
       </p>
 
-      <PageHeader
-        title="Marks"
-        description="Everything this class has been assessed on, including work not yet published."
-      />
+      <PageHeader title={t('schoolMarks.title')} description={t('schoolMarks.description')} />
 
       {withMarks.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>This class has no assessments yet.</p>
+          <p style={{ margin: 0 }}>{t('schoolMarks.none')}</p>
         </Card>
       ) : (
         <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
@@ -77,19 +81,25 @@ export default async function SchoolClassMarksPage({
                 {assessment.title}
               </h2>
               <p style={{ margin: '0 0 var(--ui-space-3)', color: 'var(--ui-color-text-muted)' }}>
-                {assessment.subjectName} · {assessment.kind.toLowerCase()} · {assessment.occurredOn}{' '}
-                · out of {assessment.maxScore} ·{' '}
-                {assessment.publishedAt ? 'published' : 'draft — the class cannot see this'}
+                {t('schoolMarks.meta', {
+                  subject: assessment.subjectName ?? '',
+                  kind: t(`marksPage.kind${assessment.kind}` as MessageKey),
+                  date: assessment.occurredOn,
+                  max: assessment.maxScore,
+                  state: assessment.publishedAt
+                    ? t('schoolMarks.published')
+                    : t('schoolMarks.draft'),
+                })}
               </p>
 
               {assessment.marks.length === 0 ? (
-                <p style={{ margin: 0 }}>Nobody has been marked yet.</p>
+                <p style={{ margin: 0 }}>{t('schoolMarks.nobodyMarked')}</p>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <caption
                     style={{ captionSide: 'top', textAlign: 'left', paddingBottom: '0.5rem' }}
                   >
-                    {assessment.marks.length} pupils
+                    {t('schoolMarks.pupilCount', { count: assessment.marks.length })}
                   </caption>
                   <thead>
                     <tr>

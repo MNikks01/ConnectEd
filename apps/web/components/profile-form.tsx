@@ -10,20 +10,23 @@ import { Field } from '@connected/ui';
 
 import { updateOwnProfileAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { ProfileResponse } from '@connected/types';
 
 export function ProfileForm({ profile }: { profile: ProfileResponse }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={updateOwnProfileAction}
-      submitLabel="Save profile"
-      pendingLabel="Saving…"
-      successMessage="Profile updated."
+      submitLabel={t('profileForm.submit')}
+      pendingLabel={t('profileForm.saving')}
+      successMessage={t('profileForm.saved')}
     >
       <Field
         name="fullName"
-        label="Name"
+        label={t('profileForm.name')}
         defaultValue={profile.displayName}
         required
         maxLength={120}
@@ -32,7 +35,7 @@ export function ProfileForm({ profile }: { profile: ProfileResponse }) {
 
       <Field
         name="bio"
-        label="About you"
+        label={t('profileForm.about')}
         as="textarea"
         rows={3}
         maxLength={1000}
@@ -42,7 +45,7 @@ export function ProfileForm({ profile }: { profile: ProfileResponse }) {
 
       <Field
         name="achievements"
-        label="Achievements"
+        label={t('profileForm.achievements')}
         as="textarea"
         rows={3}
         maxLength={2000}
@@ -52,14 +55,14 @@ export function ProfileForm({ profile }: { profile: ProfileResponse }) {
 
       <Field
         name="visibility"
-        label="Who can see the details above"
+        label={t('profileForm.visibility')}
         as="select"
         defaultValue={profile.visibility ?? 'PUBLIC'}
         error={useFieldError('visibility')}
-        hint="Your name and picture are always visible, so people can find you to connect."
+        hint={t('profileForm.visibilityHint')}
         options={[
-          { value: 'PUBLIC', label: 'Anyone signed in' },
-          { value: 'CONNECTIONS', label: 'Only my connections' },
+          { value: 'PUBLIC', label: t('profileForm.public') },
+          { value: 'CONNECTIONS', label: t('profileForm.connectionsOnly') },
         ]}
       />
     </ActionForm>

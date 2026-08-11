@@ -11,6 +11,7 @@ import { TimetableEditor } from '@/components/timetable-editor';
 import { TimetablePanel } from '@/components/timetable-panel';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type {
   ClassResponse,
@@ -24,6 +25,8 @@ import type {
 export const dynamic = 'force-dynamic';
 
 export default async function ClassDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = await getTranslations();
+
   const { id } = await params;
 
   let klass: ClassResponse | undefined;
@@ -73,33 +76,47 @@ export default async function ClassDetailPage({ params }: { params: Promise<{ id
   return (
     <>
       <p style={{ marginTop: 0 }}>
-        <Link href="/school/classes">← All classes</Link>
+        <Link href="/school/classes">{t('schoolClassDetail.back')}</Link>
       </p>
 
       <PageHeader
         title={klass.displayName}
-        description={`${klass.subjectCount} subject${klass.subjectCount === 1 ? '' : 's'} · ${klass.active ? 'Active' : 'Inactive'}`}
+        description={t('schoolClassDetail.summary', {
+          subjects:
+            klass.subjectCount === 1
+              ? t('schoolClassDetail.subjectCountOne')
+              : t('schoolClassDetail.subjectCountMany', { count: klass.subjectCount }),
+          state: klass.active ? t('schoolClassDetail.active') : t('schoolClassDetail.inactive'),
+        })}
       />
 
       <p>
-        <Link href={`/school/classes/${id}/marks`}>Marks</Link>
+        <Link href={`/school/classes/${id}/marks`}>{t('schoolClassDetail.marks')}</Link>
         {' · '}
-        <Link href={`/school/classes/${id}/report-cards`}>Report cards</Link>
+        <Link href={`/school/classes/${id}/report-cards`}>
+          {t('schoolClassDetail.reportCards')}
+        </Link>
       </p>
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Subjects</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('schoolClassDetail.subjects')}
+          </h2>
           <SubjectPanel classId={id} subjects={subjects} />
         </Card>
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Class teacher</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('schoolClassDetail.classTeacher')}
+          </h2>
           <ClassTeacherForm classId={id} current={classTeacher} teachers={teachers} />
         </Card>
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Timetable</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('schoolClassDetail.timetable')}
+          </h2>
           {/*
             Two ways to publish the same thing, side by side, because they suit different schools
             rather than different stages. A photograph of the sheet on the wall is thirty seconds

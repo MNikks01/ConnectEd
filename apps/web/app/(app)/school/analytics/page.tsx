@@ -15,17 +15,22 @@ import { redirect } from 'next/navigation';
 import { AnalyticsPanels } from '@/components/analytics-panels';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, SchoolAnalyticsResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Analytics · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolAnalytics.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
-const WINDOWS = [
-  { days: 30, label: 'Last 30 days' },
-  { days: 90, label: 'Last 90 days' },
-  { days: 365, label: 'Last year' },
+const WINDOWS: { days: number; label: MessageKey }[] = [
+  { days: 30, label: 'schoolAnalytics.last30' },
+  { days: 90, label: 'schoolAnalytics.last90' },
+  { days: 365, label: 'schoolAnalytics.lastYear' },
 ];
 
 export default async function AnalyticsPage({
@@ -33,6 +38,8 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ days?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { days: requested } = await searchParams;
   const days = WINDOWS.some((window) => String(window.days) === requested) ? Number(requested) : 30;
 
@@ -59,30 +66,35 @@ export default async function AnalyticsPage({
   return (
     <>
       <PageHeader
-        title="Analytics"
-        description="How your school is using ConnectEd, and how much of what you publish is being read."
+        title={t('schoolAnalytics.title')}
+        description={t('schoolAnalytics.description')}
       />
 
       {notInPlan ? (
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Not on your plan yet</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('schoolAnalytics.notInPlan')}
+          </h2>
           <p>{notInPlan}</p>
           <p style={{ marginBottom: 0 }}>
             {/* Where to go, rather than a button that would do nothing — self-service checkout
                 does not exist yet, and the billing page says so honestly. */}
-            <Link href="/school/billing">See your plan</Link>
+            <Link href="/school/billing">{t('schoolAnalytics.seePlan')}</Link>
           </p>
         </Card>
       ) : (
         <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
-          <nav aria-label="Period" style={{ display: 'flex', gap: 'var(--ui-space-3)' }}>
+          <nav
+            aria-label={t('schoolAnalytics.periodNav')}
+            style={{ display: 'flex', gap: 'var(--ui-space-3)' }}
+          >
             {WINDOWS.map((window) => (
               <Link
                 key={window.days}
                 href={`/school/analytics?days=${String(window.days)}`}
                 aria-current={window.days === days ? 'page' : undefined}
               >
-                {window.label}
+                {t(window.label)}
               </Link>
             ))}
           </nav>

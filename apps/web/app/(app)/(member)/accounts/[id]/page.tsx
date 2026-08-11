@@ -12,6 +12,7 @@ import { notFound, redirect } from 'next/navigation';
 import { PostCard } from '@/components/post-card';
 import { ProfileActions } from '@/components/profile-actions';
 import { ApiError } from '@/lib/api-client';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -25,12 +26,16 @@ import type {
 } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Profile · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('publicProfile.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { t } = await getTranslations();
 
   let profile: ProfileResponse;
   let me: CurrentAccountResponse;
@@ -72,7 +77,9 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       <PageHeader
         title={profile.displayName}
         {...(profile.handle ? { description: `@${profile.handle}` } : {})}
-        actions={isMe ? <Link href="/settings/profile">Edit your profile</Link> : undefined}
+        actions={
+          isMe ? <Link href="/settings/profile">{t('publicProfile.editYours')}</Link> : undefined
+        }
       />
 
       <Card as="section">
@@ -84,18 +91,21 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
             flexWrap: 'wrap',
           }}
         >
-          {profile.accountType === 'SCHOOL' ? <Badge tone="info">School</Badge> : null}
+          {profile.accountType === 'SCHOOL' ? (
+            <Badge tone="info">{t('publicProfile.schoolBadge')}</Badge>
+          ) : null}
           {follow ? (
             <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-              {follow.followerCount} following them · {follow.followingCount} they follow
+              {t('publicProfile.followCounts', {
+                followers: follow.followerCount,
+                following: follow.followingCount,
+              })}
             </span>
           ) : null}
         </div>
 
         {profile.restricted ? (
-          <p style={{ margin: 'var(--ui-space-3) 0 0' }}>
-            This profile is only visible to their connections. You can still ask to connect.
-          </p>
+          <p style={{ margin: 'var(--ui-space-3) 0 0' }}>{t('publicProfile.restricted')}</p>
         ) : (
           <>
             {profile.bio ? (
@@ -124,11 +134,11 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <section style={{ marginTop: 'var(--ui-space-5)' }}>
-        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Posts</h2>
+        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('publicProfile.posts')}</h2>
 
         {timeline.data.length === 0 ? (
           <Card>
-            <p style={{ margin: 0 }}>Nothing posted yet.</p>
+            <p style={{ margin: 0 }}>{t('publicProfile.noPosts')}</p>
           </Card>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>

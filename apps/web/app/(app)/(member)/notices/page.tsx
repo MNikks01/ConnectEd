@@ -8,12 +8,17 @@ import { Badge, Card, PageHeader } from '@connected/ui';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { formatShortDate } from '@/lib/i18n/format';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { MyMembershipResponse, NoticeResponse, Paginated } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Notices · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('notices.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +28,7 @@ export default async function NoticesPage({
   searchParams: Promise<{ school?: string; after?: string }>;
 }) {
   const { school, after } = await searchParams;
+  const { t, locale } = await getTranslations();
 
   let memberships: MyMembershipResponse[];
   try {
@@ -41,11 +47,9 @@ export default async function NoticesPage({
   if (schools.length === 0) {
     return (
       <main>
-        <PageHeader title="Notices" />
+        <PageHeader title={t('notices.title')} />
         <Card>
-          <p style={{ margin: 0 }}>
-            Notices appear here once a school has verified you as a member.
-          </p>
+          <p style={{ margin: 0 }}>{t('notices.noSchools')}</p>
         </Card>
       </main>
     );
@@ -59,10 +63,10 @@ export default async function NoticesPage({
 
   return (
     <main>
-      <PageHeader title="Notices" description="From your school." />
+      <PageHeader title={t('notices.title')} description={t('notices.description')} />
 
       {schools.length > 1 ? (
-        <nav aria-label="School" style={{ marginBottom: 'var(--ui-space-4)' }}>
+        <nav aria-label={t('notices.schoolNav')} style={{ marginBottom: 'var(--ui-space-4)' }}>
           <ul className="filter-tabs">
             {schools.map(([id, name]) => (
               <li key={id}>
@@ -70,7 +74,7 @@ export default async function NoticesPage({
                   href={`/notices?school=${id}`}
                   aria-current={id === schoolId ? 'page' : undefined}
                 >
-                  {name ?? 'School'}
+                  {name ?? t('notices.schoolFallback')}
                 </Link>
               </li>
             ))}
@@ -80,7 +84,7 @@ export default async function NoticesPage({
 
       {notices.data.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>Nothing has been posted yet.</p>
+          <p style={{ margin: 0 }}>{t('notices.empty')}</p>
         </Card>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
@@ -95,14 +99,14 @@ export default async function NoticesPage({
                     flexWrap: 'wrap',
                   }}
                 >
-                  {notice.read ? null : <Badge tone="info">Unread</Badge>}
+                  {notice.read ? null : <Badge tone="info">{t('notices.unread')}</Badge>}
                   <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                    {new Date(notice.createdAt).toLocaleDateString('en-GB')} ·{' '}
-                    {notice.authorName ?? 'School'}
+                    {formatShortDate(notice.createdAt, locale)} ·{' '}
+                    {notice.authorName ?? t('notices.schoolFallback')}
                   </span>
                   {notice.readCount === undefined ? null : (
                     <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                      Read by {notice.readCount}
+                      {t('notices.readBy', { count: notice.readCount })}
                     </span>
                   )}
                 </div>
@@ -121,7 +125,7 @@ export default async function NoticesPage({
           <Link
             href={`/notices?school=${schoolId}&after=${encodeURIComponent(notices.nextCursor)}`}
           >
-            Older notices
+            {t('notices.older')}
           </Link>
         </p>
       ) : null}

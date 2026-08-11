@@ -7,14 +7,20 @@ import { redirect } from 'next/navigation';
 import { ClassCreateForm } from '@/components/class-create-form';
 import { ClassTable } from '@/components/class-table';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { ClassResponse, CurrentAccountResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Classes · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolClasses.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function ClassesPage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let classes: ClassResponse[];
 
@@ -32,10 +38,7 @@ export default async function ClassesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Classes"
-        description="Every class is a medium, level, and section. Subjects and the class teacher are set inside each one."
-      />
+      <PageHeader title={t('schoolClasses.title')} description={t('schoolClasses.description')} />
 
       {/* `minmax(0, 1fr)`, not the default `auto`. A grid item's automatic minimum size is
           content-based, so the class table's min-content width — which is wider than 320px once
@@ -52,7 +55,9 @@ export default async function ClassesPage() {
         <ClassTable classes={classes} />
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Add a class</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('schoolClasses.addHeading')}
+          </h2>
           <ClassCreateForm schoolId={account.id} />
         </Card>
       </div>

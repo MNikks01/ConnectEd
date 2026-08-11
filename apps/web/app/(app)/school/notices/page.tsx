@@ -6,14 +6,20 @@ import { redirect } from 'next/navigation';
 
 import { NoticeComposer, NoticeList } from '@/components/notice-admin';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, NoticeResponse, Paginated } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Notices · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolNotices.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolNoticesPage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let notices: Paginated<NoticeResponse>;
 
@@ -33,17 +39,16 @@ export default async function SchoolNoticesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Notices"
-        description="Anything published here reaches every verified member of the school."
-      />
+      <PageHeader title={t('schoolNotices.title')} description={t('schoolNotices.description')} />
 
-      <section aria-label="Published notices">
+      <section aria-label={t('schoolNotices.publishedLabel')}>
         <NoticeList notices={notices.data} />
       </section>
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Publish a notice</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('schoolNotices.publishHeading')}
+        </h2>
         <NoticeComposer schoolId={account.id} />
       </Card>
     </>

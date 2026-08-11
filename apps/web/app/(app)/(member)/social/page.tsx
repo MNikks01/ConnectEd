@@ -11,12 +11,16 @@ import { redirect } from 'next/navigation';
 
 import { PostCard } from '@/components/post-card';
 import { PostComposer } from '@/components/post-composer';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { CommentResponse, Paginated, PostResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Social · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('social.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +30,7 @@ export default async function SocialPage({
   searchParams: Promise<{ cursor?: string }>;
 }) {
   const { cursor } = await searchParams;
+  const { t } = await getTranslations();
 
   let feed: Paginated<PostResponse>;
   let comments: Record<string, CommentResponse[]> = {};
@@ -53,25 +58,22 @@ export default async function SocialPage({
   return (
     <main>
       <PageHeader
-        title="Social"
-        description="From the people and schools you follow."
-        actions={<Link href="/connections">Connections</Link>}
+        title={t('social.title')}
+        description={t('social.description')}
+        actions={<Link href="/connections">{t('social.connections')}</Link>}
       />
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>New post</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('social.newPost')}</h2>
         <PostComposer />
       </Card>
 
       <section style={{ marginTop: 'var(--ui-space-5)' }}>
-        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Feed</h2>
+        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('social.feed')}</h2>
 
         {feed.data.length === 0 ? (
           <Card>
-            <p style={{ margin: 0 }}>
-              Nothing here yet. Follow a school or connect with someone and their posts appear in
-              this feed.
-            </p>
+            <p style={{ margin: 0 }}>{t('social.empty')}</p>
           </Card>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
@@ -85,7 +87,9 @@ export default async function SocialPage({
 
         {feed.nextCursor ? (
           <p style={{ marginTop: 'var(--ui-space-4)' }}>
-            <Link href={`/social?cursor=${encodeURIComponent(feed.nextCursor)}`}>Older posts</Link>
+            <Link href={`/social?cursor=${encodeURIComponent(feed.nextCursor)}`}>
+              {t('social.older')}
+            </Link>
           </p>
         ) : null}
       </section>

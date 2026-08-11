@@ -9,15 +9,19 @@
 import { Card, Field } from '@connected/ui';
 
 import { sendMessageAction } from '@/app/(app)/(member)/actions';
+import { formatDateTime } from '@/lib/i18n/format';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { MessageResponse } from '@connected/types';
 
 function BodyField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="body"
-      label="Message"
+      label={t('messageThread.label')}
       as="textarea"
       rows={2}
       required
@@ -34,17 +38,18 @@ export function MessageThread({
   threadId: string;
   messages: MessageResponse[];
 }) {
+  const { t, locale } = useTranslations();
   const inOrder = [...messages].reverse();
 
   return (
     <div style={{ display: 'grid', gap: 'var(--ui-space-4)' }}>
       {inOrder.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>Nothing said yet. Start the conversation below.</p>
+          <p style={{ margin: 0 }}>{t('messageThread.empty')}</p>
         </Card>
       ) : (
         <ul
-          aria-label="Messages"
+          aria-label={t('messageThread.listLabel')}
           style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-2)' }}
         >
           {inOrder.map((message) => (
@@ -52,8 +57,8 @@ export function MessageThread({
               <Card>
                 <p className="muted" style={{ margin: 0, fontSize: 'var(--ui-text-sm)' }}>
                   {/* Said in words, not by which side of the screen it sits on. */}
-                  {message.mine ? 'You' : 'Them'} ·{' '}
-                  {new Date(message.createdAt).toLocaleString('en-GB')}
+                  {message.mine ? t('messageThread.you') : t('messageThread.them')} ·{' '}
+                  {formatDateTime(message.createdAt, locale)}
                   {message.mine && message.readAt ? ' · read' : ''}
                 </p>
                 <p style={{ margin: '0.25rem 0 0', whiteSpace: 'pre-wrap' }}>{message.body}</p>
@@ -65,9 +70,9 @@ export function MessageThread({
 
       <ActionForm
         action={sendMessageAction.bind(null, threadId)}
-        submitLabel="Send"
-        pendingLabel="Sending…"
-        successMessage="Sent."
+        submitLabel={t('messageThread.send')}
+        pendingLabel={t('messageThread.sending')}
+        successMessage={t('messageThread.sent')}
         resetOnSuccess
       >
         <BodyField />

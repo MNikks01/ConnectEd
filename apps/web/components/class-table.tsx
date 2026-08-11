@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge, Button, Table } from '@connected/ui';
+import { useTranslations } from './locale-provider';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
@@ -10,6 +11,7 @@ import type { ClassResponse } from '@connected/types';
 
 export function ClassTable({ classes }: { classes: ClassResponse[] }) {
   const [pending, startTransition] = useTransition();
+  const { t } = useTranslations();
   // Tracked per row so toggling one class does not put every button in a busy state.
   const [busyId, setBusyId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -34,34 +36,34 @@ export function ClassTable({ classes }: { classes: ClassResponse[] }) {
       ) : null}
 
       <Table
-        caption="Classes"
+        caption={t('classTable.caption')}
         columns={[
           {
             key: 'name',
-            header: 'Class',
+            header: t('classTable.colClass'),
             render: (klass: ClassResponse) => (
               <Link href={`/school/classes/${klass.id}`}>{klass.displayName}</Link>
             ),
           },
           {
             key: 'subjects',
-            header: 'Subjects',
+            header: t('classTable.colSubjects'),
             align: 'end',
             render: (klass: ClassResponse) => klass.subjectCount,
           },
           {
             key: 'status',
-            header: 'Status',
+            header: t('classTable.colStatus'),
             render: (klass: ClassResponse) => (
               // Text, not colour alone — the badge label says which state it is.
               <Badge tone={klass.active ? 'success' : 'neutral'}>
-                {klass.active ? 'Active' : 'Inactive'}
+                {klass.active ? t('classTable.active') : t('classTable.inactive')}
               </Badge>
             ),
           },
           {
             key: 'actions',
-            header: 'Actions',
+            header: t('classTable.colActions'),
             align: 'end',
             render: (klass: ClassResponse) => (
               <Button
@@ -72,7 +74,7 @@ export function ClassTable({ classes }: { classes: ClassResponse[] }) {
                   toggle(klass);
                 }}
               >
-                {klass.active ? 'Deactivate' : 'Reactivate'}
+                {klass.active ? t('classTable.deactivate') : t('classTable.reactivate')}
               </Button>
             ),
           },

@@ -8,7 +8,11 @@ import { useState, useTransition } from 'react';
 
 import { submitFeedbackAction } from '@/app/(app)/(member)/actions';
 import { reviewFeedbackAction } from '@/app/(app)/school/actions';
+import { formatShortDate } from '@/lib/i18n/format';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
+
+import type { MessageKey } from '@/lib/i18n/translate';
 
 import type { FeedbackResponse } from '@connected/types';
 
@@ -18,41 +22,44 @@ const STATUS_TONE = {
   RESOLVED: 'success',
 } as const;
 
-const STATUS_LABEL = {
-  OPEN: 'Not yet read',
-  UNDER_REVIEW: 'Being looked at',
-  RESOLVED: 'Resolved',
-} as const;
+/** Keys, not words — each is resolved where it is rendered so it follows the reader's locale. */
+const STATUS_LABEL: Record<string, MessageKey> = {
+  OPEN: 'feedback.statusOPEN',
+  UNDER_REVIEW: 'feedback.statusUNDER_REVIEW',
+  RESOLVED: 'feedback.statusRESOLVED',
+};
 
 export function FeedbackForm({ schoolId }: { schoolId: string }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={submitFeedbackAction.bind(null, schoolId)}
-      submitLabel="Send to the school"
-      pendingLabel="Sending…"
-      successMessage="Sent. The school can see who raised it."
+      submitLabel={t('feedback.submit')}
+      pendingLabel={t('feedback.sending')}
+      successMessage={t('feedback.sent')}
       resetOnSuccess
     >
       <Field
         name="kind"
-        label="Type"
+        label={t('feedback.kind')}
         as="select"
         required
         error={useFieldError('kind')}
         options={[
-          { value: 'COMPLAINT', label: 'Complaint' },
-          { value: 'SUGGESTION', label: 'Suggestion' },
+          { value: 'COMPLAINT', label: t('feedback.complaint') },
+          { value: 'SUGGESTION', label: t('feedback.suggestion') },
         ]}
       />
       <Field
         name="body"
-        label="Details"
+        label={t('feedback.details')}
         as="textarea"
         rows={5}
         required
         maxLength={5000}
         error={useFieldError('body')}
-        hint="Your name is attached — this is not anonymous."
+        hint={t('feedback.detailsHint')}
       />
     </ActionForm>
   );
@@ -60,17 +67,19 @@ export function FeedbackForm({ schoolId }: { schoolId: string }) {
 
 /** What the author sees: status, no controls. */
 export function FeedbackHistory({ items }: { items: FeedbackResponse[] }) {
+  const { t, locale } = useTranslations();
+
   if (items.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>You have not raised anything yet.</p>
+        <p style={{ margin: 0 }}>{t('feedback.noneRaised')}</p>
       </Card>
     );
   }
 
   return (
     <ul
-      aria-label="What you have raised"
+      aria-label={t('feedback.historyLabel')}
       style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}
     >
       {items.map((item) => (
@@ -84,10 +93,14 @@ export function FeedbackHistory({ items }: { items: FeedbackResponse[] }) {
                 flexWrap: 'wrap',
               }}
             >
-              <Badge tone="neutral">{item.kind === 'COMPLAINT' ? 'Complaint' : 'Suggestion'}</Badge>
-              <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
+              <Badge tone="neutral">
+                {item.kind === 'COMPLAINT' ? t('feedback.complaint') : t('feedback.suggestion')}
+              </Badge>
+              <Badge tone={STATUS_TONE[item.status]}>
+                {t(STATUS_LABEL[item.status] as MessageKey)}
+              </Badge>
               <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                {new Date(item.createdAt).toLocaleDateString('en-GB')}
+                {formatShortDate(item.createdAt, locale)}
               </span>
             </div>
 
@@ -107,6 +120,7 @@ export function FeedbackQueue({
   items: FeedbackResponse[];
   canReview: boolean;
 }) {
+  const { t, locale } = useTranslations();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
@@ -122,7 +136,7 @@ export function FeedbackQueue({
   if (items.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>Nothing here. Complaints and suggestions arrive in this list.</p>
+        <p style={{ margin: 0 }}>{t('feedback.queueEmpty')}</p>
       </Card>
     );
   }
@@ -136,7 +150,7 @@ export function FeedbackQueue({
       ) : null}
 
       <ul
-        aria-label="Complaints and suggestions"
+        aria-label={t('feedback.queueLabel')}
         style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}
       >
         {items.map((item) => (
@@ -151,12 +165,14 @@ export function FeedbackQueue({
                 }}
               >
                 <Badge tone="neutral">
-                  {item.kind === 'COMPLAINT' ? 'Complaint' : 'Suggestion'}
+                  {item.kind === 'COMPLAINT' ? t('feedback.complaint') : t('feedback.suggestion')}
                 </Badge>
-                <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
+                <Badge tone={STATUS_TONE[item.status]}>
+                  {t(STATUS_LABEL[item.status] as MessageKey)}
+                </Badge>
                 <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                  {item.authorName ?? 'A member'} ·{' '}
-                  {new Date(item.createdAt).toLocaleDateString('en-GB')}
+                  {item.authorName ?? t('feedback.memberFallback')} ·{' '}
+                  {formatShortDate(item.createdAt, locale)}
                 </span>
               </div>
 
@@ -177,7 +193,7 @@ export function FeedbackQueue({
                         review(item.id, 'UNDER_REVIEW');
                       }}
                     >
-                      Mark as being looked at
+                      {t('feedback.markUnderReview')}
                     </Button>
                   ) : null}
 
@@ -188,7 +204,7 @@ export function FeedbackQueue({
                       review(item.id, 'RESOLVED');
                     }}
                   >
-                    Mark resolved
+                    {t('feedback.markResolved')}
                   </Button>
                 </div>
               ) : null}

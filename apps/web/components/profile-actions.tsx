@@ -18,14 +18,17 @@ import {
   startThreadAction,
 } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import { Field } from '@connected/ui';
 
 function ReasonField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="reason"
-      label="What is wrong?"
+      label={t('profileActions.reportLabel')}
       as="textarea"
       rows={3}
       required
@@ -46,6 +49,7 @@ export function ProfileActions({
   connectionState: 'none' | 'pending' | 'connected';
   blocked: boolean;
 }) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
@@ -65,7 +69,7 @@ export function ProfileActions({
   if (blocked) {
     return (
       <div>
-        <p className="muted">You have blocked this account.</p>
+        <p className="muted">{t('profileActions.blockedNotice')}</p>
         <Button
           variant="secondary"
           loading={pending}
@@ -73,7 +77,7 @@ export function ProfileActions({
             act(() => blockAction(accountId, true));
           }}
         >
-          Unblock
+          {t('profileActions.unblock')}
         </Button>
       </div>
     );
@@ -94,7 +98,7 @@ export function ProfileActions({
             act(() => followAction(accountId, following));
           }}
         >
-          {following ? 'Unfollow' : 'Follow'}
+          {following ? t('profileActions.unfollow') : t('profileActions.follow')}
         </Button>
 
         {connectionState === 'none' ? (
@@ -105,11 +109,13 @@ export function ProfileActions({
               act(() => requestConnectionAction(accountId));
             }}
           >
-            Connect
+            {t('profileActions.connect')}
           </Button>
         ) : (
           <Button variant="secondary" disabled>
-            {connectionState === 'pending' ? 'Request sent' : 'Connected'}
+            {connectionState === 'pending'
+              ? t('profileActions.requestSent')
+              : t('profileActions.connected')}
           </Button>
         )}
 
@@ -125,7 +131,7 @@ export function ProfileActions({
             );
           }}
         >
-          Message
+          {t('profileActions.message')}
         </Button>
 
         <Button
@@ -135,7 +141,7 @@ export function ProfileActions({
           }}
           aria-expanded={reporting}
         >
-          Report
+          {t('profileActions.report')}
         </Button>
 
         <Button
@@ -144,16 +150,16 @@ export function ProfileActions({
             setConfirmingBlock(true);
           }}
         >
-          Block
+          {t('profileActions.block')}
         </Button>
       </div>
 
       {reporting ? (
         <ActionForm
           action={reportAction.bind(null, 'ACCOUNT', accountId)}
-          submitLabel="Send report"
-          pendingLabel="Sending…"
-          successMessage="Reported. Nobody at your school is told."
+          submitLabel={t('profileActions.sendReport')}
+          pendingLabel={t('profileActions.sending')}
+          successMessage={t('profileActions.reported')}
         >
           <ReasonField />
         </ActionForm>
@@ -161,7 +167,7 @@ export function ProfileActions({
 
       <Dialog
         open={confirmingBlock}
-        title="Block this account?"
+        title={t('profileActions.blockTitle')}
         onClose={() => {
           setConfirmingBlock(false);
         }}
@@ -173,7 +179,7 @@ export function ProfileActions({
                 setConfirmingBlock(false);
               }}
             >
-              Cancel
+              {t('profileActions.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -187,15 +193,12 @@ export function ProfileActions({
                 );
               }}
             >
-              Block
+              {t('profileActions.block')}
             </Button>
           </>
         }
       >
-        <p style={{ margin: 0 }}>
-          You will not see each other&rsquo;s posts, comments or messages, in either direction.
-          Unblocking puts everything back — nothing is deleted.
-        </p>
+        <p style={{ margin: 0 }}>{t('profileActions.blockExplained')}</p>
       </Dialog>
     </div>
   );
