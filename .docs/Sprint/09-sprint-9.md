@@ -1,6 +1,6 @@
 # Sprint 9 — Somewhere to run
 
-`Status: Planned` · `Last updated: 2026-08-08` · Duration: 2 weeks
+`Status: In Review` · `Last updated: 2026-08-11` · Duration: 2 weeks
 
 Goal: make it possible to give this to a school. This is a **proposal for planning** — adjust the
 split before committing.
@@ -442,7 +442,79 @@ given what this sprint touches.
 
 ## Review notes
 
-_Filled at review._
+**Eleven of thirteen committed items are done or half-done; the two that are neither are S9-4 and
+S9-8, and both are one decision — S9-0a, where production runs.** That is the sprint's shape and it
+was the shape the plan predicted on day one.
+
+### The sprint's own premise was wrong, and finding that out was the value
+
+The plan opened by saying "the ungated work has run out, and that is the finding". Every functional
+requirement outstanding was blocked on a payment provider, a mail transport, or the mobile client,
+and the sprint was justified on the grounds that the missing thing — a deployment — had never been a
+requirement at all.
+
+**S9-13 then went looking, and found two unblocked commitments the product had made in its own
+documents.** Export and erasure were written into `Security/04-compliance.md` as subject rights with
+no code behind either. Internationalisation was asked for while `Class.medium` already offered Hindi.
+Neither was blocked on anything. Both were built this sprint (S9-19, S9-18).
+
+So the honest version of the sprint's opening claim is narrower than it was written: the ungated
+work had not run out — **the ungated work that somebody had asked for out loud** had run out. The
+rest was in the documents, unread, and it took writing the non-functional half of a completeness
+record to surface it. That is an argument for keeping that table current rather than for the table
+being a chore.
+
+### What the work found that nothing else would have
+
+Six defects and gaps, and every one of them came from doing the thing rather than from reasoning
+about it:
+
+| Found by | What                                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| S9-1     | The web app could not have been deployed twice — a build-time variable held the API's location |
+| S9-1     | A stale `tsbuildinfo` in the image emitted declarations and no JavaScript                      |
+| S9-3     | The first real release would have failed at the push: `MNikks01/ConnectEd` is not a valid tag  |
+| S9-17    | WebKit dropped every session cookie. **Safari users could not have signed in at all**          |
+| S9-17    | `/classes/[id]` overflowed a 320px screen by 69px                                              |
+| S9-18    | The language switcher existed only on pages you see _before_ signing in                        |
+
+The pattern the risk section predicted — "everything the product needs that only a developer's
+machine has ever provided" — held for the infrastructure items and then kept holding for the rest.
+
+### Two decisions that changed while being implemented
+
+Both are in `PRD/14-export-and-erasure.md`, and both are the same kind of mistake: a rule that was
+right about the subject and wrong about everybody else.
+
+**A message thread is not the erasing party's to delete.** Deleting it cascades into the
+counterparty's messages — words written by somebody else, about themselves. The disposition table
+said "delete"; the code says the subject's messages go and the thread stays.
+
+**Not every uploaded object is the uploader's to take.** A photograph attached to a homework item
+belongs to the class the homework was set for; deleting it would leave the surviving item pointing
+at a key that 404s.
+
+Neither was visible from the requirement. Both were visible from the schema, on the first attempt to
+write the delete.
+
+### What is honestly not done
+
+- **S9-4 and S9-8** — untouched, and correctly so. Both are S9-0a.
+- **S9-5, S9-6, S9-7, S9-10** — half each, and all four halves are the same half: the deployed one.
+  Seeing them in a column together is what made "this is one decision rather than four problems"
+  obvious, and that observation is S9-13's, not the plan's.
+- **S9-18** — 15 of 99 files, and the Hindi has had no native-speaker review. The mechanism is
+  proven and the rest is mechanical, which is a different kind of incomplete from the rows above and
+  the completeness table now says which is which.
+- **NFR-012 and NFR-005** remain measured-not-audited and reviewed-not-walked. Neither moved.
+
+### The thing that has not changed in ten sprints
+
+**Nothing in this repository has been reviewed by a second person.** Branch protection requires five
+checks and zero approvals, deliberately, because one collaborator cannot approve their own pull
+request. This sprint added an irreversible destructive operation and a data export — the two
+surfaces where a second reader is worth most — and neither was read by anybody else. It is B-8 in
+`Product/05-what-is-blocked-on-you.md` and it is the oldest open item in the project.
 
 ## Retro
 
