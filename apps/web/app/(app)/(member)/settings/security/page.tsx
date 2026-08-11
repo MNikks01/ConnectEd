@@ -34,7 +34,11 @@ export default async function SecurityPage() {
     throw error;
   }
 
-  const mayEnrol = account.accountType === 'SCHOOL' || account.role === 'PRINCIPAL';
+  // ConnectEd staff too (ASVS 4.3.1). The moderation queue is the most privileged surface in the
+  // product, and until 2026-08-11 the one interface the standard singles out for MFA was the only
+  // one whose holders could not enrol.
+  const mayEnrol =
+    account.accountType === 'SCHOOL' || account.role === 'PRINCIPAL' || account.isPlatformAdmin;
 
   return (
     <>

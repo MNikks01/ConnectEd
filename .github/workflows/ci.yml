@@ -266,6 +266,32 @@ jobs:
           docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:latest \
             detect --source /repo --config /repo/.gitleaks.toml --no-banner --redact -v
 
+  # Known vulnerabilities in what we depend on (ASVS 14.2.1, added 2026-08-11).
+  #
+  # The 2026-08-05 security review ran `pnpm audit` by hand and recorded "reports nothing". That was
+  # true on the day and nothing re-checked it, which is the shape of finding a checklist walk exists
+  # to catch: a point-in-time claim written down as if it were a property. An advisory published the
+  # following week would have been invisible until somebody thought to look again.
+  #
+  # `--prod` deliberately: a vulnerability in a dev dependency is worth knowing about and is not
+  # worth blocking a merge on, because it does not ship. The full tree is still worth reading
+  # occasionally by hand.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
   # The images the product will actually be deployed as (S9-1).
   #
   # Built on every pull request, and the point is not the artefact — nothing is pushed here, that is

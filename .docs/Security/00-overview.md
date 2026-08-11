@@ -37,3 +37,5 @@ Security is the headline reason for the rebuild. The legacy app had **no server-
 - **Rate limiting & lockout:** on auth + writes.
 - **Dependencies:** automated audits (Dependabot/`pnpm audit`) in CI; SCA gate.
 - **Uploads:** type/size validation, virus-scan hook, served via signed URLs only.
+
+- [ASVS L2 walkthrough](./07-asvs-l2.md) — the standard walked as a checklist (2026-08-11); five findings, four fixed.

@@ -27,6 +27,19 @@ const securityHeaders = [
   // Duplicates the policy's `frame-ancestors 'none'` for browsers that predate it. Both say the
   // same thing: nothing may put this app in a frame, because a click in the school portal approves
   // a member or withdraws a notice, and it has to be a click the person meant.
+  /**
+   * HSTS (ASVS 14.4.5, found walking L2 on 2026-08-11). Absent entirely until now.
+   *
+   * Browsers ignore it over plain HTTP, so it costs nothing locally and in the end-to-end suite —
+   * but it has to be *present* before the first HTTPS deployment, because the whole point is that
+   * it is already there on the first response a real user receives. Adding it at deploy time means
+   * the one request that mattered was unprotected.
+   *
+   * `preload` is deliberately absent: submitting to the preload list is close to irreversible and
+   * commits every future subdomain to HTTPS, which is a decision for whoever answers B-1 and buys
+   * the domain (B-7.1), not for this file.
+   */
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // A referrer is the page somebody was on when they clicked away, and on this product a path can
