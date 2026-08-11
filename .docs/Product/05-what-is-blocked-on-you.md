@@ -140,6 +140,11 @@ transport ships first and is proven to deliver; the gate follows.
 **Blocks:** nothing today, and it gets more expensive every term. Asked in **three** PRDs —
 gradebook, attendance, report cards — and unanswered in all three.
 
+**Sharper since 2026-08-11.** `product_event` (S9-15) now records one row per member per active
+day, forever, because nothing yet says otherwise. That is the first table in the product that grows
+with _usage_ rather than with content, and it is the one where "keep everything, delete nothing"
+stops being a defensible default soonest.
+
 **Why it matters more than it sounds.** Attendance is a legal record in many jurisdictions, with a
 statutory minimum retention. Marks are the longest-lived data the product holds. A report card is
 the artefact a family is most likely to ask for years later. Every term of real data makes the
