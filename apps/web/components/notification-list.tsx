@@ -14,33 +14,50 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
 import { markAllNotificationsReadAction } from '@/app/(app)/(member)/actions';
+import { formatDateTime } from '@/lib/i18n/format';
+import { useTranslations } from './locale-provider';
+
+import type { Translator } from '@/lib/i18n/translate';
 
 interface Rendered {
   text: string;
   href?: string;
 }
 
-function render(notification: NotificationResponse): Rendered {
+function render(notification: NotificationResponse, t: Translator): Rendered {
   switch (notification.type) {
     case 'academic.published': {
       const payload = academicPublishedPayload(notification.payload);
-      if (!payload) return { text: 'New work was published to your class.' };
+      if (!payload) return { text: t('notificationList.academicPublishedFallback') };
 
       return {
-        text: `New ${payload.itemType.toLowerCase()}: ${payload.title}`,
+        // The item type is interpolated rather than concatenated, and it is no longer lowercased:
+        // `toLowerCase()` is an English habit, and it silently mangles scripts that have no case.
+        text: t('notificationList.academicPublished', {
+          itemType: payload.itemType,
+          title: payload.title,
+        }),
         href: `/academics/${payload.itemId}`,
       };
     }
 
     case 'verification.submitted':
-      return { text: 'Someone asked to join your school.', href: '/school/verifications' };
+      return {
+        text: t('notificationList.verificationSubmitted'),
+        href: '/school/verifications',
+      };
 
     case 'verification.decided':
-      return { text: 'Your school decided on your request to join.', href: '/home' };
+      return { text: t('notificationList.verificationDecided'), href: '/home' };
 
     case 'membership.revoked':
-      return { text: 'A school ended your membership.', href: '/home' };
+      return { text: t('notificationList.membershipRevoked'), href: '/home' };
 
+    case 'privacy.export.ready':
+      return { text: t('notificationList.exportReady'), href: '/settings/privacy' };
+
+    // An unrecognised type still renders — as its own line, not as a crash — because the API may
+    // ship a new event before the portal knows about it. There is nothing to translate here.
     default:
       return { text: notification.type };
   }
@@ -55,6 +72,7 @@ export function NotificationList({
   unreadCount: number;
   nextCursor: string | null;
 }) {
+  const { t, locale } = useTranslations();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
@@ -80,14 +98,14 @@ export function NotificationList({
               });
             }}
           >
-            {pending ? 'Marking…' : 'Mark all as read'}
+            {pending ? t('notificationList.marking') : t('notificationList.markAllRead')}
           </Button>
         </p>
       ) : null}
 
       <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
         {notifications.map((notification) => {
-          const { text, href } = render(notification);
+          const { text, href } = render(notification, t);
 
           return (
             <li key={notification.id}>
@@ -101,9 +119,11 @@ export function NotificationList({
                   }}
                 >
                   {/* Unread is a word, not only a colour or a dot. */}
-                  {notification.read ? null : <Badge tone="info">Unread</Badge>}
+                  {notification.read ? null : (
+                    <Badge tone="info">{t('notificationList.unread')}</Badge>
+                  )}
                   <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                    {new Date(notification.createdAt).toLocaleString('en-GB')}
+                    {formatDateTime(notification.createdAt, locale)}
                   </span>
                 </div>
 
@@ -118,7 +138,9 @@ export function NotificationList({
 
       {nextCursor ? (
         <p style={{ marginTop: 'var(--ui-space-4)' }}>
-          <Link href={`/notifications?after=${encodeURIComponent(nextCursor)}`}>Older</Link>
+          <Link href={`/notifications?after=${encodeURIComponent(nextCursor)}`}>
+            {t('notificationList.older')}
+          </Link>
         </p>
       ) : null}
     </div>

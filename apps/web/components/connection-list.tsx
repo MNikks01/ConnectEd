@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
 import { respondToConnectionAction } from '@/app/(app)/(member)/actions';
+import { useTranslations } from './locale-provider';
 
 import type { ConnectionResponse } from '@connected/types';
 
@@ -21,6 +22,7 @@ export function ConnectionList({
   connections: ConnectionResponse[];
   emptyMessage: string;
 }) {
+  const { t } = useTranslations();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
@@ -66,10 +68,12 @@ export function ConnectionList({
                 </Link>
                 {connection.status === 'PENDING' ? (
                   <Badge tone="warning">
-                    {connection.requestedByMe ? 'Waiting on them' : 'Waiting on you'}
+                    {connection.requestedByMe
+                      ? t('connectionList.waitingOnThem')
+                      : t('connectionList.waitingOnYou')}
                   </Badge>
                 ) : (
-                  <Badge tone="success">Connected</Badge>
+                  <Badge tone="success">{t('connectionList.connected')}</Badge>
                 )}
               </div>
 
@@ -88,7 +92,7 @@ export function ConnectionList({
                       respond(connection.id, true);
                     }}
                   >
-                    Accept
+                    {t('connectionList.accept')}
                   </Button>
                 ) : null}
 
@@ -102,10 +106,10 @@ export function ConnectionList({
                 >
                   {/* One endpoint, three words, depending on who is looking at what. */}
                   {connection.status === 'ACCEPTED'
-                    ? 'Disconnect'
+                    ? t('connectionList.disconnect')
                     : connection.requestedByMe
-                      ? 'Cancel'
-                      : 'Decline'}
+                      ? t('connectionList.cancel')
+                      : t('connectionList.decline')}
                 </Button>
               </div>
             </Card>
