@@ -7,6 +7,7 @@
  */
 import { Card } from '@connected/ui';
 import type { MessageKey, Translator } from '@/lib/i18n/translate';
+import { formatShortDate } from '@/lib/i18n/format';
 import { getTranslations } from '@/lib/i18n/server';
 
 import type { SchoolAnalyticsResponse } from '@connected/types';
@@ -92,7 +93,7 @@ function percent(rate: number | null, t: Translator): string {
 }
 
 export async function AnalyticsPanels({ analytics }: { analytics: SchoolAnalyticsResponse }) {
-  const { t } = await getTranslations();
+  const { t, locale } = await getTranslations();
 
   const toEntries = (
     record: Record<string, number>,
@@ -124,6 +125,38 @@ export async function AnalyticsPanels({ analytics }: { analytics: SchoolAnalytic
               analytics.structure.subjects === 1
                 ? t('analytics.subjectOne')
                 : t('analytics.subjectMany', { count: analytics.structure.subjects }),
+          })}
+        </p>
+      </Card>
+
+      <Card as="section">
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('analytics.weeklyActive')}
+        </h2>
+
+        {analytics.activity.weeklyActiveRate === null ? (
+          <p style={{ margin: 0 }}>{t('analytics.noActivityYet')}</p>
+        ) : (
+          <>
+            <p style={{ margin: '0 0 0.25rem' }}>
+              {t('analytics.weeklyActiveCount', {
+                count: analytics.activity.weeklyActiveMembers,
+                total: analytics.membership.total,
+              })}
+            </p>
+            <p className="muted" style={{ margin: '0 0 0.5rem' }}>
+              {t('analytics.weeklyActiveRate', {
+                percent: `${String(Math.round(analytics.activity.weeklyActiveRate * 100))}%`,
+              })}
+            </p>
+          </>
+        )}
+
+        <p className="muted" style={{ marginBottom: 0, fontSize: 'var(--ui-text-sm)' }}>
+          {/* Stated, because a seven-day figure from a product that has only been recording for
+              three days is not a seven-day figure. */}
+          {t('analytics.historyFrom', {
+            date: formatShortDate(analytics.activity.since, locale),
           })}
         </p>
       </Card>

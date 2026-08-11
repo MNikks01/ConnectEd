@@ -48,6 +48,11 @@ test.describe('what the server sends', () => {
     const response = await request.get('/login');
     const headers = response.headers();
 
+    // ASVS 14.4.5, absent entirely until 2026-08-11. Browsers ignore it over plain HTTP, so this
+    // asserts it is *sent* rather than obeyed — the point being that it is already there on the
+    // first HTTPS response a real user ever receives, rather than added at deploy time.
+    expect(headers['strict-transport-security']).toBe('max-age=31536000; includeSubDomains');
+
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');

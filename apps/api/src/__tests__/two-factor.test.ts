@@ -59,6 +59,12 @@ async function auth(accountId: string, kind: 'SCHOOL' | 'INDIVIDUAL', role?: str
 const asSchool = () => auth(fixture.schoolAccountId, 'SCHOOL');
 const asPrincipal = () => auth(fixture.principalAccountId, 'INDIVIDUAL', 'PRINCIPAL');
 const asStudent = () => auth(fixture.studentAccountId, 'INDIVIDUAL', 'STUDENT');
+/**
+ * ConnectEd staff. A plain `USER` with `isPlatformAdmin` set — the fixture makes it an ordinary
+ * individual on purpose, because that is what a staff account actually is: the flag is a column,
+ * not a role, and nothing about the token says so.
+ */
+const asPlatformAdmin = () => auth(fixture.platformAdminAccountId, 'INDIVIDUAL', 'USER');
 
 /** Enrols an account and returns its secret and recovery codes. */
 async function enrol(authorization: string) {
@@ -160,6 +166,26 @@ describe('who may enrol', () => {
     const response = await request(app)
       .post('/api/v1/me/2fa')
       .set('Authorization', await asPrincipal());
+    expect(response.status).toBe(201);
+  });
+
+  /**
+   * ASVS 4.3.1 — "administrative interfaces use appropriate multi-factor authentication".
+   *
+   * This is the case walking L2 found on 2026-08-11, and it is the one that mattered: eligibility
+   * read `accountType === 'SCHOOL' || role === 'PRINCIPAL'`, and `isPlatformAdmin` is neither. The
+   * people holding the moderation queue — the most privileged surface in the product, which reads
+   * reports *about* people at schools — could not turn on a second factor at all.
+   *
+   * The token here carries `USER` and no special claim, which is the point: eligibility is read
+   * from the database, because a claim is only as trustworthy as the narrowest place that mints
+   * one and this suite signs its own (ADR-0017).
+   */
+  it('lets ConnectEd staff, whose queue is the most privileged surface in the product', async () => {
+    const response = await request(app)
+      .post('/api/v1/me/2fa')
+      .set('Authorization', await asPlatformAdmin());
+
     expect(response.status).toBe(201);
   });
 

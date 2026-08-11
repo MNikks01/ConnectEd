@@ -216,7 +216,7 @@ run**, and where the run happened is part of the number.
 | NFR-002 | p95 read < 300 ms, write < 600 ms                |   ◐   | **110 ms and 78 ms at p97.5** — stricter than p95 (S9-10). On a laptop with no network in it; the deployed number is owed                                                                                                                    |
 | NFR-003 | 500 RPS baseline                                 |   ◐   | **~1,060 RPS on reads**, same run, same caveat                                                                                                                                                                                               |
 | NFR-004 | Stateless, horizontally scalable                 |  ✅   | Sessions and cache are in Redis, never in process. The worker runs as a **separate process** in CI and in compose — the split ADR-0019 assumes (S7-17, S9-2)                                                                                 |
-| NFR-005 | OWASP ASVS L2                                    |   ◐   | A security review exists ([`../Security/05-review-2026-08-05.md`](../Security/05-review-2026-08-05.md)) and found real defects. **ASVS L2 has never been walked as a checklist**                                                             |
+| NFR-005 | OWASP ASVS L2                                    |  ✅   | **Walked 2026-08-11** ([`../Security/07-asvs-l2.md`](../Security/07-asvs-l2.md)): five findings, four fixed. 2.1.7 (breached-password check) is recorded as B-14 — a decision about a third party in the auth path, not an unknown           |
 | NFR-006 | argon2id · PII at rest · delete/export           |  ✅   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure now exist** end to end (S9-19, [`14-export-and-erasure.md`](./14-export-and-erasure.md), ADR-0020)                                                                      |
 | NFR-007 | Transactional writes, idempotent effects         |  ✅   | Academic writes are transactional; the outbox writes events in the same transaction and consumers are idempotent on `eventId` (ADR-0019)                                                                                                     |
 | NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network                                                            |
@@ -229,8 +229,8 @@ run**, and where the run happened is part of the number.
 | NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                                                                                |
 | NFR-016 | Copy externalised · English + Hindi              |   ◐   | **Externalisation complete** (S9-18, ADR-0021): every page and component, 909 keys, identical key sets in both catalogues, `tsc`-enforced. **The Hindi has had no native-speaker review**, which is the whole of what keeps this row from ✅ |
 
-**Six ✅, seven ◐, one ⛔** — NFR-006 moved from ◐ to ✅ with S9-19, and NFR-016 from ⛔ to ◐ with
-S9-18. NFR-006 is the only row here that was a promise the product had made in writing rather than
+**Seven ✅, six ◐, one ⛔** — NFR-006 moved to ✅ with S9-19, NFR-016 from ⛔ to ◐ with S9-18, and
+NFR-005 to ✅ with the ASVS walk. NFR-006 is the only row here that was a promise the product had made in writing rather than
 a target it had set itself.
 
 **NFR-016's ◐ now has exactly one cause, and it is not an engineering one.** The mechanical half is

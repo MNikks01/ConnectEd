@@ -1065,6 +1065,11 @@ const en = {
   },
 
   analytics: {
+    weeklyActive: 'Weekly active',
+    weeklyActiveCount: '{count} of {total} verified members were active in the last seven days',
+    weeklyActiveRate: '{percent} of your verified members',
+    noActivityYet: 'Nobody has signed in yet.',
+    historyFrom: 'Activity has been recorded since {date}.',
     nothingPublished: 'nothing published yet',
     roleSTUDENT: 'Students',
     rolePARENT: 'Parents',
@@ -1139,6 +1144,7 @@ const en = {
     publishing: 'Publishing…',
     published: 'Timetable published. Members of this class can see it now.',
   },
+
   settings: {
     nav: 'Settings',
     profile: 'Profile',
