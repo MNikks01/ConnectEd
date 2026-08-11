@@ -16,6 +16,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ReportCardIssuer } from '@/components/report-card-issuer';
 import { ReportCardView } from '@/components/report-card';
 import { ApiError } from '@/lib/api-client';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -26,7 +27,10 @@ import type {
 } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Report cards · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('reportCardsPage.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +60,7 @@ export default async function ReportCardsPage({
   searchParams: Promise<{ termId?: string }>;
 }) {
   const { id } = await params;
+  const { t } = await getTranslations();
   const { termId } = await searchParams;
   const back = `/classes/${id}/report-cards`;
 
@@ -129,10 +134,18 @@ export default async function ReportCardsPage({
             `/children/${membership.childId}/report-cards`,
           )
         ).data.filter((card) => card.classId === id);
-        childrens.push({ name: membership.childName ?? 'Your child', cards, unlinked: false });
+        childrens.push({
+          name: membership.childName ?? t('reportCardsPage.yourChild'),
+          cards,
+          unlinked: false,
+        });
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
-          childrens.push({ name: membership.childName ?? 'Your child', cards: [], unlinked: true });
+          childrens.push({
+            name: membership.childName ?? t('reportCardsPage.yourChild'),
+            cards: [],
+            unlinked: true,
+          });
         } else {
           throw error;
         }
@@ -149,17 +162,17 @@ export default async function ReportCardsPage({
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/classes/${id}`}>{t('reportCardsPage.backToClass')}</Link>
       </p>
 
       <PageHeader
-        title="Report cards"
-        description="A card keeps the numbers it was issued with. Correcting a mark later does not change one that has already gone out."
+        title={t('reportCardsPage.title')}
+        description={t('reportCardsPage.description')}
       />
 
       {issuing ? (
         <section style={{ marginBottom: 'var(--ui-space-5)' }}>
-          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>Issue</h2>
+          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>{t('reportCardsPage.issue')}</h2>
           <ReportCardIssuer
             classId={id}
             terms={terms}
@@ -171,13 +184,13 @@ export default async function ReportCardsPage({
 
       {staffView ? (
         <section style={{ marginBottom: 'var(--ui-space-5)' }}>
-          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>This class</h2>
+          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>{t('reportCardsPage.thisClass')}</h2>
 
           {terms.length > 1 ? (
             // A plain GET form: choosing a term is navigation, not a mutation, so it belongs in
             // the URL where it can be linked to and reloaded.
             <form method="get" style={{ marginBottom: 'var(--ui-space-4)' }}>
-              <label htmlFor="term-picker">Term shown</label>{' '}
+              <label htmlFor="term-picker">{t('reportCardsPage.termShown')}</label>{' '}
               <select id="term-picker" name="termId" defaultValue={selectedTerm}>
                 {terms.map((term) => (
                   <option key={term.id} value={term.id}>
@@ -185,21 +198,18 @@ export default async function ReportCardsPage({
                   </option>
                 ))}
               </select>{' '}
-              <button type="submit">Show</button>
+              <button type="submit">{t('reportCardsPage.show')}</button>
             </form>
           ) : null}
 
-          <CardList cards={classCards} empty="No cards have been issued for this term yet." />
+          <CardList cards={classCards} empty={t('reportCardsPage.noneForTerm')} />
         </section>
       ) : null}
 
       {asPupil ? (
         <section style={{ marginBottom: 'var(--ui-space-5)' }}>
-          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>Your report cards</h2>
-          <CardList
-            cards={mine}
-            empty="Your school has not issued a report card for this class yet."
-          />
+          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>{t('reportCardsPage.yours')}</h2>
+          <CardList cards={mine} empty={t('reportCardsPage.noneYours')} />
         </section>
       ) : null}
 
@@ -224,7 +234,7 @@ export default async function ReportCardsPage({
 
       {!staffView && !asPupil && childrens.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>There are no report cards for you to see in this class.</p>
+          <p style={{ margin: 0 }}>{t('reportCardsPage.nothingToSee')}</p>
         </Card>
       ) : null}
     </main>

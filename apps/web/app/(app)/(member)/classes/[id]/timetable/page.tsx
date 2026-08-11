@@ -15,17 +15,23 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { ApiError } from '@/lib/api-client';
+import { formatShortDate } from '@/lib/i18n/format';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { TimetableResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Timetable · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('timetablePage.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function TimetablePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { t, locale } = await getTranslations();
 
   let timetable: TimetableResponse | undefined;
 
@@ -46,12 +52,14 @@ export default async function TimetablePage({ params }: { params: Promise<{ id: 
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/classes/${id}`}>{t('timetablePage.backToClass')}</Link>
       </p>
 
       <PageHeader
-        title="Timetable"
-        {...(timetable ? { description: `Version ${timetable.version}` } : {})}
+        title={t('timetablePage.title')}
+        {...(timetable
+          ? { description: t('timetablePage.version', { version: timetable.version }) }
+          : {})}
       />
 
       {timetable?.kind === 'STRUCTURED' ? (
@@ -61,19 +69,21 @@ export default async function TimetablePage({ params }: { params: Promise<{ id: 
           {/* A signed URL that expires — `next/image` would proxy and cache it. */}
           <img
             src={timetable.imageUrl}
-            alt={`Class timetable, version ${timetable.version}`}
+            alt={t('timetablePage.imageAlt', { version: timetable.version })}
             style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--ui-radius)' }}
           />
           <figcaption
             className="muted"
             style={{ fontSize: 'var(--ui-text-sm)', marginTop: 'var(--ui-space-2)' }}
           >
-            Uploaded {new Date(timetable.createdAt).toLocaleDateString('en-GB')}
+            {t('timetablePage.uploaded', {
+              date: formatShortDate(timetable.createdAt, locale),
+            })}
           </figcaption>
         </figure>
       ) : (
         <Card>
-          <p style={{ margin: 0 }}>Your school has not uploaded a timetable for this class yet.</p>
+          <p style={{ margin: 0 }}>{t('timetablePage.none')}</p>
         </Card>
       )}
     </main>

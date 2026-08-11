@@ -10,6 +10,8 @@ import { notFound, redirect } from 'next/navigation';
 
 import { PublishItemForm } from '@/components/publish-item-form';
 import { ApiError } from '@/lib/api-client';
+import { formatShortDate } from '@/lib/i18n/format';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -20,7 +22,10 @@ import type {
 } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Class · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('classFeed.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +38,7 @@ export default async function ClassFeedPage({
 }) {
   const { id } = await params;
   const { after } = await searchParams;
+  const { t, locale } = await getTranslations();
 
   // The cursor is opaque and comes straight back from the API; it is only ever passed through.
   const query = after ? `?cursor=${encodeURIComponent(after)}` : '';
@@ -65,40 +71,42 @@ export default async function ClassFeedPage({
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href="/home">← Your classes</Link>
+        <Link href="/home">{t('classFeed.backToClasses')}</Link>
       </p>
 
       <PageHeader
-        title={membership?.className ?? 'Class'}
+        title={membership?.className ?? t('classFeed.classFallback')}
         {...(membership?.schoolName ? { description: membership.schoolName } : {})}
         actions={
           // `flexWrap` matters at 320px: five links in a row that cannot wrap made this page
           // 69px wider than the viewport, and the fifth link is one S8-7 added to a row that was
           // already tight. The container wraps; a non-wrapping flex child inside it does not.
           <span style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--ui-space-4)' }}>
-            <Link href={`/classes/${id}/timetable`}>Timetable</Link>
-            <Link href={`/classes/${id}/syllabus`}>Syllabus</Link>
-            <Link href={`/classes/${id}/marks`}>Marks</Link>
-            <Link href={`/classes/${id}/register`}>Attendance</Link>
-            <Link href={`/classes/${id}/report-cards`}>Report cards</Link>
+            <Link href={`/classes/${id}/timetable`}>{t('classFeed.timetable')}</Link>
+            <Link href={`/classes/${id}/syllabus`}>{t('classFeed.syllabus')}</Link>
+            <Link href={`/classes/${id}/marks`}>{t('classFeed.marks')}</Link>
+            <Link href={`/classes/${id}/register`}>{t('classFeed.attendance')}</Link>
+            <Link href={`/classes/${id}/report-cards`}>{t('classFeed.reportCards')}</Link>
           </span>
         }
       />
 
       {subjects.length > 0 ? (
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Publish to this class</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('classFeed.publishHeading')}
+          </h2>
           <PublishItemForm classId={id} subjects={subjects} />
         </Card>
       ) : null}
 
       <section style={{ marginTop: 'var(--ui-space-5)' }}>
-        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>Recent</h2>
+        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('classFeed.recent')}</h2>
 
         {feed.data.length === 0 ? (
           <Card>
             <p style={{ margin: 0 }}>
-              {after ? 'Nothing older to show.' : 'Nothing has been published to this class yet.'}
+              {after ? t('classFeed.nothingOlder') : t('classFeed.empty')}
             </p>
           </Card>
         ) : (
@@ -116,10 +124,10 @@ export default async function ClassFeedPage({
                   >
                     <Badge tone="neutral">{item.type}</Badge>
                     {/* Unread is stated in words, not only by weight or colour. */}
-                    {item.read ? null : <Badge tone="info">Unread</Badge>}
+                    {item.read ? null : <Badge tone="info">{t('classFeed.unread')}</Badge>}
                     {item.readCount === undefined ? null : (
                       <span className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-                        Read by {item.readCount}
+                        {t('classFeed.readBy', { count: item.readCount })}
                       </span>
                     )}
                   </div>
@@ -132,8 +140,11 @@ export default async function ClassFeedPage({
                     className="muted"
                     style={{ margin: '0.25rem 0 0', fontSize: 'var(--ui-text-sm)' }}
                   >
-                    {item.subjectName ?? 'Subject'} · {item.authorName ?? 'Staff'}
-                    {item.dueAt ? ` · due ${new Date(item.dueAt).toLocaleDateString('en-GB')}` : ''}
+                    {item.subjectName ?? t('classFeed.subjectFallback')} ·{' '}
+                    {item.authorName ?? t('classFeed.staffFallback')}
+                    {item.dueAt
+                      ? t('classFeed.dueSuffix', { date: formatShortDate(item.dueAt, locale) })
+                      : ''}
                   </p>
                 </Card>
               </li>
@@ -144,7 +155,7 @@ export default async function ClassFeedPage({
         {feed.nextCursor ? (
           <p style={{ marginTop: 'var(--ui-space-4)' }}>
             <Link href={`/classes/${id}?after=${encodeURIComponent(feed.nextCursor)}`}>
-              Older items
+              {t('classFeed.older')}
             </Link>
           </p>
         ) : null}

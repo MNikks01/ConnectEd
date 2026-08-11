@@ -11,6 +11,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { RegisterForm } from '@/components/register-form';
 import { ApiError } from '@/lib/api-client';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type {
@@ -19,24 +20,28 @@ import type {
   RegisterResponse,
 } from '@connected/types';
 import type { Metadata } from 'next';
+import type { MessageKey, Translator } from '@/lib/i18n/translate';
 
-export const metadata: Metadata = { title: 'Register · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('attendanceRegister.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 /** Plain words rather than a colour or an icon alone. */
-const STATE_LABEL: Record<string, string> = {
-  PRESENT: 'Present',
-  ABSENT: 'Absent',
-  LATE: 'Late',
-  EXCUSED: 'Excused',
+const STATE_LABEL: Record<string, MessageKey> = {
+  PRESENT: 'attendanceRegister.present',
+  ABSENT: 'attendanceRegister.absent',
+  LATE: 'attendanceRegister.late',
+  EXCUSED: 'attendanceRegister.excused',
 };
 
-function DayList({ days }: { days: MyAttendanceResponse[] }) {
+function DayList({ days, t }: { days: MyAttendanceResponse[]; t: Translator }) {
   if (days.length === 0) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>No attendance has been recorded yet.</p>
+        <p style={{ margin: 0 }}>{t('attendanceRegister.none')}</p>
       </Card>
     );
   }
@@ -46,8 +51,9 @@ function DayList({ days }: { days: MyAttendanceResponse[] }) {
       <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
         {days.map((day) => (
           <li key={day.onDate}>
-            {day.onDate} — {STATE_LABEL[day.state] ?? day.state}
-            {day.fromLeave ? ' (leave the school accepted)' : ''}
+            {day.onDate} —{' '}
+            {day.state in STATE_LABEL ? t(STATE_LABEL[day.state] as MessageKey) : day.state}
+            {day.fromLeave ? t('attendanceRegister.fromLeave') : ''}
           </li>
         ))}
       </ul>
@@ -65,6 +71,7 @@ export default async function RegisterPage({
   const { id } = await params;
   const { date } = await searchParams;
   const onDate = date ?? new Date().toISOString().slice(0, 10);
+  const { t } = await getTranslations();
 
   let memberships: MyMembershipResponse[] = [];
 
@@ -108,10 +115,18 @@ export default async function RegisterPage({
             `/children/${membership.childId}/attendance`,
           )
         ).data;
-        childrens.push({ name: membership.childName ?? 'Your child', days, unlinked: false });
+        childrens.push({
+          name: membership.childName ?? t('attendanceRegister.yourChild'),
+          days,
+          unlinked: false,
+        });
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
-          childrens.push({ name: membership.childName ?? 'Your child', days: [], unlinked: true });
+          childrens.push({
+            name: membership.childName ?? t('attendanceRegister.yourChild'),
+            days: [],
+            unlinked: true,
+          });
         } else {
           throw error;
         }
@@ -128,17 +143,22 @@ export default async function RegisterPage({
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/classes/${id}`}>← Back to the class</Link>
+        <Link href={`/classes/${id}`}>{t('attendanceRegister.backToClass')}</Link>
       </p>
 
-      <PageHeader title="Attendance" description={`Register for ${onDate}.`} />
+      <PageHeader
+        title={t('attendanceRegister.title')}
+        description={t('attendanceRegister.description', { date: onDate })}
+      />
 
       {register ? <RegisterForm register={register} /> : null}
 
       {asPupil ? (
         <section style={{ marginTop: 'var(--ui-space-5)' }}>
-          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>Your attendance</h2>
-          <DayList days={mine} />
+          <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>
+            {t('attendanceRegister.yourAttendance')}
+          </h2>
+          <DayList days={mine} t={t} />
         </section>
       ) : null}
 
@@ -147,20 +167,17 @@ export default async function RegisterPage({
           <h2 style={{ fontSize: 'var(--ui-font-size-3)' }}>{child.name}</h2>
           {child.unlinked ? (
             <Card>
-              <p style={{ margin: 0 }}>
-                Your school has not yet linked {child.name} to their student account, so their
-                attendance cannot be shown here. Ask the school to link them.
-              </p>
+              <p style={{ margin: 0 }}>{t('attendanceRegister.unlinked', { name: child.name })}</p>
             </Card>
           ) : (
-            <DayList days={child.days} />
+            <DayList days={child.days} t={t} />
           )}
         </section>
       ))}
 
       {!register && !asPupil && childrens.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>There is no attendance for you to see in this class.</p>
+          <p style={{ margin: 0 }}>{t('attendanceRegister.nothingToSee')}</p>
         </Card>
       ) : null}
     </main>
