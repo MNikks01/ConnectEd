@@ -28,6 +28,7 @@ import {
   requestExportAction,
 } from '@/app/(app)/(member)/actions';
 import { useTranslations } from '@/components/locale-provider';
+import { formatDate as formatLocalisedDate } from '@/lib/i18n/format';
 
 import type { MessageKey, Translator } from '@/lib/i18n/translate';
 import type { Locale } from '@/lib/i18n/locales';
@@ -55,17 +56,10 @@ function toneFor(status: DataExportResponse['status']): StatusTone {
 }
 
 /**
- * The locale is passed rather than left to `undefined`. `undefined` means "whatever the browser is
- * set to", which on a shared staffroom machine is not the language the person chose in this
- * product — a Hindi page with an English date on it, from the one call that looked harmless.
+ * Shared rather than local, so this page cannot drift from the rest of the product on the one
+ * detail that made dates worth centralising: a UI locale code is not a formatting tag.
  */
-function formatDate(value: string, locale: Locale): string {
-  return new Date(value).toLocaleDateString(locale, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
+const formatDate = formatLocalisedDate;
 
 /** The unit is part of the sentence, so it comes from the catalogue rather than being appended. */
 function formatSize(bytes: number | null, t: Translator, locale: Locale): string {

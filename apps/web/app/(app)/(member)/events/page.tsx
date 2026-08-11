@@ -5,12 +5,17 @@ import { Card, PageHeader } from '@connected/ui';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { formatDateTime } from '@/lib/i18n/format';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { EventResponse, MyMembershipResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Events · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('events.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +25,7 @@ export default async function EventsPage({
   searchParams: Promise<{ school?: string; includePast?: string }>;
 }) {
   const { school, includePast } = await searchParams;
+  const { t, locale } = await getTranslations();
 
   let memberships: MyMembershipResponse[];
   try {
@@ -38,9 +44,9 @@ export default async function EventsPage({
   if (schools.length === 0) {
     return (
       <main>
-        <PageHeader title="Events" />
+        <PageHeader title={t('events.title')} />
         <Card>
-          <p style={{ margin: 0 }}>Events appear here once a school has verified you.</p>
+          <p style={{ margin: 0 }}>{t('events.noSchools')}</p>
         </Card>
       </main>
     );
@@ -55,15 +61,15 @@ export default async function EventsPage({
   return (
     <main>
       <PageHeader
-        title="Events"
-        description={past ? 'Everything, including past.' : 'What is coming up.'}
+        title={t('events.title')}
+        description={past ? t('events.allDescription') : t('events.upcomingDescription')}
       />
 
-      <nav aria-label="Range" style={{ marginBottom: 'var(--ui-space-4)' }}>
+      <nav aria-label={t('events.rangeNav')} style={{ marginBottom: 'var(--ui-space-4)' }}>
         <ul className="filter-tabs">
           <li>
             <Link href={`/events?school=${schoolId}`} aria-current={past ? undefined : 'page'}>
-              Upcoming
+              {t('events.upcoming')}
             </Link>
           </li>
           <li>
@@ -71,7 +77,7 @@ export default async function EventsPage({
               href={`/events?school=${schoolId}&includePast=true`}
               aria-current={past ? 'page' : undefined}
             >
-              Including past
+              {t('events.includingPast')}
             </Link>
           </li>
         </ul>
@@ -79,9 +85,7 @@ export default async function EventsPage({
 
       {events.data.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>
-            {past ? 'No events yet.' : 'Nothing coming up. Check back later.'}
-          </p>
+          <p style={{ margin: 0 }}>{past ? t('events.emptyPast') : t('events.emptyUpcoming')}</p>
         </Card>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
@@ -90,13 +94,7 @@ export default async function EventsPage({
               <Card>
                 <p className="muted" style={{ margin: 0, fontSize: 'var(--ui-text-sm)' }}>
                   {/* Weekday included: "Friday 14th" is how a parent thinks about a school event. */}
-                  {new Date(event.eventAt).toLocaleString('en-GB', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(event.eventAt, locale)}
                 </p>
 
                 <h2 style={{ margin: '0.25rem 0 0.5rem', fontSize: 'var(--ui-text-base)' }}>

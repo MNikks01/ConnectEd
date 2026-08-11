@@ -6,16 +6,22 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { LiveMessages } from '@/components/live-messages';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { InboxResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Messages · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('messages.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function MessagesPage() {
+  const { t } = await getTranslations();
+
   let inbox: InboxResponse;
 
   try {
@@ -29,15 +35,17 @@ export default async function MessagesPage() {
     <main>
       <LiveMessages />
       <PageHeader
-        title="Messages"
-        description={inbox.unreadTotal > 0 ? `${inbox.unreadTotal} unread` : 'Nothing unread.'}
+        title={t('messages.title')}
+        description={
+          inbox.unreadTotal > 0
+            ? t('messages.unreadCount', { count: inbox.unreadTotal })
+            : t('messages.nothingUnread')
+        }
       />
 
       {inbox.data.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>
-            No conversations. Open someone&rsquo;s profile and choose Message to start one.
-          </p>
+          <p style={{ margin: 0 }}>{t('messages.empty')}</p>
         </Card>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-3)' }}>
@@ -54,7 +62,9 @@ export default async function MessagesPage() {
                 >
                   <Link href={`/messages/${thread.id}`}>{thread.other.displayName}</Link>
                   {thread.unreadCount > 0 ? (
-                    <Badge tone="info">{thread.unreadCount} unread</Badge>
+                    <Badge tone="info">
+                      {t('messages.unreadCount', { count: thread.unreadCount })}
+                    </Badge>
                   ) : null}
                 </div>
 
@@ -63,8 +73,8 @@ export default async function MessagesPage() {
                   style={{ margin: '0.25rem 0 0', fontSize: 'var(--ui-text-sm)' }}
                 >
                   {thread.lastMessage
-                    ? `${thread.lastMessage.mine ? 'You: ' : ''}${thread.lastMessage.body}`
-                    : 'No messages yet.'}
+                    ? `${thread.lastMessage.mine ? t('messages.youPrefix') : ''}${thread.lastMessage.body}`
+                    : t('messages.noMessagesYet')}
                 </p>
               </Card>
             </li>

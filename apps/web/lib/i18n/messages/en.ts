@@ -104,6 +104,121 @@ const en = {
     signIn: 'Sign in',
   },
 
+  notices: {
+    metaTitle: 'Notices · GetConnected',
+    title: 'Notices',
+    description: 'From your school.',
+    noSchools: 'Notices appear here once a school has verified you as a member.',
+    schoolNav: 'School',
+    schoolFallback: 'School',
+    empty: 'Nothing has been posted yet.',
+    unread: 'Unread',
+    readBy: 'Read by {count}',
+    older: 'Older notices',
+  },
+
+  events: {
+    metaTitle: 'Events · GetConnected',
+    title: 'Events',
+    upcomingDescription: 'What is coming up.',
+    allDescription: 'Everything, including past.',
+    noSchools: 'Events appear here once a school has verified you.',
+    rangeNav: 'Range',
+    upcoming: 'Upcoming',
+    includingPast: 'Including past',
+    emptyUpcoming: 'Nothing coming up. Check back later.',
+    emptyPast: 'No events yet.',
+  },
+
+  notifications: {
+    metaTitle: 'Notifications · GetConnected',
+    title: 'Notifications',
+    unreadCount: '{count} unread',
+    allRead: 'Everything here has been read.',
+    empty:
+      'Nothing yet. Homework, decisions on your verification, and school announcements arrive here.',
+  },
+
+  complaints: {
+    metaTitle: 'Complaints · GetConnected',
+    title: 'Complaints and suggestions',
+    description: 'Raised with your school, and answered by it.',
+    notEligible:
+      'Complaints are raised by parents and staff. Once a school has verified you in one of those roles, the form appears here.',
+    schoolNav: 'School',
+    yourSchool: 'Your school',
+    raiseSomething: 'Raise something',
+    whatYouRaised: 'What you have raised',
+  },
+
+  connections: {
+    metaTitle: 'Connections · GetConnected',
+    title: 'Connections',
+    backToSocial: '← Social',
+    waitingOnYou: 'Waiting on you',
+    waitingOnThem: 'Waiting on them',
+    connected: 'Connected',
+    emptyWaitingOnYou: 'No requests to answer.',
+    emptyWaitingOnThem: 'You have no requests open.',
+    emptyConnected: 'Nobody yet. Find someone from a post or a class and ask to connect.',
+  },
+
+  social: {
+    metaTitle: 'Social · GetConnected',
+    title: 'Social',
+    description: 'From the people and schools you follow.',
+    connections: 'Connections',
+    newPost: 'New post',
+    feed: 'Feed',
+    empty:
+      'Nothing here yet. Follow a school or connect with someone and their posts appear in this feed.',
+    older: 'Older posts',
+  },
+
+  messages: {
+    metaTitle: 'Messages · GetConnected',
+    title: 'Messages',
+    unreadCount: '{count} unread',
+    nothingUnread: 'Nothing unread.',
+    empty: 'No conversations. Open someone’s profile and choose Message to start one.',
+    /** Prefixes the preview of a thread's last message when the reader sent it. */
+    youPrefix: 'You: ',
+    noMessagesYet: 'No messages yet.',
+  },
+
+  home: {
+    metaTitle: 'Home · GetConnected',
+    greeting: 'Hello, {name}',
+    schoolDescription: 'You are signed in as an institution.',
+    memberDescription: 'Your classes, and everything published to them.',
+    unverifiedDescription: 'You are signed in. Ask your school to verify you to see your classes.',
+    schoolPortalNote: 'Classes, members, and verification requests live in your',
+    schoolPortalLink: 'school portal',
+    yourClasses: 'Your classes',
+    noClasses:
+      'You are not a verified member of any class yet. A class appears here once your school approves your request.',
+    classFallback: 'Class',
+    schoolFallback: 'School',
+    /** A parent's membership reads as a person, not a role — "Parent of Aarav". */
+    parentOf: 'Parent of {name}',
+    parent: 'Parent',
+    student: 'Student',
+    teacher: 'Teacher',
+    principal: 'Principal',
+    user: 'Member',
+    truncated: 'Work and notices above are drawn from your first {count} classes.',
+    yourAccount: 'Your account',
+    name: 'Name',
+    accountType: 'Account type',
+    email: 'Email',
+    role: 'Role',
+    handle: 'Handle',
+    notApplicable: 'Not applicable',
+    emailVerifiedLabel: 'Email verified',
+    verified: 'Verified',
+    notVerified: 'Not yet verified',
+  },
+
   settings: {
     nav: 'Settings',
     profile: 'Profile',

@@ -8,12 +8,16 @@ import { Card, PageHeader } from '@connected/ui';
 import { redirect } from 'next/navigation';
 
 import { NotificationList } from '@/components/notification-list';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { NotificationListResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Notifications · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('notifications.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +27,7 @@ export default async function NotificationsPage({
   searchParams: Promise<{ after?: string }>;
 }) {
   const { after } = await searchParams;
+  const { t } = await getTranslations();
 
   let list: NotificationListResponse;
   try {
@@ -37,18 +42,17 @@ export default async function NotificationsPage({
   return (
     <main>
       <PageHeader
-        title="Notifications"
+        title={t('notifications.title')}
         description={
-          list.unreadCount > 0 ? `${list.unreadCount} unread` : 'Everything here has been read.'
+          list.unreadCount > 0
+            ? t('notifications.unreadCount', { count: list.unreadCount })
+            : t('notifications.allRead')
         }
       />
 
       {list.data.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>
-            Nothing yet. Homework, decisions on your verification, and school announcements arrive
-            here.
-          </p>
+          <p style={{ margin: 0 }}>{t('notifications.empty')}</p>
         </Card>
       ) : (
         <NotificationList

@@ -9,12 +9,16 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { FeedbackForm, FeedbackHistory } from '@/components/feedback-forms';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { FeedbackResponse, MyMembershipResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Complaints · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('complaints.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +28,7 @@ export default async function ComplaintsPage({
   searchParams: Promise<{ school?: string }>;
 }) {
   const { school } = await searchParams;
+  const { t } = await getTranslations();
 
   let memberships: MyMembershipResponse[];
   let mine: FeedbackResponse[];
@@ -43,7 +48,10 @@ export default async function ComplaintsPage({
     ...new Map(
       memberships
         .filter((membership) => membership.role !== 'STUDENT')
-        .map((membership) => [membership.schoolId, membership.schoolName ?? 'Your school']),
+        .map((membership) => [
+          membership.schoolId,
+          membership.schoolName ?? t('complaints.yourSchool'),
+        ]),
     ).entries(),
   ].map(([id, name]) => ({ id, name }));
 
@@ -51,22 +59,19 @@ export default async function ComplaintsPage({
 
   return (
     <main>
-      <PageHeader
-        title="Complaints and suggestions"
-        description="Raised with your school, and answered by it."
-      />
+      <PageHeader title={t('complaints.title')} description={t('complaints.description')} />
 
       {eligible.length === 0 ? (
         <Card>
-          <p style={{ margin: 0 }}>
-            Complaints are raised by parents and staff. Once a school has verified you in one of
-            those roles, the form appears here.
-          </p>
+          <p style={{ margin: 0 }}>{t('complaints.notEligible')}</p>
         </Card>
       ) : (
         <>
           {eligible.length > 1 ? (
-            <nav aria-label="School" style={{ marginBottom: 'var(--ui-space-4)' }}>
+            <nav
+              aria-label={t('complaints.schoolNav')}
+              style={{ marginBottom: 'var(--ui-space-4)' }}
+            >
               <ul className="filter-tabs">
                 {eligible.map((entry) => (
                   <li key={entry.id}>
@@ -83,14 +88,16 @@ export default async function ComplaintsPage({
           ) : null}
 
           <Card as="section">
-            <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Raise something</h2>
+            <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+              {t('complaints.raiseSomething')}
+            </h2>
             <FeedbackForm schoolId={schoolId ?? ''} />
           </Card>
         </>
       )}
 
       <section style={{ marginTop: 'var(--ui-space-5)' }}>
-        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>What you have raised</h2>
+        <h2 style={{ fontSize: 'var(--ui-text-lg)' }}>{t('complaints.whatYouRaised')}</h2>
         <FeedbackHistory items={mine} />
       </section>
     </main>

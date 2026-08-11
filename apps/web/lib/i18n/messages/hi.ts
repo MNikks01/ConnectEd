@@ -116,6 +116,120 @@ const hi: Messages = {
     signIn: 'साइन इन करें',
   },
 
+  notices: {
+    metaTitle: 'सूचनाएँ · GetConnected',
+    title: 'सूचनाएँ',
+    description: 'आपके विद्यालय की ओर से।',
+    noSchools: 'जैसे ही कोई विद्यालय आपको सदस्य के रूप में सत्यापित करेगा, सूचनाएँ यहाँ दिखेंगी।',
+    schoolNav: 'विद्यालय',
+    schoolFallback: 'विद्यालय',
+    empty: 'अभी तक कुछ भी नहीं भेजा गया है।',
+    unread: 'अपठित',
+    readBy: '{count} लोगों ने पढ़ा',
+    older: 'पुरानी सूचनाएँ',
+  },
+
+  events: {
+    metaTitle: 'कार्यक्रम · GetConnected',
+    title: 'कार्यक्रम',
+    upcomingDescription: 'आगे क्या होने वाला है।',
+    allDescription: 'सब कुछ, बीते हुए कार्यक्रमों सहित।',
+    noSchools: 'जैसे ही कोई विद्यालय आपको सत्यापित करेगा, कार्यक्रम यहाँ दिखेंगे।',
+    rangeNav: 'अवधि',
+    upcoming: 'आगामी',
+    includingPast: 'बीते हुए सहित',
+    emptyUpcoming: 'आगे कुछ नहीं है। बाद में देखें।',
+    emptyPast: 'अभी तक कोई कार्यक्रम नहीं।',
+  },
+
+  notifications: {
+    metaTitle: 'अधिसूचनाएँ · GetConnected',
+    title: 'अधिसूचनाएँ',
+    unreadCount: '{count} अपठित',
+    allRead: 'यहाँ सब कुछ पढ़ा जा चुका है।',
+    empty: 'अभी कुछ नहीं। गृहकार्य, आपके सत्यापन पर निर्णय, और विद्यालय की घोषणाएँ यहाँ आती हैं।',
+  },
+
+  complaints: {
+    metaTitle: 'शिकायतें · GetConnected',
+    title: 'शिकायतें और सुझाव',
+    description: 'आपके विद्यालय के सामने रखी जाती हैं, और वही उनका उत्तर देता है।',
+    notEligible:
+      'शिकायतें अभिभावक और कर्मचारी दर्ज करते हैं। जैसे ही कोई विद्यालय आपको इनमें से किसी भूमिका में सत्यापित करेगा, यहाँ फ़ॉर्म दिखने लगेगा।',
+    schoolNav: 'विद्यालय',
+    yourSchool: 'आपका विद्यालय',
+    raiseSomething: 'कुछ दर्ज करें',
+    whatYouRaised: 'आपने जो दर्ज किया है',
+  },
+
+  connections: {
+    metaTitle: 'कनेक्शन · GetConnected',
+    title: 'कनेक्शन',
+    backToSocial: '← सामुदायिक',
+    waitingOnYou: 'आपके उत्तर की प्रतीक्षा में',
+    waitingOnThem: 'उनके उत्तर की प्रतीक्षा में',
+    connected: 'जुड़े हुए',
+    emptyWaitingOnYou: 'उत्तर देने के लिए कोई अनुरोध नहीं।',
+    emptyWaitingOnThem: 'आपका कोई अनुरोध लंबित नहीं है।',
+    emptyConnected:
+      'अभी कोई नहीं। किसी पोस्ट या कक्षा से किसी को ढूँढ़ें और जुड़ने का अनुरोध भेजें।',
+  },
+
+  social: {
+    metaTitle: 'सामुदायिक · GetConnected',
+    title: 'सामुदायिक',
+    description: 'जिन लोगों और विद्यालयों को आप फ़ॉलो करते हैं, उनकी ओर से।',
+    connections: 'कनेक्शन',
+    newPost: 'नई पोस्ट',
+    feed: 'फ़ीड',
+    empty:
+      'अभी यहाँ कुछ नहीं है। किसी विद्यालय को फ़ॉलो करें या किसी से जुड़ें, और उनकी पोस्ट इस फ़ीड में दिखने लगेंगी।',
+    older: 'पुरानी पोस्ट',
+  },
+
+  messages: {
+    metaTitle: 'संदेश · GetConnected',
+    title: 'संदेश',
+    unreadCount: '{count} अपठित',
+    nothingUnread: 'कुछ भी अपठित नहीं।',
+    empty: 'कोई बातचीत नहीं। किसी की प्रोफ़ाइल खोलें और बातचीत शुरू करने के लिए “संदेश” चुनें।',
+    youPrefix: 'आप: ',
+    noMessagesYet: 'अभी कोई संदेश नहीं।',
+  },
+
+  home: {
+    metaTitle: 'होम · GetConnected',
+    greeting: 'नमस्ते, {name}',
+    schoolDescription: 'आप एक संस्था के रूप में साइन इन हैं।',
+    memberDescription: 'आपकी कक्षाएँ, और उनमें प्रकाशित सब कुछ।',
+    unverifiedDescription:
+      'आप साइन इन हैं। अपनी कक्षाएँ देखने के लिए अपने विद्यालय से सत्यापन कराएँ।',
+    schoolPortalNote: 'कक्षाएँ, सदस्य और सत्यापन अनुरोध आपके',
+    schoolPortalLink: 'विद्यालय पोर्टल',
+    yourClasses: 'आपकी कक्षाएँ',
+    noClasses:
+      'आप अभी किसी कक्षा के सत्यापित सदस्य नहीं हैं। जैसे ही आपका विद्यालय आपके अनुरोध को स्वीकार करेगा, कक्षा यहाँ दिखने लगेगी।',
+    classFallback: 'कक्षा',
+    schoolFallback: 'विद्यालय',
+    parentOf: '{name} के अभिभावक',
+    parent: 'अभिभावक',
+    student: 'विद्यार्थी',
+    teacher: 'शिक्षक',
+    principal: 'प्रधानाचार्य',
+    user: 'सदस्य',
+    truncated: 'ऊपर दिया गया कार्य और सूचनाएँ आपकी पहली {count} कक्षाओं से ली गई हैं।',
+    yourAccount: 'आपका खाता',
+    name: 'नाम',
+    accountType: 'खाते का प्रकार',
+    email: 'ईमेल',
+    role: 'भूमिका',
+    handle: 'हैंडल',
+    notApplicable: 'लागू नहीं',
+    emailVerifiedLabel: 'ईमेल सत्यापित',
+    verified: 'सत्यापित',
+    notVerified: 'अभी सत्यापित नहीं',
+  },
+
   settings: {
     nav: 'सेटिंग्स',
     profile: 'प्रोफ़ाइल',
