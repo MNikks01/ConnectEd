@@ -22,6 +22,10 @@ const LINKS = [
   { href: '/school/verifications', label: 'Verifications' },
   { href: '/school/analytics', label: 'Analytics' },
   { href: '/school/billing', label: 'Billing' },
+  // A school exports its own record too (FR-DSR-012). The page itself lives in the member shell,
+  // which schools are deliberately not redirected away from — but nothing in this portal linked to
+  // it, and a subject right reachable only by typing a URL is not one.
+  { href: '/settings/privacy', label: 'Your data' },
 ];
 
 export function SchoolNav({ schoolName }: { schoolName: string }) {

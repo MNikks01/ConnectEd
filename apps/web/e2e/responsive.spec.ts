@@ -85,6 +85,7 @@ test.describe('at 320px', () => {
       `/classes/${classId}/register`,
       `/classes/${classId}/report-cards`,
       '/settings/profile',
+      '/settings/privacy',
     ]) {
       await page.goto(path);
       await expectNoHorizontalOverflow(page, path);

@@ -373,14 +373,14 @@ times over would treble the job to re-prove the same assertions about the same s
 
 ## Stretch (only if committed done)
 
-| #     | Item                                                                                            | Carried from |
-| ----- | ----------------------------------------------------------------------------------------------- | ------------ |
-| S9-14 | Retention implemented, once S9-0b is answered                                                   | new          |
-| S9-15 | Product-event analytics sink (`Product/02-metrics.md`)                                          | S8-17        |
-| S9-16 | Push-token registration (FR-NOTIF-004)                                                          | S8-18        |
-| S9-17 | ✅ **Done 2026-08-09** — Firefox, WebKit and a 320px viewport (NFR-011)                         | frontend     | S   | Found two defects on the first run: WebKit dropped every session cookie, and `/classes/[id]` overflowed by 69px. Both fixed, both sabotage-checked |
-| S9-18 | **Externalise copy, English + Hindi** (NFR-016) — the product already models the medium         | S9-13        |
-| S9-19 | **Export and erasure** (NFR-006) — `Security/04-compliance.md` promises both and neither exists | S9-13        |
+| #     | Item                                                                                    | Carried from |
+| ----- | --------------------------------------------------------------------------------------- | ------------ |
+| S9-14 | Retention implemented, once S9-0b is answered                                           | new          |
+| S9-15 | Product-event analytics sink (`Product/02-metrics.md`)                                  | S8-17        |
+| S9-16 | Push-token registration (FR-NOTIF-004)                                                  | S8-18        |
+| S9-17 | ✅ **Done 2026-08-09** — Firefox, WebKit and a 320px viewport (NFR-011)                 | frontend     | S   | Found two defects on the first run: WebKit dropped every session cookie, and `/classes/[id]` overflowed by 69px. Both fixed, both sabotage-checked |
+| S9-18 | **Externalise copy, English + Hindi** (NFR-016) — the product already models the medium | S9-13        |
+| S9-19 | ✅ **Done 2026-08-11** — export and erasure (NFR-006)                                   | S9-13        | L   | `PRD/14-export-and-erasure.md` + ADR-0020. Both flows end to end, 20 integration tests, 4 browser tests, two sabotage checks. NFR-006 moves ◐ → ✅ |
 
 ## Dependencies / risks
 

@@ -42,6 +42,8 @@ function fakeStorage(): Storage {
       bucket.set(key, body);
       return Promise.resolve({ key, contentType, size: body.length });
     },
+    putObject: ({ key, body }) => Promise.resolve({ key, size: body.length }),
+    signedUrlTtlSeconds: 300,
     signedUrl: (key) => Promise.resolve(`https://signed.test/${key}`),
     remove: (key) => {
       bucket.delete(key);

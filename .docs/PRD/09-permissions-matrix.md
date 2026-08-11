@@ -1,6 +1,6 @@
 # PRD — Permissions Matrix (server-enforced)
 
-`Status: Accepted` · `Last updated: 2026-08-07`
+`Status: Accepted` · `Last updated: 2026-08-11`
 
 Legend: ✅ can do · 👁 view only · ➖ not available/hidden. **All enforced on the server** against role,
 verification state, and resource ownership. See [`../Security/02-authorization.md`](../Security/02-authorization.md).
@@ -37,6 +37,8 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
 | Manage subscription/billing                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | View school analytics                         |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ✅   |      ➖      |
 | Review the moderation queue                   |   ➖    |       ➖       |   ➖    |      ➖       |    ➖     |   ➖   |      ➖      |
+| Export my own data                            |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ✅   |      ✅      |
+| Erase my own account                          |   ✅    |       ✅       |   ✅    |      ✅       |    ✅     |   ➖   |      ✅      |
 
 ## Notes
 
@@ -91,5 +93,21 @@ verification state, and resource ownership. See [`../Security/02-authorization.m
   [`11-gradebook.md`](./11-gradebook.md) is the contract for this row and the tests follow that.
   Marks are the first data in the product that must be protected from a member's own classmates
   rather than from outsiders.
+- **The last two rows are the only ones where every column is the same, and one of them still has a
+  `➖`.** Export and erasure are subject rights: they do not depend on a role, a membership or a
+  verification state, because they are exercised against your own account and nothing else. That is
+  why they read ✅ across the board where every other row above them varies.
+
+  The exception is **a school erasing itself**, which is refused (FR-DSR-020). A school account is a
+  data _controller_, not merely a subject — erasing it would take every pupil's register, marks and
+  report cards with it, which is somebody else's record and somebody else's legal duty. A school
+  still exports: [FR-DSR-012](./14-export-and-erasure.md) scopes that to the institution's own
+  record rather than to its pupils' data, which is the failure worth naming in a product where "the
+  school's data" could plausibly mean four hundred children's marks.
+
+  Neither row is scoped by verification, and that is deliberate: an unverified account holds
+  personal data too, and making a right conditional on a school's approval would put the school
+  between a person and their own data.
+
 - The matrix is the **product contract**; the **enforcement** contract lives in Security + API and must match it
   test-for-test (see permission integration tests in [`../Checklists/`](../Checklists/)).

@@ -51,7 +51,10 @@ export function MemberNav({
       <nav aria-label="Main">
         <ul className="school-nav__list">
           {links.map((link) => {
-            const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+            // Settings is a set of pages under one link, so the tab stays current on all of
+            // them rather than only on the one the link happens to point at.
+            const section = link.href.startsWith('/settings') ? '/settings' : link.href;
+            const active = pathname === section || pathname.startsWith(`${section}/`);
             const bell = link.href === '/notifications';
             const label =
               bell && unreadCount > 0 ? `${link.label}, ${unreadCount} unread` : link.label;

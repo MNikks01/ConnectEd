@@ -45,8 +45,25 @@ export interface Storage {
     /** Groups keys by purpose, e.g. `academic-items`. Never client-supplied. */
     prefix: string;
   }) => Promise<StoredObject>;
+  /**
+   * An object that is not an image and not client-supplied: today, a data-export bundle
+   * (`.docs/PRD/14-export-and-erasure.md`).
+   *
+   * Separate from `putImage` rather than a loosening of it, and the difference is the key. An
+   * image's key is generated here precisely because the caller is relaying something a user
+   * uploaded; this one is passed in, because the caller knows what the object *is* and has to be
+   * able to find it again to delete it. Widening `putImage` to accept a key would have handed
+   * every upload path the ability to choose one.
+   */
+  putObject: (input: {
+    key: string;
+    body: Buffer;
+    contentType: string;
+  }) => Promise<{ key: string; size: number }>;
   /** A time-limited URL. Callers must authorize *before* asking for one. */
   signedUrl: (key: string) => Promise<string>;
+  /** How long `signedUrl` lasts, so a caller can tell the holder when it stops working. */
+  signedUrlTtlSeconds: number;
   remove: (key: string) => Promise<void>;
   /** Readiness probe target. */
   ping: () => Promise<void>;
@@ -85,10 +102,26 @@ export function createStorage(config: Config, logger: Logger): Storage {
       return { key, contentType, size: body.length };
     },
 
+    putObject: async ({ key, body, contentType }) => {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          ACL: 'private',
+        }),
+      );
+
+      return { key, size: body.length };
+    },
+
     signedUrl: (key: string) =>
       getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
         expiresIn: SIGNED_URL_TTL_SECONDS,
       }),
+
+    signedUrlTtlSeconds: SIGNED_URL_TTL_SECONDS,
 
     remove: async (key: string) => {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

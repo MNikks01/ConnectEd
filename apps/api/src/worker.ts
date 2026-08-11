@@ -102,7 +102,8 @@ logger.info('Outbox relay started');
  * Housekeeping. The orphan sweep lives here rather than in the API: it is slow, periodic, and
  * nobody is waiting for its response.
  */
-const media = createMediaModule(createStorage(config, logger), logger, config.MAX_UPLOAD_BYTES, db);
+const storage = createStorage(config, logger);
+const media = createMediaModule(storage, logger, config.MAX_UPLOAD_BYTES, db);
 
 /**
  * Login throttles are swept here too. They expire by time rather than by row — a stale one refuses
@@ -124,6 +125,23 @@ const auth = createAuthModule({
   mailer: createMailer(config.MAIL_TRANSPORT, logger, config.NODE_ENV),
 });
 
+/**
+ * Export and erasure (`.docs/PRD/14-export-and-erasure.md`). All three of its scheduled jobs live
+ * here for the same reason the relay does: they are periodic, slow, and nobody is waiting.
+ *
+ * Building an export is the only one that runs at minute granularity. It is not really
+ * maintenance — it is the work half of a request somebody made — but the `data_export` row *is*
+ * the queue (see the model's comment), so a scheduled claim is all a consumer needs to be.
+ */
+const { createPrivacyModule } = await import('./modules/privacy/index.js');
+
+const privacy = createPrivacyModule({
+  db,
+  logger,
+  storage,
+  hashEmail: createTokenService(config).hashRefreshToken,
+});
+
 const maintenance = createMaintenanceScheduler(
   connection,
   logger,
@@ -134,9 +152,27 @@ const maintenance = createMaintenanceScheduler(
     'auth:sweep-login-throttles': async () => {
       await auth.service.sweepLoginThrottles();
     },
+    'privacy:build-exports': async () => {
+      await privacy.service.buildPendingExports();
+    },
+    'privacy:expire-exports': async () => {
+      await privacy.service.expireExports();
+    },
+    'privacy:execute-erasures': async () => {
+      await privacy.service.executeDueErasures();
+    },
   },
   // Nightly, off the hour. An upload abandoned during the day is collected the following night.
-  { 'media:sweep-orphans': '17 3 * * *', 'auth:sweep-login-throttles': '41 3 * * *' },
+  //
+  // Erasures run nightly and the exports that feed them are swept just before, so an account
+  // erased tonight does not leave a `READY` bundle of itself in the bucket until tomorrow.
+  {
+    'media:sweep-orphans': '17 3 * * *',
+    'auth:sweep-login-throttles': '41 3 * * *',
+    'privacy:build-exports': '* * * * *',
+    'privacy:expire-exports': '5 3 * * *',
+    'privacy:execute-erasures': '25 3 * * *',
+  },
 );
 
 await maintenance.ready;

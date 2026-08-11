@@ -27,6 +27,7 @@ import { createMediaModule } from './modules/media/index.js';
 import { createAttendanceModule } from './modules/attendance/index.js';
 import { createGradebookModule } from './modules/gradebook/index.js';
 import { createNotificationsModule } from './modules/notifications/index.js';
+import { createPrivacyModule } from './modules/privacy/index.js';
 import { createReportCardsModule } from './modules/reportcards/index.js';
 import { createSocialModule } from './modules/social/index.js';
 import { createVerificationModule } from './modules/verification/index.js';
@@ -231,6 +232,14 @@ export function createApp(overrides: Partial<AppDependencies> = {}): Express {
       billing.routes,
       createAnalyticsModule(db, billing.service).routes,
       createModerationQueueModule(db).routes,
+      // Subject rights. The API half only requests and reads: building a bundle and executing an
+      // erasure both run in the worker, where nobody is waiting on them.
+      createPrivacyModule({
+        db,
+        logger,
+        storage,
+        hashEmail: tokens.hashRefreshToken,
+      }).routes,
       ...(realtime ? [realtimeRoutes(realtime, config)] : []),
       ...(media ? [media.routes] : []),
     );

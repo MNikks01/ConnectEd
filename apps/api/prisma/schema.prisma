@@ -33,6 +33,10 @@ enum AccountStatus {
   ACTIVE
   SUSPENDED
   DEACTIVATED
+  /// A tombstone: the row survives so the school's records can still point at it, and holds no
+  /// personal data (ADR-0020). Terminal — nothing moves an account out of this state, because
+  /// there is nothing left to restore.
+  ERASED
 }
 
 enum UserRole {
@@ -182,6 +186,10 @@ enum NotificationCategory {
   MESSAGE
   VERIFICATION
   BILLING
+  /// Things that happened to the account itself — today, an export finishing. Absent from
+  /// `OPTIONAL_NOTIFICATION_CATEGORIES` deliberately: a person who asked for their data has to be
+  /// told it is ready, and with no mail transport yet this is the only channel there is.
+  ACCOUNT
 }
 
 enum DevicePlatform {
@@ -209,6 +217,8 @@ model Account {
   isPlatformAdmin Boolean       @default(false) @map("is_platform_admin")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  /// The moment this became a tombstone (ADR-0020). Set only by erasure, alongside
+  /// `status = ERASED`; the column predates the feature and had never been written to.
   deletedAt       DateTime?     @map("deleted_at")
 
   credential          Credential?
@@ -254,6 +264,9 @@ model Account {
   reportsMade          Report[]              @relation("Reporter")
 
   reportsReviewed Report[] @relation("ReportReviewer")
+
+  dataExports     DataExport[]
+  erasureRequests ErasureRequest[]
 
   @@index([type])
   // Partial-index-shaped in intent: the queue's authorization check is the only reader, and there
@@ -1370,4 +1383,81 @@ model ReportCard {
   @@unique([termId, studentAccountId])
   @@index([studentAccountId])
   @@map("report_card")
+}
+
+// ---------------------------------------------------------------------------
+// Subject rights — export and erasure (`.docs/PRD/14-export-and-erasure.md`)
+// ---------------------------------------------------------------------------
+
+enum DataExportStatus {
+  PENDING
+  BUILDING
+  READY
+  FAILED
+  EXPIRED
+}
+
+/// A request for a copy of everything the product holds about one account (FR-DSR-001).
+///
+/// **The row is the queue.** There is no BullMQ job behind an export: the worker claims `PENDING`
+/// rows with `FOR UPDATE SKIP LOCKED`, exactly as the outbox relay does (ADR-0019), and the status
+/// column is the only record of what is outstanding. A job in Redis alongside a row in Postgres
+/// would be two sources of truth for one fact, and the failure mode of that is an export that the
+/// database says is building and the queue has never heard of.
+model DataExport {
+  id        String           @id @default(uuid()) @db.Uuid
+  accountId String           @map("account_id") @db.Uuid
+  status    DataExportStatus @default(PENDING)
+
+  /// Where the bundle landed. Null until it is built, and null again once it has been swept.
+  objectKey String? @map("object_key")
+  sizeBytes Int?    @map("size_bytes")
+  /// Why it failed, in words the owner can read (FR-DSR-007). Never a stack trace.
+  error     String?
+  /// Counted rather than merely allowed: a bundle downloaded eleven times is worth noticing
+  /// (FR-DSR-006).
+  downloads Int     @default(0)
+
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  /// Seven days after completion. The object goes when this passes — an export concentrates in one
+  /// place what the rest of the product keeps behind fifty separate authorization checks.
+  expiresAt   DateTime? @map("expires_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, requestedAt])
+  /// The claim query: oldest pending first.
+  @@index([status, requestedAt])
+  @@map("data_export")
+}
+
+/// A scheduled erasure of an individual account (FR-DSR-020 … 028).
+///
+/// Deliberately **not** deleted when the erasure executes: it is the record that the account was
+/// erased, and when, and it survives its own subject — which is the same reasoning that keeps
+/// `audit_log` (ADR-0020).
+model ErasureRequest {
+  id        String @id @default(uuid()) @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+
+  requestedAt DateTime @default(now()) @map("requested_at")
+  /// `requestedAt + 30 days`. The grace period exists because the commonest reason to press this
+  /// button is a bad afternoon (FR-DSR-021).
+  scheduledFor DateTime @map("scheduled_for")
+
+  cancelledAt DateTime? @map("cancelled_at")
+  executedAt  DateTime? @map("executed_at")
+  /// Free text from the requester, optional. Never required — a right you must justify is not one.
+  reason      String?
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, requestedAt])
+  /// The nightly sweep: due, not cancelled, not executed.
+  @@index([scheduledFor])
+  @@map("erasure_request")
 }

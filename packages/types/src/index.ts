@@ -25,6 +25,7 @@ export * from './institution.js';
 export * from './moderation.js';
 export * from './notices.js';
 export * from './notifications.js';
+export * from './privacy.js';
 export * from './rum.js';
 export * from './report-cards.js';
 export * from './social.js';

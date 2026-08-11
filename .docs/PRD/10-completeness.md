@@ -217,7 +217,7 @@ run**, and where the run happened is part of the number.
 | NFR-003 | 500 RPS baseline                                 |   ◐   | **~1,060 RPS on reads**, same run, same caveat                                                                                                                                    |
 | NFR-004 | Stateless, horizontally scalable                 |  ✅   | Sessions and cache are in Redis, never in process. The worker runs as a **separate process** in CI and in compose — the split ADR-0019 assumes (S7-17, S9-2)                      |
 | NFR-005 | OWASP ASVS L2                                    |   ◐   | A security review exists ([`../Security/05-review-2026-08-05.md`](../Security/05-review-2026-08-05.md)) and found real defects. **ASVS L2 has never been walked as a checklist**  |
-| NFR-006 | argon2id · PII at rest · delete/export           |   ◐   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure do not exist** — no route, no service. `../Security/04-compliance.md` promises both                          |
+| NFR-006 | argon2id · PII at rest · delete/export           |  ✅   | argon2id ✅; TOTP secrets encrypted at rest ✅. **Export and erasure now exist** end to end (S9-19, [`14-export-and-erasure.md`](./14-export-and-erasure.md), ADR-0020)           |
 | NFR-007 | Transactional writes, idempotent effects         |  ✅   | Academic writes are transactional; the outbox writes events in the same transaction and consumers are idempotent on `eventId` (ADR-0019)                                          |
 | NFR-008 | Structured logs · RED metrics · tracing          |   ◐   | Logs with correlation IDs ✅, RED metrics ✅, OTLP export configured and a Tempo collector in local compose ✅. **No deployed collector**, so no trace has crossed a real network |
 | NFR-009 | ≥ 80% coverage on domain/services                |  ✅   | **Services 95.3% lines, 80.8% branches, 96.9% functions** (S9-12). Thresholds now fail the build on regression                                                                    |
@@ -229,7 +229,13 @@ run**, and where the run happened is part of the number.
 | NFR-015 | Rate limiting on auth and writes                 |  ✅   | Per-IP limiter plus per-address exponential backoff, with tests (FR-AUTH-011)                                                                                                     |
 | NFR-016 | Copy externalised · English + Hindi              |  ⛔   | **Not started.** No i18n library, no message catalogue, every string inline — while the product models `medium` per class and offers Hindi as one                                 |
 
-**Five ✅, seven ◐, two ⛔.** NFR-011 was one of the cheap ⛔ rows and is now green — its first run found two defects (S9-17), which is the argument for the other cheap one.
+**Six ✅, six ◐, two ⛔** — NFR-006 moved from ◐ to ✅ with S9-19, and it is the only row here that
+was a promise the product had made in writing rather than a target it had set itself.
+
+The paragraph below is kept as it was written on 2026-08-09, because the record of what the table
+found is worth more than a tidy table. Two of the three contradictions it names are now closed:
+NFR-011 by S9-17 and NFR-006 by S9-19. **NFR-016 is the one that is left**, and it is still not
+blocked by anything.
 
 ### What this half says that the functional half did not
 

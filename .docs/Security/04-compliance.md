@@ -7,16 +7,16 @@ ConnectEd handles **minors' data**, raising the compliance bar. Finalize with le
 
 ## Data governance
 
-| Concern                   | Policy                                                                                                               |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Data minimization**     | Collect only what a feature needs; no unnecessary PII.                                                               |
-| **Encryption in transit** | TLS 1.2+ everywhere.                                                                                                 |
-| **Encryption at rest**    | DB volume encryption; sensitive columns/app-level encryption where warranted.                                        |
-| **Retention**             | User content soft-deleted; hard-purge on retention expiry or erasure request. Audit logs retained longer per policy. |
-| **Access to PII**         | Least privilege; internal access audited; no prod PII in dev/test (use anonymized seed).                             |
-| **Subject rights**        | Export (data portability) and delete (erasure) flows; guardian consent for minors.                                   |
-| **Consent**               | Parental/guardian consent recorded for student accounts.                                                             |
-| **Breach response**       | Incident runbook + notification obligations (`Runbooks/`).                                                           |
+| Concern                   | Policy                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Data minimization**     | Collect only what a feature needs; no unnecessary PII.                                                                                           |
+| **Encryption in transit** | TLS 1.2+ everywhere.                                                                                                                             |
+| **Encryption at rest**    | DB volume encryption; sensitive columns/app-level encryption where warranted.                                                                    |
+| **Retention**             | User content soft-deleted; hard-purge on retention expiry or erasure request. Audit logs retained longer per policy.                             |
+| **Access to PII**         | Least privilege; internal access audited; no prod PII in dev/test (use anonymized seed).                                                         |
+| **Subject rights**        | Export (data portability) and delete (erasure) — [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md); guardian consent for minors. |
+| **Consent**               | Parental/guardian consent recorded for student accounts.                                                                                         |
+| **Breach response**       | Incident runbook + notification obligations (`Runbooks/`).                                                                                       |
 
 ## Regulatory mapping (indicative — confirm with counsel)
 
@@ -27,6 +27,10 @@ ConnectEd handles **minors' data**, raising the compliance bar. Finalize with le
 ## Engineering obligations
 
 - No prod PII in logs; scrub/deny-list sensitive fields in the logger.
-- Right-to-be-forgotten implemented as a real, tested workflow (not manual DB edits).
+- Right-to-be-forgotten implemented as a real, tested workflow (not manual DB edits) —
+  [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) is the contract and
+  [ADR-0020](../ADR/0020-erasure-by-tombstone.md) explains why it empties the account row rather
+  than deleting it. **Erasure does not reach a backup taken before it ran**; the privacy notice must
+  say so rather than implying otherwise.
 - Data-processing records for third parties (payment/push/email providers) maintained.
 - Privacy review is part of the definition-of-done for features touching PII.

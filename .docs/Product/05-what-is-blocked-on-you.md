@@ -1,6 +1,6 @@
 # Product — What is blocked on you
 
-`Status: Accepted` · `Last updated: 2026-08-09`
+`Status: Accepted` · `Last updated: 2026-08-11`
 
 Everything engineering cannot do without an answer, an account, or a person. Each item says what to
 decide, **how to actually do it**, and what happens the moment it lands.
@@ -25,15 +25,16 @@ end-to-end tests behind it.
 
 **What the product cannot do**, and why:
 
-| Cannot                    | Because                                      | Item                                    |
-| ------------------------- | -------------------------------------------- | --------------------------------------- |
-| Run anywhere but a laptop | No environment has ever existed              | [B-1](#b-1--where-production-runs)      |
-| Take money                | No payment provider chosen                   | [B-2](#b-2--a-payment-provider)         |
-| Send an email             | No mail transport chosen                     | [B-3](#b-3--a-mail-transport)           |
-| Speak Hindi               | No internationalisation, and nobody asked    | [B-10](#things-that-are-mine-not-yours) |
-| Honour an erasure request | Export and deletion were promised, not built | [B-9](#things-that-are-mine-not-yours)  |
+| Cannot                    | Because                                   | Item                                    |
+| ------------------------- | ----------------------------------------- | --------------------------------------- |
+| Run anywhere but a laptop | No environment has ever existed           | [B-1](#b-1--where-production-runs)      |
+| Take money                | No payment provider chosen                | [B-2](#b-2--a-payment-provider)         |
+| Send an email             | No mail transport chosen                  | [B-3](#b-3--a-mail-transport)           |
+| Speak Hindi               | No internationalisation, and nobody asked | [B-10](#things-that-are-mine-not-yours) |
 
-Four of those five are waiting on a decision below.
+Three of those four are waiting on a decision below. **Erasure was the fifth row here until
+2026-08-11**, and it is now built — which leaves internationalisation as the only thing on this list
+that is nobody's decision and simply has not been done.
 
 ---
 
@@ -226,13 +227,13 @@ Worth doing before B-1, not after: infrastructure is where a second reader is wo
 
 Listed so the boundary is clear. None of these need you.
 
-| #    | What                                              | State                                                                                                                          |
-| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| B-9  | **Export and erasure** (NFR-006)                  | Not built. `Security/04-compliance.md` promises both as subject rights. **The highest-priority unblocked work in the project** |
-| B-10 | **Internationalisation** (NFR-016)                | Not started. `Class.medium` already offers Hindi; the product models the language and cannot speak it                          |
-| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                    |
-| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | A security review exists and found real defects; the standard has never been walked formally                                   |
-| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                             |
+| #    | What                                              | State                                                                                                                         |
+| ---- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| B-9  | **Export and erasure** (NFR-006)                  | ✅ **Built 2026-08-11.** Both flows live — see [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) and ADR-0020 |
+| B-10 | **Internationalisation** (NFR-016)                | Not started. `Class.medium` already offers Hindi; the product models the language and cannot speak it                         |
+| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                   |
+| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | A security review exists and found real defects; the standard has never been walked formally                                  |
+| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                            |
 
 ---
 
@@ -250,6 +251,6 @@ Listed so the boundary is clear. None of these need you.
 | B-7  | Accounts and DNS       | As each of B-1 … B-3 is answered                        |
 
 The engineering position is straightforward: **there is no unblocked feature work left that anybody
-asked for.** What remains is a deployment, two integrations behind your deferrals, and two
-commitments the product made in its own documents (export/erasure, Hindi) that nobody has been
-asked to schedule.
+asked for.** What remains is a deployment, two integrations behind your deferrals, and — since
+export and erasure shipped on 2026-08-11 — **one** remaining commitment the product made in its own
+documents: Hindi (NFR-016).
