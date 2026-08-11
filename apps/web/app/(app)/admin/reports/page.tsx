@@ -11,25 +11,30 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { QueuedReportResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Reports · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('moderation.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
-const FILTERS = [
-  { status: 'OPEN', label: 'Open' },
-  { status: 'REVIEWED', label: 'Needs a second look' },
-  { status: 'ACTIONED', label: 'Actioned' },
-  { status: 'DISMISSED', label: 'Dismissed' },
+const FILTERS: { status: string; label: MessageKey }[] = [
+  { status: 'OPEN', label: 'moderation.statusOPEN' },
+  { status: 'REVIEWED', label: 'moderation.statusREVIEWED' },
+  { status: 'ACTIONED', label: 'moderation.statusACTIONED' },
+  { status: 'DISMISSED', label: 'moderation.statusDISMISSED' },
 ];
 
-const SUBJECT_LABELS: Record<string, string> = {
-  POST: 'a post',
-  COMMENT: 'a comment',
-  MESSAGE: 'a message',
-  ACCOUNT: 'an account',
+const SUBJECT_LABELS: Record<string, MessageKey> = {
+  POST: 'moderation.subjectPOST',
+  COMMENT: 'moderation.subjectCOMMENT',
+  MESSAGE: 'moderation.subjectMESSAGE',
+  ACCOUNT: 'moderation.subjectACCOUNT',
 };
 
 export default async function ReportQueuePage({
@@ -37,6 +42,8 @@ export default async function ReportQueuePage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { status: requested } = await searchParams;
   const status = FILTERS.some((filter) => filter.status === requested) ? requested : 'OPEN';
 
@@ -53,14 +60,11 @@ export default async function ReportQueuePage({
 
   return (
     <>
-      <PageHeader
-        title="Reports"
-        description="What people have reported, oldest first. Every decision is recorded against your account."
-      />
+      <PageHeader title={t('moderation.title')} description={t('moderation.description')} />
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         <nav
-          aria-label="Status"
+          aria-label={t('moderation.statusNav')}
           style={{ display: 'flex', gap: 'var(--ui-space-3)', flexWrap: 'wrap' }}
         >
           {FILTERS.map((filter) => (
@@ -69,14 +73,14 @@ export default async function ReportQueuePage({
               href={`/admin/reports?status=${filter.status}`}
               aria-current={filter.status === status ? 'page' : undefined}
             >
-              {filter.label}
+              {t(filter.label)}
             </Link>
           ))}
         </nav>
 
         {reports.length === 0 ? (
           <Card as="section">
-            <p style={{ margin: 0 }}>Nothing here.</p>
+            <p style={{ margin: 0 }}>{t('moderation.empty')}</p>
           </Card>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 'var(--ui-space-4)' }}>
@@ -91,12 +95,20 @@ export default async function ReportQueuePage({
                       flexWrap: 'wrap',
                     }}
                   >
-                    <strong>{SUBJECT_LABELS[report.subject.type] ?? report.subject.type}</strong>
-                    {report.subject.removed ? <Badge tone="info">Already removed</Badge> : null}
+                    <strong>
+                      {report.subject.type in SUBJECT_LABELS
+                        ? t(SUBJECT_LABELS[report.subject.type] as MessageKey)
+                        : report.subject.type}
+                    </strong>
+                    {report.subject.removed ? (
+                      <Badge tone="info">{t('moderation.alreadyRemoved')}</Badge>
+                    ) : null}
                     {report.reportCount > 1 ? (
                       // Two people objecting is a different signal from one, and it is the only
                       // number on this page — because it changes how a reviewer reads the report.
-                      <Badge tone="warning">Reported by {report.reportCount} people</Badge>
+                      <Badge tone="warning">
+                        {t('moderation.reportedByMany', { count: report.reportCount })}
+                      </Badge>
                     ) : null}
                   </div>
 
@@ -118,12 +130,12 @@ export default async function ReportQueuePage({
                       {/* Said rather than left blank: a reviewer needs to know the content is
                           withheld by design, not missing by accident. */}
                       {report.subject.type === 'MESSAGE'
-                        ? 'The message itself is not shown — a private conversation is not made public by being reported.'
-                        : 'No content to show.'}
+                        ? t('moderation.messageWithheldShort')
+                        : t('moderation.noContent')}
                     </p>
                   )}
 
-                  <Link href={`/admin/reports/${report.id}`}>Review this</Link>
+                  <Link href={`/admin/reports/${report.id}`}>{t('moderation.reviewThis')}</Link>
                 </Card>
               </li>
             ))}

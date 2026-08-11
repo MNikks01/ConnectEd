@@ -11,27 +11,26 @@ import { redirect } from 'next/navigation';
 
 import { PlanUsage } from '@/components/plan-usage';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { formatDate } from '@/lib/i18n/format';
+import type { Locale } from '@/lib/i18n/locales';
+import type { MessageKey, Translator } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, SubscriptionResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Billing · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('billing.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
-const STATUS_LABEL: Record<string, string> = {
-  TRIALING: 'Trial',
-  ACTIVE: 'Active',
-  PAST_DUE: 'Payment failed',
-  CANCELED: 'Cancelled',
+const STATUS_LABEL: Record<string, MessageKey> = {
+  TRIALING: 'billing.statusTRIALING',
+  ACTIVE: 'billing.statusACTIVE',
+  PAST_DUE: 'billing.statusPAST_DUE',
+  CANCELED: 'billing.statusCANCELED',
 };
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
 
 function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now();
@@ -45,41 +44,37 @@ function daysUntil(iso: string): number {
  * a real decision, not reassurance — so it is safe to say, and worth saying to someone who has
  * just seen "payment failed" and is wondering whether their timetable is about to disappear.
  */
-function statusExplanation(subscription: SubscriptionResponse): string {
+function statusExplanation(
+  subscription: SubscriptionResponse,
+  t: Translator,
+  locale: Locale,
+): string {
   const { status, periodEnd } = subscription;
 
   if (status === 'TRIALING' && periodEnd) {
     const days = daysUntil(periodEnd);
-    return (
-      `Your trial runs until ${formatDate(periodEnd)} — ${String(days)} ` +
-      `${days === 1 ? 'day' : 'days'} left. After that you will need a paid plan to add beyond ` +
-      `the trial limits. Everything you have already created stays exactly as it is.`
-    );
+
+    // The day count is a phrase from the catalogue, not a number with a word after it. English
+    // needs two forms and Hindi needs a different pair, and neither survives `days + ' days'`.
+    return t('billing.trialing', {
+      date: formatDate(periodEnd, locale),
+      days: days === 1 ? t('billing.dayOne') : t('billing.dayMany', { count: days }),
+    });
   }
 
-  if (status === 'PAST_DUE') {
-    return (
-      'A payment did not go through. Nothing has changed for your staff or students — you keep ' +
-      'everything your plan allows while this is sorted out.'
-    );
-  }
-
-  if (status === 'CANCELED') {
-    return (
-      'Your subscription has been cancelled, so the free limits apply from here. Nothing has ' +
-      'been deleted: every class and member you already have is untouched, and you can add ' +
-      'again once you subscribe.'
-    );
-  }
+  if (status === 'PAST_DUE') return t('billing.pastDue');
+  if (status === 'CANCELED') return t('billing.cancelled');
 
   if (status === 'ACTIVE' && periodEnd) {
-    return `Your plan renews on ${formatDate(periodEnd)}.`;
+    return t('billing.renews', { date: formatDate(periodEnd, locale) });
   }
 
-  return 'Your school is on the free limits.';
+  return t('billing.freeLimits');
 }
 
 export default async function BillingPage() {
+  const { t, locale } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let subscription: SubscriptionResponse;
 
@@ -95,10 +90,7 @@ export default async function BillingPage() {
 
   return (
     <>
-      <PageHeader
-        title="Billing"
-        description="Your plan, what it allows, and how much of it you are using."
-      />
+      <PageHeader title={t('billing.title')} description={t('billing.description')} />
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         <Card as="section">
@@ -113,34 +105,36 @@ export default async function BillingPage() {
             <h2 style={{ margin: 0, fontSize: 'var(--ui-text-lg)' }}>{subscription.planName}</h2>
             {status ? (
               <Badge tone={status === 'PAST_DUE' ? 'warning' : 'info'}>
-                {STATUS_LABEL[status] ?? status}
+                {status in STATUS_LABEL ? t(STATUS_LABEL[status] as MessageKey) : status}
               </Badge>
             ) : null}
           </div>
 
-          <p style={{ marginBottom: 0 }}>{statusExplanation(subscription)}</p>
+          <p style={{ marginBottom: 0 }}>{statusExplanation(subscription, t, locale)}</p>
         </Card>
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>What you are using</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('billing.usageHeading')}
+          </h2>
           <PlanUsage limits={subscription.limits} usage={subscription.usage} />
 
           <p className="muted" style={{ marginBottom: 0 }}>
             {/* Said here rather than only in the error, so a school reads it before it is stopped
                 rather than at the moment it is. */}
-            Reaching a limit stops you adding new ones. It never removes or hides anything you
-            already have.
+            {t('billing.usageNote')}
           </p>
         </Card>
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Changing your plan</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+            {t('billing.changeHeading')}
+          </h2>
           <p style={{ marginBottom: 0 }}>
             {/* Deliberately not a button. Checkout waits on the payment provider decision
                 (ADR-0015), and a control that looks live and does nothing is worse than its
                 absence — particularly on the page where someone is trying to give us money. */}
-            Self-service upgrades are not available yet. Speak to your ConnectEd contact to move to
-            a larger plan, and your limits change the same day.
+            {t('billing.changeNote')}
           </p>
         </Card>
       </div>

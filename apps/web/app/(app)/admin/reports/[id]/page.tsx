@@ -11,23 +11,30 @@ import { notFound, redirect } from 'next/navigation';
 import { ReportDecision } from '@/components/report-decision';
 import { ApiError } from '@/lib/api-client';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import type { MessageKey } from '@/lib/i18n/translate';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { QueuedReportResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Report · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('moderation.detailMetaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 const REMOVABLE = new Set(['POST', 'COMMENT']);
 
 const STATUS_LABELS: Record<string, string> = {
-  OPEN: 'Open',
-  REVIEWED: 'Needs a second look',
-  ACTIONED: 'Actioned',
-  DISMISSED: 'Dismissed',
+  OPEN: 'moderation.statusOPEN',
+  REVIEWED: 'moderation.statusREVIEWED',
+  ACTIONED: 'moderation.statusACTIONED',
+  DISMISSED: 'moderation.statusDISMISSED',
 };
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = await getTranslations();
+
   const { id } = await params;
 
   let report: QueuedReportResponse;
@@ -45,11 +52,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   return (
     <>
-      <PageHeader title="Report" description={report.reason} />
+      <PageHeader title={t('moderation.detailTitle')} description={report.reason} />
 
       <div style={{ display: 'grid', gap: 'var(--ui-space-5)' }}>
         <p style={{ margin: 0 }}>
-          <Link href="/admin/reports">Back to the queue</Link>
+          <Link href="/admin/reports">{t('moderation.backToQueue')}</Link>
         </p>
 
         <Card as="section">
@@ -62,12 +69,16 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             }}
           >
             <h2 style={{ margin: 0, fontSize: 'var(--ui-text-lg)' }}>
-              {report.subject.authorDisplayName ?? 'Someone'}
+              {report.subject.authorDisplayName ?? t('moderation.someone')}
             </h2>
             <Badge tone={report.status === 'OPEN' ? 'warning' : 'info'}>
-              {STATUS_LABELS[report.status] ?? report.status}
+              {report.status in STATUS_LABELS
+                ? t(STATUS_LABELS[report.status] as MessageKey)
+                : report.status}
             </Badge>
-            {report.subject.removed ? <Badge tone="info">Already removed</Badge> : null}
+            {report.subject.removed ? (
+              <Badge tone="info">{t('moderation.alreadyRemoved')}</Badge>
+            ) : null}
           </div>
 
           {report.subject.excerpt ? (
@@ -84,21 +95,22 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           ) : (
             <p className="muted" style={{ marginBottom: 0 }}>
               {report.subject.type === 'MESSAGE'
-                ? 'The message itself is not shown — a private conversation is not made public by being reported. You have the sender and the reporter’s description.'
-                : 'There is no content to show for this kind of report.'}
+                ? t('moderation.messageWithheldLong')
+                : t('moderation.noContentDetail')}
             </p>
           )}
 
           <p className="muted" style={{ marginBottom: 0 }}>
             {/* The reporter is not named anywhere, and this says so — otherwise a reviewer looks
                 for the name and assumes the page is broken when they cannot find it. */}
-            Reported {report.reportCount === 1 ? 'once' : `by ${String(report.reportCount)} people`}
-            . Reporters are never named.
+            {report.reportCount === 1
+              ? t('moderation.reportedOnce')
+              : t('moderation.reportedTimes', { count: report.reportCount })}
           </p>
         </Card>
 
         <Card as="section">
-          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Decide</h2>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>{t('moderation.decide')}</h2>
           <ReportDecision reportId={report.id} removable={REMOVABLE.has(report.subject.type)} />
         </Card>
       </div>

@@ -554,6 +554,201 @@ const hi: Messages = {
     unreachable: 'सर्वर तक नहीं पहुँच सके। अपना कनेक्शन जाँचें और फिर कोशिश करें।',
   },
 
+  errorPages: {
+    notFoundTitle: 'पृष्ठ नहीं मिला',
+    notFoundBody:
+      '404 — यह पता मौजूद नहीं है। हो सकता है यह बदल गया हो, या जिस लिंक से आप यहाँ आए वह पुराना हो।',
+    backToStart: 'शुरुआत पर वापस',
+    somethingWentWrong: 'कुछ गड़बड़ हो गई',
+    portalFailed: 'पोर्टल लोड नहीं हो सका।',
+    reference: 'संदर्भ: {digest}',
+    tryAgain: 'फिर कोशिश करें',
+  },
+
+  schoolProfile: {
+    metaTitle: 'विद्यालय प्रोफ़ाइल · GetConnected',
+    title: 'विद्यालय प्रोफ़ाइल',
+    description: 'सदस्य और आगंतुक यही देखते हैं। यहाँ सब कुछ संपादित किया जा सकता है।',
+  },
+
+  schoolNotices: {
+    metaTitle: 'सूचनाएँ · GetConnected',
+    title: 'सूचनाएँ',
+    description: 'यहाँ प्रकाशित हर चीज़ विद्यालय के हर सत्यापित सदस्य तक पहुँचती है।',
+    publishedLabel: 'प्रकाशित सूचनाएँ',
+    publishHeading: 'सूचना प्रकाशित करें',
+  },
+
+  schoolEvents: {
+    metaTitle: 'कार्यक्रम · GetConnected',
+    title: 'कार्यक्रम',
+    description: 'विद्यालय में सत्यापित हर व्यक्ति इन्हें देखता है।',
+    rangeNav: 'अवधि',
+    upcoming: 'आगामी',
+    includingPast: 'बीते हुए सहित',
+    scheduledLabel: 'निर्धारित कार्यक्रम',
+    addHeading: 'कार्यक्रम जोड़ें',
+  },
+
+  schoolComplaints: {
+    metaTitle: 'शिकायतें · GetConnected',
+    title: 'शिकायतें और सुझाव',
+    description: 'अभिभावकों और कर्मचारियों की ओर से। हर एक के साथ दर्ज करने वाले का नाम रहता है।',
+    statusNav: 'स्थिति',
+    all: 'सभी',
+    open: 'अभी पढ़ा नहीं गया',
+    underReview: 'देखा जा रहा है',
+    resolved: 'निपटा दिया गया',
+  },
+
+  schoolClasses: {
+    metaTitle: 'कक्षाएँ · GetConnected',
+    title: 'कक्षाएँ',
+    description:
+      'हर कक्षा एक माध्यम, स्तर और अनुभाग से बनती है। विषय और कक्षा-शिक्षक हर कक्षा के भीतर तय होते हैं।',
+    addHeading: 'कक्षा जोड़ें',
+  },
+
+  schoolTerms: {
+    metaTitle: 'सत्र · GetConnected',
+    title: 'सत्र',
+    description:
+      'वे अवधियाँ जिन्हें प्रगति पत्र दर्शाता है। अवधियाँ आपस में नहीं टकरा सकतीं, क्योंकि हर परीक्षा या तो किसी एक सत्र की होती है या किसी की नहीं।',
+    listLabel: 'आपके सत्र',
+    none: 'आपने अभी कोई सत्र नहीं बनाया है। जब तक आप ऐसा नहीं करते, कोई प्रगति पत्र जारी नहीं कर सकता।',
+    colTerm: 'सत्र',
+    colFrom: 'से',
+    colTo: 'तक',
+    colStatus: 'स्थिति',
+    frozen: 'प्रगति पत्र जारी हो चुके — अब तिथियाँ नहीं बदलेंगी',
+    notFrozen: 'अभी कोई प्रगति पत्र जारी नहीं हुआ',
+    addHeading: 'सत्र जोड़ें',
+  },
+
+  schoolVerifications: {
+    metaTitle: 'सत्यापन · GetConnected',
+    title: 'सत्यापन',
+    description:
+      'अनुरोध स्वीकार करते ही सदस्य को उस कक्षा तक पहुँच मिल जाती है। अस्वीकार करने पर वे फिर से आवेदन कर सकते हैं।',
+  },
+
+  schoolMembers: {
+    metaTitle: 'सदस्य · GetConnected',
+    title: 'सदस्य',
+    description:
+      'इस विद्यालय ने जिन्हें सत्यापित किया है। किसी को हटाते ही उनकी शैक्षणिक पहुँच तुरंत समाप्त हो जाती है।',
+  },
+
+  schoolAnalytics: {
+    metaTitle: 'विश्लेषण · GetConnected',
+    title: 'विश्लेषण',
+    description:
+      'आपका विद्यालय ConnectEd का उपयोग कैसे कर रहा है, और आप जो प्रकाशित करते हैं उसका कितना पढ़ा जा रहा है।',
+    notInPlan: 'अभी आपकी योजना में शामिल नहीं',
+    seePlan: 'अपनी योजना देखें',
+    periodNav: 'अवधि',
+    last30: 'पिछले 30 दिन',
+    last90: 'पिछले 90 दिन',
+    lastYear: 'पिछला वर्ष',
+  },
+
+  billing: {
+    metaTitle: 'बिलिंग · GetConnected',
+    title: 'बिलिंग',
+    description: 'आपकी योजना, उसमें क्या शामिल है, और आप उसका कितना उपयोग कर रहे हैं।',
+    statusTRIALING: 'परीक्षण अवधि',
+    statusACTIVE: 'सक्रिय',
+    statusPAST_DUE: 'भुगतान विफल',
+    statusCANCELED: 'रद्द',
+    trialing:
+      'आपकी परीक्षण अवधि {date} तक चलेगी — {days} शेष। उसके बाद परीक्षण की सीमाओं से आगे जोड़ने के लिए आपको एक सशुल्क योजना चाहिए होगी। आपने अब तक जो बनाया है, वह जस का तस बना रहेगा।',
+    dayOne: '1 दिन',
+    dayMany: '{count} दिन',
+    pastDue:
+      'भुगतान नहीं हो सका। आपके कर्मचारियों या विद्यार्थियों के लिए कुछ नहीं बदला है — यह सुलझने तक आपकी योजना की सारी सुविधाएँ बनी रहेंगी।',
+    cancelled:
+      'आपकी सदस्यता रद्द कर दी गई है, इसलिए अब निःशुल्क सीमाएँ लागू हैं। कुछ भी मिटाया नहीं गया है: आपकी सारी कक्षाएँ और सदस्य यथावत हैं, और दोबारा सदस्यता लेते ही आप फिर से जोड़ सकते हैं।',
+    renews: 'आपकी योजना {date} को नवीनीकृत होगी।',
+    freeLimits: 'आपका विद्यालय निःशुल्क सीमाओं पर है।',
+    usageHeading: 'आप कितना उपयोग कर रहे हैं',
+    usageNote:
+      'सीमा तक पहुँचने पर आप नए नहीं जोड़ सकते। जो पहले से है उसे यह कभी नहीं हटाता और न छिपाता है।',
+    changeHeading: 'अपनी योजना बदलना',
+    changeNote:
+      'स्वयं योजना बदलने की सुविधा अभी उपलब्ध नहीं है। बड़ी योजना पर जाने के लिए अपने ConnectEd संपर्क से बात करें; आपकी सीमाएँ उसी दिन बदल जाएँगी।',
+  },
+
+  schoolClassDetail: {
+    back: '← सभी कक्षाएँ',
+    subjectCountOne: '1 विषय',
+    subjectCountMany: '{count} विषय',
+    active: 'सक्रिय',
+    inactive: 'निष्क्रिय',
+    summary: '{subjects} · {state}',
+    marks: 'अंक',
+    reportCards: 'प्रगति पत्र',
+    subjects: 'विषय',
+    classTeacher: 'कक्षा-शिक्षक',
+    timetable: 'समय-सारणी',
+  },
+
+  schoolMarks: {
+    metaTitle: 'अंक · GetConnected',
+    back: '← कक्षा पर वापस',
+    title: 'अंक',
+    description: 'इस कक्षा का हर मूल्यांकन, उन कार्यों सहित जो अभी प्रकाशित नहीं हुए।',
+    none: 'इस कक्षा में अभी कोई परीक्षा नहीं है।',
+    meta: '{subject} · {kind} · {date} · {max} में से · {state}',
+    published: 'प्रकाशित',
+    draft: 'मसौदा — कक्षा इसे नहीं देख सकती',
+    nobodyMarked: 'अभी किसी को अंक नहीं दिए गए।',
+    pupilCount: '{count} विद्यार्थी',
+  },
+
+  schoolReportCards: {
+    metaTitle: 'प्रगति पत्र · GetConnected',
+    back: '← कक्षा पर वापस',
+    title: 'प्रगति पत्र',
+    description: 'इस कक्षा के परिवारों को जो दिया गया, ठीक उसी रूप में जैसे वह जारी हुआ था।',
+    noTerms: 'आपने अभी कोई सत्र नहीं बनाया है, इसलिए कुछ जारी हुआ ही नहीं हो सकता।',
+    addTerm: 'सत्र जोड़ें',
+    termShown: 'दिखाया जा रहा सत्र',
+    show: 'दिखाएँ',
+  },
+
+  moderation: {
+    metaTitle: 'रिपोर्टें · GetConnected',
+    detailMetaTitle: 'रिपोर्ट · GetConnected',
+    title: 'रिपोर्टें',
+    description:
+      'लोगों ने जो शिकायतें दर्ज की हैं, पुरानी पहले। हर निर्णय आपके खाते के विरुद्ध दर्ज होता है।',
+    statusNav: 'स्थिति',
+    statusOPEN: 'खुली',
+    statusREVIEWED: 'दोबारा देखने की ज़रूरत',
+    statusACTIONED: 'कार्रवाई हुई',
+    statusDISMISSED: 'ख़ारिज',
+    empty: 'यहाँ कुछ नहीं है।',
+    subjectPOST: 'एक पोस्ट',
+    subjectCOMMENT: 'एक टिप्पणी',
+    subjectMESSAGE: 'एक संदेश',
+    subjectACCOUNT: 'एक खाता',
+    alreadyRemoved: 'पहले ही हटाया जा चुका',
+    reportedByMany: '{count} लोगों ने शिकायत दर्ज की',
+    messageWithheldShort:
+      'संदेश स्वयं नहीं दिखाया जाता — शिकायत दर्ज होने से कोई निजी बातचीत सार्वजनिक नहीं हो जाती।',
+    noContent: 'दिखाने के लिए कोई सामग्री नहीं।',
+    reviewThis: 'इसकी समीक्षा करें',
+    detailTitle: 'रिपोर्ट',
+    backToQueue: 'सूची पर वापस',
+    someone: 'कोई',
+    messageWithheldLong:
+      'संदेश स्वयं नहीं दिखाया जाता — शिकायत दर्ज होने से कोई निजी बातचीत सार्वजनिक नहीं हो जाती। आपके पास भेजने वाले का नाम और शिकायतकर्ता का विवरण है।',
+    noContentDetail: 'इस प्रकार की शिकायत के लिए दिखाने को कोई सामग्री नहीं है।',
+    reportedOnce: 'एक बार शिकायत दर्ज हुई। शिकायतकर्ताओं का नाम कभी नहीं बताया जाता।',
+    reportedTimes: '{count} लोगों ने शिकायत दर्ज की। शिकायतकर्ताओं का नाम कभी नहीं बताया जाता।',
+    decide: 'निर्णय लें',
+  },
+
   settings: {
     nav: 'सेटिंग्स',
     profile: 'प्रोफ़ाइल',

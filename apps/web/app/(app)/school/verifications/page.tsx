@@ -7,11 +7,15 @@ import { redirect } from 'next/navigation';
 
 import { VerificationQueue } from '@/components/verification-queue';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, VerificationRequestResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Verifications · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolVerifications.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function VerificationsPage({
@@ -19,6 +23,8 @@ export default async function VerificationsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { status = 'PENDING' } = await searchParams;
 
   let requests: VerificationRequestResponse[];
@@ -39,8 +45,8 @@ export default async function VerificationsPage({
   return (
     <>
       <PageHeader
-        title="Verifications"
-        description="Approve a request and the member gains access to that class immediately. Reject it and they can apply again."
+        title={t('schoolVerifications.title')}
+        description={t('schoolVerifications.description')}
       />
 
       <VerificationQueue requests={requests} status={status} />

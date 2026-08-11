@@ -544,6 +544,201 @@ const en = {
     unreachable: 'Could not reach the server. Check your connection and try again.',
   },
 
+  errorPages: {
+    notFoundTitle: 'Page not found',
+    notFoundBody:
+      '404 — that address does not exist. It may have moved, or the link that brought you here may be out of date.',
+    backToStart: 'Back to the start',
+    somethingWentWrong: 'Something went wrong',
+    portalFailed: 'The portal could not be loaded.',
+    reference: 'Reference: {digest}',
+    tryAgain: 'Try again',
+  },
+
+  schoolProfile: {
+    metaTitle: 'School profile · GetConnected',
+    title: 'School profile',
+    description: 'What members and visitors see. Everything here is editable.',
+  },
+
+  schoolNotices: {
+    metaTitle: 'Notices · GetConnected',
+    title: 'Notices',
+    description: 'Anything published here reaches every verified member of the school.',
+    publishedLabel: 'Published notices',
+    publishHeading: 'Publish a notice',
+  },
+
+  schoolEvents: {
+    metaTitle: 'Events · GetConnected',
+    title: 'Events',
+    description: 'Everyone verified at the school sees these.',
+    rangeNav: 'Range',
+    upcoming: 'Upcoming',
+    includingPast: 'Including past',
+    scheduledLabel: 'Scheduled events',
+    addHeading: 'Add an event',
+  },
+
+  schoolComplaints: {
+    metaTitle: 'Complaints · GetConnected',
+    title: 'Complaints and suggestions',
+    description: 'From parents and staff. The person who raised each one is named.',
+    statusNav: 'Status',
+    all: 'All',
+    open: 'Not yet read',
+    underReview: 'Being looked at',
+    resolved: 'Resolved',
+  },
+
+  schoolClasses: {
+    metaTitle: 'Classes · GetConnected',
+    title: 'Classes',
+    description:
+      'Every class is a medium, level, and section. Subjects and the class teacher are set inside each one.',
+    addHeading: 'Add a class',
+  },
+
+  schoolTerms: {
+    metaTitle: 'Terms · GetConnected',
+    title: 'Terms',
+    description:
+      'The periods a report card covers. Ranges may not overlap, because an assessment has to belong to one term or none.',
+    listLabel: 'Your terms',
+    none: 'You have not set up any terms yet. Until you do, nobody can issue a report card.',
+    colTerm: 'Term',
+    colFrom: 'From',
+    colTo: 'To',
+    colStatus: 'Status',
+    frozen: 'Cards issued — dates are now fixed',
+    notFrozen: 'No cards issued yet',
+    addHeading: 'Add a term',
+  },
+
+  schoolVerifications: {
+    metaTitle: 'Verifications · GetConnected',
+    title: 'Verifications',
+    description:
+      'Approve a request and the member gains access to that class immediately. Reject it and they can apply again.',
+  },
+
+  schoolMembers: {
+    metaTitle: 'Members · GetConnected',
+    title: 'Members',
+    description:
+      'Everyone this school has verified. Removing someone revokes their academic access immediately.',
+  },
+
+  schoolAnalytics: {
+    metaTitle: 'Analytics · GetConnected',
+    title: 'Analytics',
+    description:
+      'How your school is using ConnectEd, and how much of what you publish is being read.',
+    notInPlan: 'Not on your plan yet',
+    seePlan: 'See your plan',
+    periodNav: 'Period',
+    last30: 'Last 30 days',
+    last90: 'Last 90 days',
+    lastYear: 'Last year',
+  },
+
+  billing: {
+    metaTitle: 'Billing · GetConnected',
+    title: 'Billing',
+    description: 'Your plan, what it allows, and how much of it you are using.',
+    statusTRIALING: 'Trial',
+    statusACTIVE: 'Active',
+    statusPAST_DUE: 'Payment failed',
+    statusCANCELED: 'Cancelled',
+    trialing:
+      'Your trial runs until {date} — {days} left. After that you will need a paid plan to add beyond the trial limits. Everything you have already created stays exactly as it is.',
+    dayOne: '1 day',
+    dayMany: '{count} days',
+    pastDue:
+      'A payment did not go through. Nothing has changed for your staff or students — you keep everything your plan allows while this is sorted out.',
+    cancelled:
+      'Your subscription has been cancelled, so the free limits apply from here. Nothing has been deleted: every class and member you already have is untouched, and you can add again once you subscribe.',
+    renews: 'Your plan renews on {date}.',
+    freeLimits: 'Your school is on the free limits.',
+    usageHeading: 'What you are using',
+    usageNote:
+      'Reaching a limit stops you adding new ones. It never removes or hides anything you already have.',
+    changeHeading: 'Changing your plan',
+    changeNote:
+      'Self-service upgrades are not available yet. Speak to your ConnectEd contact to move to a larger plan, and your limits change the same day.',
+  },
+
+  schoolClassDetail: {
+    back: '← All classes',
+    subjectCountOne: '1 subject',
+    subjectCountMany: '{count} subjects',
+    active: 'Active',
+    inactive: 'Inactive',
+    summary: '{subjects} · {state}',
+    marks: 'Marks',
+    reportCards: 'Report cards',
+    subjects: 'Subjects',
+    classTeacher: 'Class teacher',
+    timetable: 'Timetable',
+  },
+
+  schoolMarks: {
+    metaTitle: 'Marks · GetConnected',
+    back: '← Back to the class',
+    title: 'Marks',
+    description: 'Everything this class has been assessed on, including work not yet published.',
+    none: 'This class has no assessments yet.',
+    meta: '{subject} · {kind} · {date} · out of {max} · {state}',
+    published: 'published',
+    draft: 'draft — the class cannot see this',
+    nobodyMarked: 'Nobody has been marked yet.',
+    pupilCount: '{count} pupils',
+  },
+
+  schoolReportCards: {
+    metaTitle: 'Report cards · GetConnected',
+    back: '← Back to the class',
+    title: 'Report cards',
+    description: 'What this class’s families were given, exactly as it was issued.',
+    noTerms: 'You have not set up any terms yet, so nothing can have been issued.',
+    addTerm: 'Add a term',
+    termShown: 'Term shown',
+    show: 'Show',
+  },
+
+  moderation: {
+    metaTitle: 'Reports · GetConnected',
+    detailMetaTitle: 'Report · GetConnected',
+    title: 'Reports',
+    description:
+      'What people have reported, oldest first. Every decision is recorded against your account.',
+    statusNav: 'Status',
+    statusOPEN: 'Open',
+    statusREVIEWED: 'Needs a second look',
+    statusACTIONED: 'Actioned',
+    statusDISMISSED: 'Dismissed',
+    empty: 'Nothing here.',
+    subjectPOST: 'a post',
+    subjectCOMMENT: 'a comment',
+    subjectMESSAGE: 'a message',
+    subjectACCOUNT: 'an account',
+    alreadyRemoved: 'Already removed',
+    reportedByMany: 'Reported by {count} people',
+    messageWithheldShort:
+      'The message itself is not shown — a private conversation is not made public by being reported.',
+    noContent: 'No content to show.',
+    reviewThis: 'Review this',
+    detailTitle: 'Report',
+    backToQueue: 'Back to the queue',
+    someone: 'Someone',
+    messageWithheldLong:
+      'The message itself is not shown — a private conversation is not made public by being reported. You have the sender and the reporter’s description.',
+    noContentDetail: 'There is no content to show for this kind of report.',
+    reportedOnce: 'Reported once. Reporters are never named.',
+    reportedTimes: 'Reported by {count} people. Reporters are never named.',
+    decide: 'Decide',
+  },
+
   settings: {
     nav: 'Settings',
     profile: 'Profile',

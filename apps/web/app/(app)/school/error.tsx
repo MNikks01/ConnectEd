@@ -8,6 +8,7 @@
  * conversation can tie the screen to a server log line.
  */
 import { Alert, Button, Card } from '@connected/ui';
+import { useTranslations } from '@/components/locale-provider';
 
 export default function SchoolError({
   error,
@@ -16,20 +17,22 @@ export default function SchoolError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslations();
+
   return (
     <Card as="section">
-      <Alert tone="danger" title="Something went wrong">
-        {error.message || 'The portal could not be loaded.'}
+      <Alert tone="danger" title={t('errorPages.somethingWentWrong')}>
+        {error.message || t('errorPages.portalFailed')}
       </Alert>
 
       {error.digest ? (
         <p className="muted" style={{ fontSize: 'var(--ui-text-sm)' }}>
-          Reference: {error.digest}
+          {t('errorPages.reference', { digest: error.digest })}
         </p>
       ) : null}
 
       <div style={{ marginTop: 'var(--ui-space-4)' }}>
-        <Button onClick={reset}>Try again</Button>
+        <Button onClick={reset}>{t('errorPages.tryAgain')}</Button>
       </div>
     </Card>
   );

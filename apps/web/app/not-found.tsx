@@ -12,19 +12,19 @@
  * is the correct outcome: what they are really asserting is that an outsider learns nothing.
  */
 import Link from 'next/link';
+import { getTranslations } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await getTranslations();
+
   return (
     <main>
-      <h1>Page not found</h1>
-      <p className="muted">
-        404 — that address does not exist. It may have moved, or the link that brought you here may
-        be out of date.
-      </p>
+      <h1>{t('errorPages.notFoundTitle')}</h1>
+      <p className="muted">{t('errorPages.notFoundBody')}</p>
       <p>
-        <Link href="/">Back to the start</Link>
+        <Link href="/">{t('errorPages.backToStart')}</Link>
       </p>
     </main>
   );

@@ -6,14 +6,20 @@ import { redirect } from 'next/navigation';
 
 import { SchoolProfileForm } from '@/components/school-profile-form';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, SchoolProfileResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'School profile · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolProfile.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolProfilePage() {
+  const { t } = await getTranslations();
+
   let account: CurrentAccountResponse;
   let profile: SchoolProfileResponse;
 
@@ -27,10 +33,7 @@ export default async function SchoolProfilePage() {
 
   return (
     <>
-      <PageHeader
-        title="School profile"
-        description="What members and visitors see. Everything here is editable."
-      />
+      <PageHeader title={t('schoolProfile.title')} description={t('schoolProfile.description')} />
 
       <Card as="section">
         <SchoolProfileForm schoolId={account.id} profile={profile} />

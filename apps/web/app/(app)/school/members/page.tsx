@@ -6,14 +6,20 @@ import { redirect } from 'next/navigation';
 
 import { MemberRoster } from '@/components/member-roster';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, SchoolMemberResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Members · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolMembers.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
+  const { t } = await getTranslations();
+
   let members: SchoolMemberResponse[];
   let schoolId: string;
 
@@ -29,10 +35,7 @@ export default async function MembersPage() {
 
   return (
     <>
-      <PageHeader
-        title="Members"
-        description="Everyone this school has verified. Removing someone revokes their academic access immediately."
-      />
+      <PageHeader title={t('schoolMembers.title')} description={t('schoolMembers.description')} />
 
       <MemberRoster schoolId={schoolId} members={members} />
     </>

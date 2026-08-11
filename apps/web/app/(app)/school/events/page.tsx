@@ -7,11 +7,15 @@ import { redirect } from 'next/navigation';
 
 import { EventComposer, EventList } from '@/components/event-admin';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
+import { getTranslations } from '@/lib/i18n/server';
 
 import type { CurrentAccountResponse, EventResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Events · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('schoolEvents.metaTitle') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function SchoolEventsPage({
@@ -19,6 +23,8 @@ export default async function SchoolEventsPage({
 }: {
   searchParams: Promise<{ includePast?: string }>;
 }) {
+  const { t } = await getTranslations();
+
   const { includePast } = await searchParams;
   const past = includePast === 'true';
 
@@ -43,29 +49,31 @@ export default async function SchoolEventsPage({
 
   return (
     <>
-      <PageHeader title="Events" description="Everyone verified at the school sees these." />
+      <PageHeader title={t('schoolEvents.title')} description={t('schoolEvents.description')} />
 
-      <nav aria-label="Range" style={{ marginBottom: 'var(--ui-space-4)' }}>
+      <nav aria-label={t('schoolEvents.rangeNav')} style={{ marginBottom: 'var(--ui-space-4)' }}>
         <ul className="filter-tabs">
           <li>
             <Link href="/school/events" aria-current={past ? undefined : 'page'}>
-              Upcoming
+              {t('schoolEvents.upcoming')}
             </Link>
           </li>
           <li>
             <Link href="/school/events?includePast=true" aria-current={past ? 'page' : undefined}>
-              Including past
+              {t('schoolEvents.includingPast')}
             </Link>
           </li>
         </ul>
       </nav>
 
-      <section aria-label="Scheduled events">
+      <section aria-label={t('schoolEvents.scheduledLabel')}>
         <EventList events={events.data} />
       </section>
 
       <Card as="section">
-        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>Add an event</h2>
+        <h2 style={{ marginTop: 0, fontSize: 'var(--ui-text-lg)' }}>
+          {t('schoolEvents.addHeading')}
+        </h2>
         <EventComposer schoolId={account.id} />
       </Card>
     </>
