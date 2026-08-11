@@ -220,4 +220,55 @@ been found to fill the gap; there is no reason to assume a fourth will be there.
 
 ## Retro
 
-_Written at the retro, in the room — see action A4._
+**Drafted from the record on 2026-08-12, not held in the room.** Sprint 6's retro carried the same
+caveat and A4 was written to end the practice; it did not, and Sprint 9's retro below explains why
+rather than apologising again. What follows is checked against commits, PRs and the review notes.
+The team's account of the sprint is still not here, because there was no ceremony at which to take
+it.
+
+### Went well
+
+**The chain found more than the plan did.** The completeness audit named one engineering gap; fixing
+it produced a new failure mode; auditing the release path found that the process holding that
+failure mode had never been started by anything; starting it found a defect that had already
+shipped. Four items, each visible only because the one before it was done. No amount of planning
+would have produced that sequence, and the sprint's value came from following it rather than from
+sticking to the list.
+
+**The defect S7-17 found is the argument for the whole sprint.** `worker.ts` built its notifications
+module without the audience parameter. It is optional, so it type-checked; without it, every class
+fan-out in the split deployment reached nobody, while notifications naming a recipient directly
+still arrived. Half-working is why nothing looked broken. S7-3 had described this exact gap the day
+before as "a typo in that file would be found in production" — it was not a typo, and it was not
+theoretical for even a day.
+
+**Three defects were introduced and caught inside the sprint**, and recording them is the point: an
+unbounded `queue.add` in the relay, an `approve` that took an event and never recorded it, and a
+merge that went through without `verify` green. A sprint that lists only what it fixed reads better
+than it was.
+
+**The outbox closed the one real engineering gap the completeness record held.** ADR-0019 is the
+kind of change that is easy to describe and hard to do halfway: events now commit with their cause,
+and the publisher that swallowed failures is deleted rather than deprecated.
+
+### Didn't go well
+
+**S7-0a carried a fourth time.** It was S5-0a, then S6-0a, then S7-0a. The retro before this one
+asked for "a decision, not a default", and got a default. The port-and-fake trick that saved Sprint
+5 has nothing left to abstract.
+
+**A merge reached `development` without `verify` green**, because cancelling a stuck run dropped the
+cancelled checks out of the list and an armed auto-merge gate merged on the two that remained. The
+content was harmless and the guarantee was not the one that had been described. This is the first
+appearance of a failure that recurs in Sprint 9 in a worse form, and the fix applied here — refuse
+when fewer than five checks report — turned out to address the symptom rather than the cause.
+
+**Nothing was reviewed by a second person**, seventh sprint running.
+
+### Actions — owners proposed, not agreed
+
+| #   | Action                                                                                                        | Proposed owner | By                |
+| --- | ------------------------------------------------------------------------------------------------------------- | -------------- | ----------------- |
+| A1  | ✅ **Superseded** — S7-0a was deferred explicitly on 2026-08-08 rather than carried again. A real answer.     | product        | —                 |
+| A2  | ✅ **Done 2026-08-11** — the check-count guard was the symptom; `cancel-in-progress` was the cause. See #151. | devops         | —                 |
+| A3  | Nothing else is startable without a decision — say so in the plan rather than filling the sprint.             | whole team     | Sprint 8 planning |

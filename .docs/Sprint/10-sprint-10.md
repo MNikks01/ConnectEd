@@ -108,9 +108,12 @@ that feels like progress and is not.
 - **This sprint spends money**, and it is the first that does. A managed platform, a database, a
   registry and a staging environment are a recurring bill whose size depends on B-1.
 
-- **Three retros are outstanding** — Sprints 7, 8 and 9. Action A4 has been carried three times.
-  A fourth is not a slip, it is evidence the action has failed, and it should be dropped honestly
-  or done in the room at this sprint's planning.
+- **The three outstanding retros were written on 2026-08-12**, from the record and labelled as
+  such. **A4 is closed as failed rather than done**, and the reason is the finding: a retro held in
+  the room needs a room, and this repository has one collaborator. An action assigned to a "whole
+  team" could not be completed by the one person it landed on, and carrying it three times produced
+  a missing ceremony _and_ a missing document. A1 replaces it with something achievable by that
+  person; the ceremony version is worth reinstating the day B-8 is answered.
 
 - **Still no second reviewer.** Ten sprints. This sprint's work is infrastructure, which is where a
   second pair of eyes is worth most: a wrong security group, an over-permissive bucket policy or a
@@ -119,8 +122,8 @@ that feels like progress and is not.
 
 ## Ceremonies
 
-Planning · daily async standup · backlog refinement · review · **retro, in the room — including the
-three owed, or the action dropped.**
+Planning · daily async standup · backlog refinement · review · **retro written from the record at
+close** (Sprint 9's A1). The three owed were written on 2026-08-12; A4 is closed as failed.
 
 ## Definition of Done (item-level)
 
@@ -135,4 +138,5 @@ _Filled at review._
 
 ## Retro
 
-_Written at the retro, in the room — see action A4, now carried three times._
+_Written from the record at sprint close, in the PR that closes the sprint, labelled as a
+reconstruction — see Sprint 9's action A1, which replaced A4 after it failed three times._
