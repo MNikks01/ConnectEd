@@ -111,6 +111,20 @@ export interface FeedbackReviewedEvent extends DomainEventBase {
   status: FeedbackStatus;
 }
 
+/**
+ * A data export finished building (FR-DSR-002).
+ *
+ * Carries no data about the person, which is the whole point of it being an event: the bundle is
+ * behind an authorized download, and a notification says only that there is one.
+ */
+export interface ExportReadyEvent extends DomainEventBase {
+  type: 'privacy.export.ready';
+  exportId: string;
+  accountId: string;
+  /** So the notification can say how long they have (FR-DSR-005). */
+  expiresAt: string;
+}
+
 export type DomainEvent =
   | VerificationSubmittedEvent
   | VerificationDecidedEvent
@@ -120,7 +134,8 @@ export type DomainEvent =
   | EventPublishedEvent
   | MarksPublishedEvent
   | LeaveDecidedEvent
-  | FeedbackReviewedEvent;
+  | FeedbackReviewedEvent
+  | ExportReadyEvent;
 
 /**
  * What a module publishes: any event minus the envelope fields, which are filled in here.

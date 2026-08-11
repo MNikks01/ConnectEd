@@ -1,6 +1,6 @@
 # Sprint 8 — Finish what the gradebook started
 
-`Status: Planned` · `Last updated: 2026-08-07` · Duration: 2 weeks
+`Status: Done` · `Last updated: 2026-08-08` · Duration: 2 weeks
 
 Goal: make the gradebook usable by the people it was built for, and take the next academic
 capability that needs nobody's permission. This is a **proposal for planning** — adjust the split
@@ -121,7 +121,48 @@ was left undone on purpose, and it is now the only guard the repository does not
 
 ## Review notes
 
-_Filled at review._
+**Shipped: every ungated item, and both gated on the decision that arrived.**
+
+| Item | What                                        | PR         |
+| ---- | ------------------------------------------- | ---------- |
+| S8-1 | Creating an assessment, in the product      | #118       |
+| S8-2 | Correcting a published mark, in the product | #119       |
+| S8-3 | The school's view of a class's marks        | #120       |
+| S8-4 | Attendance — PRD and server                 | #121, #122 |
+| S8-5 | Attendance on screen                        | #123       |
+| S8-6 | `PRD/13-report-cards.md`                    | #130       |
+| S8-7 | Report cards, server and screen             | #131, #132 |
+
+Two decisions were answered on 2026-08-08 (S8-0c, S8-0d); S8-0d shipped the same day, as #126. S8-0a and
+S8-0b were not — see below. S8-10 … S8-15 and the three stretch items were not started.
+
+Released as `release/2026-08-08` (attendance and the usable gradebook), `release/2026-08-08.2`
+(report cards) and `release/2026-08-08.3` (the version bump the second one should have carried).
+
+## Four items, four defects only a screen could find
+
+This is the sprint's real finding, and it is a pattern rather than four accidents. Each frontend
+item was supposed to be a thin layer over a finished, tested server. Each one found the server
+wrong in exactly one way that no server test could express:
+
+| Item | What the server was missing                                                                |
+| ---- | ------------------------------------------------------------------------------------------ |
+| S8-1 | No route to create an assessment at all — the E2E suite had used the API to set one up     |
+| S8-2 | No route to correct a mark, though corrections had been audited since the day they shipped |
+| S8-3 | The school could open a draft by id and never see one listed — two endpoints disagreeing   |
+| S8-7 | A class teacher could issue against a term and could not list one to choose from           |
+
+The common shape: **the server said yes to an action and no to something the action needs**, and no
+amount of testing the action finds that. The Definition of Done gained a clause this sprint —
+_and a route a person can reach it by_ — and it earned it four times.
+
+## What the sprint says about the plan
+
+**The ungated half was found for the third sprint running, and this is the last time.** Sprint 7's
+notes said there was no reason to assume a fourth would be there. Sprint 8 found one; Sprint 9 does
+not. Every remaining functional requirement is blocked on S8-0a or S8-0b, or is the mobile phase.
+That is not a scheduling problem to plan around — it is the signal that the next sprint's content
+has to come from outside the PRD. See [`09-sprint-9.md`](09-sprint-9.md).
 
 ## Retro
 

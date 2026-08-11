@@ -17,8 +17,13 @@ const logger = createLogger(config);
 const { createApp } = await import('./app.js');
 const { createDb, registerDbReadiness } = await import('./shared/db/index.js');
 const { ReadinessRegistry } = await import('./shared/health/readiness.js');
-const { createEventQueue, createEventWorker, createRedisConnection, EVENTS_QUEUE } =
-  await import('./shared/queue/index.js');
+const {
+  createEventQueue,
+  createEventWorker,
+  createMaintenanceScheduler,
+  createRedisConnection,
+  EVENTS_QUEUE,
+} = await import('./shared/queue/index.js');
 const { createNotificationsModule } = await import('./modules/notifications/index.js');
 const { createStorage } = await import('./shared/storage/index.js');
 
@@ -138,6 +143,55 @@ if (relay) {
   logger.info('Outbox relay running in-process');
 }
 
+/**
+ * Export and erasure's scheduled half, in-process when the worker is (FR-DSR-002).
+ *
+ * **This is not the housekeeping the standalone worker also runs.** The media and login-throttle
+ * sweeps are tidiness and have always been the worker's alone; nothing is missing without them.
+ * Building an export is the *work half of a request somebody made* — the `data_export` row is the
+ * queue, and without a consumer the row sits `PENDING` forever and the owner watches a screen that
+ * says "being prepared" and always will.
+ *
+ * That distinction is the S7-17 lesson applied before it bites rather than after: a feature that
+ * only functions in one of the two supported deployment shapes is a feature that works on the
+ * machine it was written on.
+ */
+const { createPrivacyModule } = await import('./modules/privacy/index.js');
+const { createTokenService } = await import('./shared/auth/tokens.js');
+
+const privacy = createPrivacyModule({
+  db,
+  logger,
+  storage,
+  hashEmail: createTokenService(config).hashRefreshToken,
+});
+
+const privacyConnection = config.RUN_WORKER_IN_PROCESS
+  ? createRedisConnection(config.REDIS_URL)
+  : undefined;
+
+const privacyMaintenance = privacyConnection
+  ? createMaintenanceScheduler(
+      privacyConnection,
+      logger,
+      {
+        'privacy:build-exports': () => privacy.service.buildPendingExports(),
+        'privacy:expire-exports': () => privacy.service.expireExports(),
+        'privacy:execute-erasures': () => privacy.service.executeDueErasures(),
+      },
+      {
+        'privacy:build-exports': '* * * * *',
+        'privacy:expire-exports': '5 3 * * *',
+        'privacy:execute-erasures': '25 3 * * *',
+      },
+    )
+  : undefined;
+
+if (privacyMaintenance) {
+  await privacyMaintenance.ready;
+  logger.info('Privacy maintenance running in-process');
+}
+
 const server = app.listen(config.API_PORT, () => {
   logger.info({ port: config.API_PORT, env: config.NODE_ENV }, 'ConnectEd API listening');
 });
@@ -178,9 +232,11 @@ function shutdown(signal: string): void {
       await realtime.close();
       await realtimeConnection.quit();
       await realtimeSubscriber.quit();
+      await privacyMaintenance?.close();
       await events.close();
       await queueConnection.quit();
       await workerConnection?.quit();
+      await privacyConnection?.quit();
       await db.$disconnect();
       await tracing.stop();
       logger.info('Shutdown complete');

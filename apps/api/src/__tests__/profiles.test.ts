@@ -32,6 +32,8 @@ function fakeStorage(): Storage {
   return {
     putImage: ({ body, contentType, prefix }) =>
       Promise.resolve({ key: `${prefix}/x.bin`, contentType, size: body.length }),
+    putObject: ({ key, body }) => Promise.resolve({ key, size: body.length }),
+    signedUrlTtlSeconds: 300,
     signedUrl: (key) => Promise.resolve(`https://signed.test/${key}`),
     remove: () => Promise.resolve(),
     ping: () => Promise.resolve(),

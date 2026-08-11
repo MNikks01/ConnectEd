@@ -11,27 +11,27 @@ new stack (Node.js + Express + Prisma + PostgreSQL backend, Next.js frontend, pn
 
 ## Layout
 
-| Folder                             | Contains                                                                          |
-| ---------------------------------- | --------------------------------------------------------------------------------- |
-| [`PRD/`](./PRD/)                   | Product Requirements — what we are building and why, per module.                  |
-| [`Product/`](./Product/)           | Vision, personas, metrics, roadmap, glossary.                                     |
-| [`TRD/`](./TRD/)                   | Technical Requirements — how the system must behave (non-functional + technical). |
-| [`Architecture/`](./Architecture/) | System architecture, C4 views, module boundaries, sequence flows.                 |
-| [`ADR/`](./ADR/)                   | Architecture Decision Records (numbered, immutable once accepted).                |
-| [`API/`](./API/)                   | REST API contract: resources, endpoints, error model, versioning, auth.           |
-| [`Database/`](./Database/)         | Data model, ERD, Prisma schema notes, migrations & RBAC data strategy.            |
-| [`Security/`](./Security/)         | Threat model, authN/authZ, secrets, OWASP posture, compliance.                    |
-| [`Deployment/`](./Deployment/)     | Environments, infra topology, release process, rollback.                          |
-| [`CI-CD/`](./CI-CD/)               | Branching/git flow, pipelines, changesets, code review (CodeRabbit).              |
-| [`Monitoring/`](./Monitoring/)     | Observability stack (Prometheus/Grafana/Loki/Tempo), SLOs, alerting.              |
-| [`UserFlows/`](./UserFlows/)       | End-to-end flows per role.                                                        |
-| [`Wireframes/`](./Wireframes/)     | Low-fidelity screen specs (textual).                                              |
-| [`Runbooks/`](./Runbooks/)         | Operational playbooks for incidents.                                              |
-| [`Research/`](./Research/)         | Spikes, comparisons, and background research.                                     |
-| [`Sprint/`](./Sprint/)             | Sprint plans and ceremonies (Sprint 0 onward).                                    |
-| [`MeetingNotes/`](./MeetingNotes/) | Dated meeting notes (template provided).                                          |
-| [`Checklists/`](./Checklists/)     | Frontend & backend engineering master checklists (gates).                         |
-| [`Setup/`](./Setup/)               | Environment setup, Claude skills/plugins catalogue, onboarding.                   |
+| Folder                             | Contains                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [`PRD/`](./PRD/)                   | Product Requirements — what we are building and why, per module.                                                            |
+| [`Product/`](./Product/)           | Vision, personas, metrics, roadmap, glossary, and **[what is blocked on product](./Product/05-what-is-blocked-on-you.md)**. |
+| [`TRD/`](./TRD/)                   | Technical Requirements — how the system must behave (non-functional + technical).                                           |
+| [`Architecture/`](./Architecture/) | System architecture, C4 views, module boundaries, sequence flows.                                                           |
+| [`ADR/`](./ADR/)                   | Architecture Decision Records (numbered, immutable once accepted).                                                          |
+| [`API/`](./API/)                   | REST API contract: resources, endpoints, error model, versioning, auth.                                                     |
+| [`Database/`](./Database/)         | Data model, ERD, Prisma schema notes, migrations & RBAC data strategy.                                                      |
+| [`Security/`](./Security/)         | Threat model, authN/authZ, secrets, OWASP posture, compliance.                                                              |
+| [`Deployment/`](./Deployment/)     | Environments, infra topology, release process, rollback.                                                                    |
+| [`CI-CD/`](./CI-CD/)               | Branching/git flow, pipelines, changesets, code review (CodeRabbit).                                                        |
+| [`Monitoring/`](./Monitoring/)     | Observability stack (Prometheus/Grafana/Loki/Tempo), SLOs, alerting.                                                        |
+| [`UserFlows/`](./UserFlows/)       | End-to-end flows per role.                                                                                                  |
+| [`Wireframes/`](./Wireframes/)     | Low-fidelity screen specs (textual).                                                                                        |
+| [`Runbooks/`](./Runbooks/)         | Operational playbooks for incidents.                                                                                        |
+| [`Research/`](./Research/)         | Spikes, comparisons, and background research.                                                                               |
+| [`Sprint/`](./Sprint/)             | Sprint plans and ceremonies (Sprint 0 onward).                                                                              |
+| [`MeetingNotes/`](./MeetingNotes/) | Dated meeting notes (template provided).                                                                                    |
+| [`Checklists/`](./Checklists/)     | Frontend & backend engineering master checklists (gates).                                                                   |
+| [`Setup/`](./Setup/)               | Environment setup, Claude skills/plugins catalogue, onboarding.                                                             |
 
 ## Conventions
 

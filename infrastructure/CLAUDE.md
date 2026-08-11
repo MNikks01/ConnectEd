@@ -3,19 +3,24 @@
 Infrastructure-as-code and ops configuration. Owned by the `devops-engineer` charter. Design docs:
 [`../.docs/Deployment/`](../.docs/Deployment/) and [`../.docs/Monitoring/`](../.docs/Monitoring/).
 
-| Dir               | Contents                                                                         |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `docker/`         | Multi-stage Dockerfiles for api, web, worker (minimal base, non-root, scanned).  |
-| `kubernetes/`     | K8s manifests (deployments, services, HPA, probes) — staging/prod.               |
-| `helm/`           | Helm charts packaging the above.                                                 |
-| `terraform/`      | Cloud resources (DB, Redis, buckets, networking, secrets).                       |
-| `nginx/`          | Reverse-proxy / ingress config.                                                  |
-| `prometheus/`     | Scrape configs + alert rules.                                                    |
-| `alertmanager/`   | Where firing alerts go: routing by severity, grouping, inhibition.               |
-| `grafana/`        | Dashboards (service, DB, queue, business, RUM) + alerting.                       |
-| `loki/`           | Log aggregation config.                                                          |
-| `tempo/`          | Distributed-tracing config.                                                      |
-| `github-actions/` | Reusable composite actions/workflow fragments referenced by `.github/workflows`. |
+**⏳ marks a directory this table describes and the repository does not have yet.** Until Sprint 9
+every row below the observability ones was one of those, and the table read as a description of
+something that existed. `docker/` arrived with S9-1; the rest are S9-4 and S9-8, and they keep the
+marker until they are real.
+
+| Dir                  | Contents                                                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `docker/`            | `api.Dockerfile` (API, worker **and** the migration runner — three targets, one source), `web.Dockerfile`, and `compose.yml`, which runs the whole product from those images. Non-root, no dev dependencies, built and scanned by the `images` CI job. |
+| `kubernetes/` ⏳     | K8s manifests (deployments, services, HPA, probes) — staging/prod.                                                                                                                                                                                     |
+| `helm/` ⏳           | Helm charts packaging the above.                                                                                                                                                                                                                       |
+| `terraform/` ⏳      | Cloud resources (DB, Redis, buckets, networking, secrets).                                                                                                                                                                                             |
+| `nginx/` ⏳          | Reverse-proxy / ingress config.                                                                                                                                                                                                                        |
+| `prometheus/`        | Scrape configs + alert rules.                                                                                                                                                                                                                          |
+| `alertmanager/`      | Where firing alerts go: routing by severity, grouping, inhibition.                                                                                                                                                                                     |
+| `grafana/`           | Dashboards (service, DB, queue, business, RUM) + alerting.                                                                                                                                                                                             |
+| `loki/`              | Log aggregation config.                                                                                                                                                                                                                                |
+| `tempo/`             | Distributed-tracing config.                                                                                                                                                                                                                            |
+| `github-actions/` ⏳ | Reusable composite actions/workflow fragments referenced by `.github/workflows`.                                                                                                                                                                       |
 
 ## Rules
 

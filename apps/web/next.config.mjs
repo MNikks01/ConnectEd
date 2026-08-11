@@ -6,6 +6,13 @@
  * handling — and must not, since `apps/api` runs that same output directly on node.
  */
 
+// Imported rather than assumed: the shared ESLint config declares no Node globals for `.mjs`, so
+// a bare `URL` here is an error — the same rule `scripts/migrate-e2e.mjs` explains at length.
+// `fileURLToPath` is also the correct conversion; `new URL(...).pathname` produces a path Windows
+// cannot use.
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /**
  * Security headers that are the same on every response.
  *
@@ -34,6 +41,14 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Emits `.next/standalone`: the server plus only the `node_modules` it actually reached for. It
+  // is what the container image runs, and in a pnpm workspace it is the difference between
+  // shipping the app and shipping the monorepo. `next start` still works from `.next` as before,
+  // so the E2E suite is unaffected.
+  output: 'standalone',
+  // Without this, standalone traces from `apps/web` and misses the workspace's hoisted
+  // `node_modules` one directory up.
+  outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '../..'),
   transpilePackages: ['@connected/ui'],
   // The browser must never see a stack trace or an internal header.
   poweredByHeader: false,

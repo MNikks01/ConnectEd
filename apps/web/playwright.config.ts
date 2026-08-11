@@ -35,6 +35,10 @@ const DATABASE_URL =
 
 export default defineConfig({
   testDir: './e2e',
+  // The smoke test lives alongside these but is not one of them: it runs against something already
+  // deployed, from `smoke.config.ts`. Running it here would point it at this suite's servers and
+  // quietly turn a deployment check into a duplicate of the E2E suite.
+  testIgnore: '**/smoke.spec.ts',
   // The suite shares one database, so parallel workers would truncate each other's fixtures.
   workers: 1,
   fullyParallel: false,
@@ -49,7 +53,42 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  /**
+   * **Chromium runs everything; the others run what engines actually differ on** (S9-17, NFR-011).
+   *
+   * Running the whole suite three times would triple a four-minute job to prove the same
+   * assertions about the same server, and most of what it asserts — who may read a mark, what a
+   * card contains — cannot vary by browser. What *can* vary is the part below the application:
+   * cookie attributes and how they survive a redirect, form submission, and how a strict content
+   * security policy with a per-response nonce is enforced. Those specs run everywhere.
+   *
+   * `narrow` is Chromium at 320px, which is the viewport NFR-011 names and the one nothing had
+   * ever loaded a page at.
+   */
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      // Not the responsive spec: at a desktop viewport it asserts nothing and would pass for the
+      // wrong reason, which is the failure this sprint has spent its time finding.
+      testIgnore: '**/responsive.spec.ts',
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      testMatch: ['**/auth.spec.ts', '**/security-headers.spec.ts'],
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: ['**/auth.spec.ts', '**/security-headers.spec.ts'],
+    },
+    {
+      name: 'narrow',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 320, height: 720 } },
+      testMatch: ['**/responsive.spec.ts'],
+    },
+  ],
 
   webServer: [
     {
@@ -134,6 +173,13 @@ export default defineConfig({
       env: {
         NODE_ENV: 'production',
         NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}/api/v1`,
+        /**
+         * **The production build, served over plain HTTP** — which is the point, and which makes a
+         * `Secure` session cookie undeliverable. Chromium keeps one anyway on `localhost`; WebKit
+         * drops it, and every sign-in fails with a redirect and no error. Explicit here rather than
+         * inferred, so the suite says what it is doing (S9-17).
+         */
+        SESSION_COOKIE_SECURE: 'false',
       },
     },
   ],

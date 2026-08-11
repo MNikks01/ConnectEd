@@ -70,8 +70,13 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
+      # The API suite runs **with coverage**, which is what enforces NFR-009's thresholds
+      # (`apps/api/vitest.config.ts`). Split rather than doubled: running `pnpm test` and then the
+      # coverage run would execute the same 1150 tests twice for one number.
       - name: Test
-        run: pnpm test
+        run: |
+          pnpm turbo run test --filter='!@connected/api'
+          pnpm --filter @connected/api test:coverage
 
       - name: Build
         run: pnpm build
@@ -136,9 +141,17 @@ jobs:
             sleep 2
           done
 
-      # Chromium only — the suite asserts behaviour, not rendering differences between engines.
-      - name: Install Playwright browser
-        run: pnpm --filter @connected/web exec playwright install --with-deps chromium
+      # **Three engines, not one** (S9-17, NFR-011). The comment that stood here said "Chromium
+      # only — the suite asserts behaviour, not rendering differences between engines", and it was
+      # wrong in a way that cost nine sprints: the first WebKit run failed *every sign-in*, because
+      # a `Secure` cookie over HTTP is kept by Chromium on localhost and dropped by WebKit. That is
+      # behaviour, not rendering.
+      #
+      # Chromium still runs the whole suite; Firefox and WebKit run the specs where engines
+      # genuinely differ — cookies, form submission, and a content security policy with a
+      # per-response nonce. See `playwright.config.ts` for the split.
+      - name: Install Playwright browsers
+        run: pnpm --filter @connected/web exec playwright install --with-deps chromium firefox webkit
 
       - name: Run end-to-end tests
         run: pnpm --filter @connected/web test:e2e
@@ -171,6 +184,156 @@ jobs:
 
       - name: Every alert routes somewhere and names a runbook that exists
         run: node scripts/check-alerts.mjs
+
+  # The restore drill (S9-7), kept honest.
+  #
+  # This does **not** prove the backups work — there is no database with real data in it yet, which
+  # waits on S9-4. It proves the drill itself still runs: a restore script that has silently rotted
+  # is worse than none, because it is the thing somebody reaches for on the worst morning of the
+  # quarter and finds broken.
+  #
+  # Cheap, because the drill's own guard does the interesting part: it refuses an empty database,
+  # so the seed has to have worked for this job to mean anything.
+  restore-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: connected
+          POSTGRES_PASSWORD: connected
+          POSTGRES_DB: connected_drill_src
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U connected"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://connected:connected@localhost:5432/connected_drill_src?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrate and seed
+        run: |
+          pnpm --filter @connected/api db:deploy
+          pnpm --filter @connected/api db:seed
+
+      # `--network host` because the service container is reachable at localhost from the job, and
+      # the drill runs its client in a container of its own — see the script's header for why the
+      # client is pinned to the server's image rather than taken from the runner.
+      - name: Drill
+        run: node scripts/restore-drill.mjs
+        env:
+          DRILL_URL: postgresql://connected:connected@localhost:5432/connected_drill_src
+          DRILL_NETWORK: host
+  # Secret scanning (S9-6).
+  #
+  # An image layer and a git object are both permanent: a secret committed and then removed is a
+  # secret published, and the only useful moment to catch one is before the merge. This scans the
+  # **whole history**, not the diff — 143 commits in under a second — because a secret that entered
+  # three months ago is still live today, and a diff-only scan would say the branch is clean.
+  #
+  # `--no-git` is deliberately not used: it walks the working tree including `node_modules`, which
+  # produced nineteen findings in other people's fixtures the one time it was tried.
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Shallow by default, and a shallow clone is a scan of the last commit wearing the
+          # costume of a scan of the repository.
+          fetch-depth: 0
+
+      - name: Scan the history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:latest \
+            detect --source /repo --config /repo/.gitleaks.toml --no-banner --redact -v
+
+  # The images the product will actually be deployed as (S9-1).
+  #
+  # Built on every pull request, and the point is not the artefact — nothing is pushed here, that is
+  # the release's job. The point is that the Dockerfiles stay buildable. A monorepo image breaks
+  # from an ordinary-looking change: a new workspace package that the manifest-copy step does not
+  # list, a dependency that needs a compiler, a file that was only ever present on a laptop. Each of
+  # those is silent until somebody deploys.
+  #
+  # Then scanned, because "minimal base, non-root, no dev dependencies" is a claim with a shelf
+  # life: a base image that was clean when it was chosen acquires CVEs on somebody else's schedule.
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the API and worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          load: true
+          tags: connected-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          load: true
+          tags: connected-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The claims the Dockerfiles make, checked rather than trusted. Each of these was true when
+      # the file was written, and each is one careless `USER root` or one dev dependency away from
+      # not being.
+      - name: The images are what they claim to be
+        run: |
+          set -euo pipefail
+
+          for image in connected-api:ci connected-web:ci; do
+            user=$(docker image inspect "$image" --format '{{.Config.User}}')
+            if [ "$user" != "node" ]; then
+              echo "::error::$image runs as '${user:-root}', not node"
+              exit 1
+            fi
+          done
+
+          # tsx, vitest, Playwright and the Prisma CLI have no business in a running container.
+          # The Prisma CLI is the interesting one: its absence is why the migrate target exists.
+          for pkg in tsx vitest @playwright/test prisma typescript; do
+            if docker run --rm --entrypoint sh connected-api:ci -c "[ -e node_modules/$pkg ]"; then
+              echo "::error::connected-api ships the dev dependency $pkg"
+              exit 1
+            fi
+          done
+
+      - name: Scan both images
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: connected-api:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Scan the web image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: connected-web:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
 
   changeset-check:
     runs-on: ubuntu-latest

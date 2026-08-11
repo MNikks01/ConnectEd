@@ -114,10 +114,47 @@ export default defineConfig({
       S3_ACCESS_KEY: 'test',
       S3_SECRET_KEY: 'test',
     },
+    /**
+     * Coverage, and the thresholds that keep it from drifting (S9-12, NFR-009).
+     *
+     * NFR-009 asks for **≥ 80% on domain and services**, and until 2026-08-08 nothing had measured
+     * it. A test count is not a coverage figure: ~1150 passing tests said nothing about which
+     * lines they reached.
+     *
+     * Measured that day: services 95.3% of lines, **80.8% of branches**, 96.9% of functions. Met,
+     * and on branches only just — which is the number to watch, because it is the one that falls
+     * when a guard clause is added without a test for the case it guards.
+     *
+     * The thresholds below are **floors slightly under what was measured**, not aspirations. A
+     * threshold above the current figure is a build that is already red; a threshold far below it
+     * catches nothing. These fail on a real regression and tolerate a rounding change.
+     */
     coverage: {
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/index.ts'],
+      thresholds: {
+        // The whole tree, which includes generated Prisma output, bootstrap and observability
+        // wiring — none of it the thing NFR-009 is about, all of it dragging the average.
+        lines: 85,
+        branches: 75,
+        functions: 88,
+        // **NFR-009 itself.** Services are where the product's rules live: what a teacher may
+        // publish, who may read a mark, whether a card is issued. This is the number the
+        // requirement means.
+        'src/modules/**/*.service.ts': {
+          lines: 92,
+          branches: 78,
+          functions: 94,
+        },
+        // Not in the requirement and worth a floor anyway: every authorization decision in the
+        // product goes through here.
+        'src/shared/authz/**': {
+          lines: 95,
+          branches: 85,
+          functions: 100,
+        },
+      },
     },
   },
 });
