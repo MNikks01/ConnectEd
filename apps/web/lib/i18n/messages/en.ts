@@ -400,6 +400,150 @@ const en = {
     none: 'Your school has not uploaded a timetable for this class yet.',
   },
 
+  noticeDetail: {
+    metaTitle: 'Notice · GetConnected',
+    back: '← All notices',
+    byline: '{author} · {date}',
+    schoolFallback: 'School',
+    readBy: 'Read by {count}',
+  },
+
+  thread: {
+    metaTitle: 'Conversation · GetConnected',
+    back: '← All messages',
+    fallbackTitle: 'Conversation',
+  },
+
+  profileSettings: {
+    metaTitle: 'Your profile · GetConnected',
+    back: '← How others see you',
+    title: 'Your profile',
+  },
+
+  leavePage: {
+    metaTitle: 'Leave · GetConnected',
+    title: 'Leave',
+    description: 'Apply, and see where your applications got to.',
+    toDecide: 'Applications to decide',
+    yourSchool: 'Your school',
+    notEligible:
+      'Leave is for parents applying on behalf of a child, and for teachers applying for themselves. Neither applies to you yet.',
+    applyForChild: 'Apply for your child',
+    applyForSelf: 'Apply for yourself',
+    yourApplications: 'Your applications',
+  },
+
+  approvals: {
+    metaTitle: 'Approvals · GetConnected',
+    back: '← Your leave',
+    title: 'Applications to decide',
+    yourSchool: 'Your school',
+    notAnApprover:
+      'You are not a class teacher or a principal, so no applications wait on you. If that looks wrong, your school allocates class teachers from its portal.',
+    noClassLeave: 'No leave waiting for this class.',
+    teacherLeaveHeading: 'Teacher leave · {school}',
+    noTeacherLeave: 'No teacher leave waiting.',
+  },
+
+  publicProfile: {
+    metaTitle: 'Profile · GetConnected',
+    editYours: 'Edit your profile',
+    schoolBadge: 'School',
+    followCounts: '{followers} following them · {following} they follow',
+    restricted: 'This profile is only visible to their connections. You can still ask to connect.',
+    posts: 'Posts',
+    noPosts: 'Nothing posted yet.',
+  },
+
+  feedback: {
+    statusOPEN: 'Not yet read',
+    statusUNDER_REVIEW: 'Being looked at',
+    statusRESOLVED: 'Resolved',
+    submit: 'Send to the school',
+    sending: 'Sending…',
+    sent: 'Sent. The school can see who raised it.',
+    kind: 'Type',
+    complaint: 'Complaint',
+    suggestion: 'Suggestion',
+    details: 'Details',
+    detailsHint: 'Your name is attached — this is not anonymous.',
+    noneRaised: 'You have not raised anything yet.',
+    historyLabel: 'What you have raised',
+    queueEmpty: 'Nothing here. Complaints and suggestions arrive in this list.',
+    queueLabel: 'Complaints and suggestions',
+    memberFallback: 'A member',
+    markUnderReview: 'Mark as being looked at',
+    markResolved: 'Mark resolved',
+  },
+
+  leaveForms: {
+    firstDay: 'First day',
+    lastDay: 'Last day',
+    reason: 'Reason',
+    reasonHint: 'Seen by whoever decides the application.',
+    submit: 'Apply for leave',
+    sending: 'Sending…',
+    sentToClassTeacher: 'Sent to the class teacher.',
+    sentToPrincipal: 'Sent to the principal.',
+    child: 'Child',
+    childOption: '{child} — {className}',
+    childFallback: 'Child',
+    classFallback: 'Class',
+    school: 'School',
+  },
+
+  messageThread: {
+    label: 'Message',
+    empty: 'Nothing said yet. Start the conversation below.',
+    listLabel: 'Messages',
+    you: 'You',
+    them: 'Them',
+    send: 'Send',
+    sending: 'Sending…',
+    sent: 'Sent.',
+  },
+
+  profileActions: {
+    reportLabel: 'What is wrong?',
+    blockedNotice: 'You have blocked this account.',
+    unblock: 'Unblock',
+    follow: 'Follow',
+    unfollow: 'Unfollow',
+    connect: 'Connect',
+    requestSent: 'Request sent',
+    connected: 'Connected',
+    message: 'Message',
+    report: 'Report',
+    block: 'Block',
+    sendReport: 'Send report',
+    sending: 'Sending…',
+    reported: 'Reported. Nobody at your school is told.',
+    blockTitle: 'Block this account?',
+    cancel: 'Cancel',
+    blockExplained:
+      'You will not see each other’s posts, comments or messages, in either direction. Unblocking puts everything back — nothing is deleted.',
+  },
+
+  leaveQueue: {
+    applicantFallback: 'Applicant',
+    accept: 'Accept',
+    reject: 'Reject',
+    rejectTitle: 'Reject this application?',
+    cancel: 'Cancel',
+    rejectConfirm: 'Reject application',
+    rejectExplained:
+      'The applicant is told. A rejected application cannot be reopened — they would have to apply again.',
+    noneApplied: 'You have not applied for any leave.',
+    statusRECEIVED: 'Waiting',
+    statusACCEPTED: 'Accepted',
+    statusREJECTED: 'Rejected',
+  },
+
+  authForm: {
+    somethingWentWrong: 'Something went wrong. Please try again.',
+    unreachable: 'Could not reach the server. Check your connection and try again.',
+  },
+
   settings: {
     nav: 'Settings',
     profile: 'Profile',

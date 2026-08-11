@@ -409,6 +409,151 @@ const hi: Messages = {
     none: 'आपके विद्यालय ने इस कक्षा के लिए अभी समय-सारणी अपलोड नहीं की है।',
   },
 
+  noticeDetail: {
+    metaTitle: 'सूचना · GetConnected',
+    back: '← सभी सूचनाएँ',
+    byline: '{author} · {date}',
+    schoolFallback: 'विद्यालय',
+    readBy: '{count} लोगों ने पढ़ा',
+  },
+
+  thread: {
+    metaTitle: 'बातचीत · GetConnected',
+    back: '← सभी संदेश',
+    fallbackTitle: 'बातचीत',
+  },
+
+  profileSettings: {
+    metaTitle: 'आपकी प्रोफ़ाइल · GetConnected',
+    back: '← दूसरे आपको कैसे देखते हैं',
+    title: 'आपकी प्रोफ़ाइल',
+  },
+
+  leavePage: {
+    metaTitle: 'छुट्टी · GetConnected',
+    title: 'छुट्टी',
+    description: 'आवेदन करें, और देखें कि आपके आवेदन कहाँ तक पहुँचे।',
+    toDecide: 'निर्णय के लिए आवेदन',
+    yourSchool: 'आपका विद्यालय',
+    notEligible:
+      'छुट्टी का आवेदन अभिभावक अपने बच्चे की ओर से और शिक्षक अपने लिए करते हैं। अभी इनमें से कोई भी आप पर लागू नहीं होता।',
+    applyForChild: 'अपने बच्चे के लिए आवेदन करें',
+    applyForSelf: 'अपने लिए आवेदन करें',
+    yourApplications: 'आपके आवेदन',
+  },
+
+  approvals: {
+    metaTitle: 'अनुमोदन · GetConnected',
+    back: '← आपकी छुट्टी',
+    title: 'निर्णय के लिए आवेदन',
+    yourSchool: 'आपका विद्यालय',
+    notAnApprover:
+      'आप न कक्षा-शिक्षक हैं और न प्रधानाचार्य, इसलिए कोई आवेदन आप पर लंबित नहीं है। यदि यह ग़लत लगे, तो कक्षा-शिक्षक आपका विद्यालय अपने पोर्टल से नियुक्त करता है।',
+    noClassLeave: 'इस कक्षा के लिए कोई छुट्टी लंबित नहीं है।',
+    teacherLeaveHeading: 'शिक्षकों की छुट्टी · {school}',
+    noTeacherLeave: 'शिक्षकों की कोई छुट्टी लंबित नहीं है।',
+  },
+
+  publicProfile: {
+    metaTitle: 'प्रोफ़ाइल · GetConnected',
+    editYours: 'अपनी प्रोफ़ाइल संपादित करें',
+    schoolBadge: 'विद्यालय',
+    followCounts: '{followers} उन्हें फ़ॉलो करते हैं · वे {following} को फ़ॉलो करते हैं',
+    restricted:
+      'यह प्रोफ़ाइल केवल उनके कनेक्शन देख सकते हैं। आप फिर भी जुड़ने का अनुरोध भेज सकते हैं।',
+    posts: 'पोस्ट',
+    noPosts: 'अभी तक कुछ पोस्ट नहीं किया गया।',
+  },
+
+  feedback: {
+    statusOPEN: 'अभी पढ़ा नहीं गया',
+    statusUNDER_REVIEW: 'देखा जा रहा है',
+    statusRESOLVED: 'निपटा दिया गया',
+    submit: 'विद्यालय को भेजें',
+    sending: 'भेजा जा रहा है…',
+    sent: 'भेज दिया गया। विद्यालय देख सकता है कि यह किसने दर्ज किया।',
+    kind: 'प्रकार',
+    complaint: 'शिकायत',
+    suggestion: 'सुझाव',
+    details: 'विवरण',
+    detailsHint: 'आपका नाम इसके साथ जुड़ा रहता है — यह गुमनाम नहीं है।',
+    noneRaised: 'आपने अभी तक कुछ दर्ज नहीं किया है।',
+    historyLabel: 'आपने जो दर्ज किया है',
+    queueEmpty: 'यहाँ कुछ नहीं है। शिकायतें और सुझाव इसी सूची में आते हैं।',
+    queueLabel: 'शिकायतें और सुझाव',
+    memberFallback: 'एक सदस्य',
+    markUnderReview: 'देखा जा रहा है, ऐसा चिह्नित करें',
+    markResolved: 'निपटा हुआ चिह्नित करें',
+  },
+
+  leaveForms: {
+    firstDay: 'पहला दिन',
+    lastDay: 'अंतिम दिन',
+    reason: 'कारण',
+    reasonHint: 'जो व्यक्ति आवेदन पर निर्णय लेता है, वह इसे देखता है।',
+    submit: 'छुट्टी के लिए आवेदन करें',
+    sending: 'भेजा जा रहा है…',
+    sentToClassTeacher: 'कक्षा-शिक्षक को भेज दिया गया।',
+    sentToPrincipal: 'प्रधानाचार्य को भेज दिया गया।',
+    child: 'बच्चा',
+    childOption: '{child} — {className}',
+    childFallback: 'बच्चा',
+    classFallback: 'कक्षा',
+    school: 'विद्यालय',
+  },
+
+  messageThread: {
+    label: 'संदेश',
+    empty: 'अभी तक कुछ नहीं कहा गया। नीचे से बातचीत शुरू करें।',
+    listLabel: 'संदेश',
+    you: 'आप',
+    them: 'वे',
+    send: 'भेजें',
+    sending: 'भेजा जा रहा है…',
+    sent: 'भेज दिया गया।',
+  },
+
+  profileActions: {
+    reportLabel: 'क्या ग़लत है?',
+    blockedNotice: 'आपने इस खाते को अवरुद्ध कर रखा है।',
+    unblock: 'अवरोध हटाएँ',
+    follow: 'फ़ॉलो करें',
+    unfollow: 'फ़ॉलो हटाएँ',
+    connect: 'जुड़ें',
+    requestSent: 'अनुरोध भेजा गया',
+    connected: 'जुड़े हुए',
+    message: 'संदेश',
+    report: 'शिकायत करें',
+    block: 'अवरुद्ध करें',
+    sendReport: 'शिकायत भेजें',
+    sending: 'भेजा जा रहा है…',
+    reported: 'शिकायत दर्ज हो गई। आपके विद्यालय में किसी को नहीं बताया जाता।',
+    blockTitle: 'इस खाते को अवरुद्ध करें?',
+    cancel: 'रद्द करें',
+    blockExplained:
+      'आप दोनों एक-दूसरे की पोस्ट, टिप्पणियाँ और संदेश नहीं देख पाएँगे। अवरोध हटाने पर सब कुछ वापस आ जाता है — कुछ भी मिटाया नहीं जाता।',
+  },
+
+  leaveQueue: {
+    applicantFallback: 'आवेदक',
+    accept: 'स्वीकार करें',
+    reject: 'अस्वीकार करें',
+    rejectTitle: 'इस आवेदन को अस्वीकार करें?',
+    cancel: 'रद्द करें',
+    rejectConfirm: 'आवेदन अस्वीकार करें',
+    rejectExplained:
+      'आवेदक को सूचित किया जाता है। अस्वीकृत आवेदन दोबारा नहीं खोला जा सकता — उन्हें फिर से आवेदन करना होगा।',
+    noneApplied: 'आपने किसी छुट्टी के लिए आवेदन नहीं किया है।',
+    statusRECEIVED: 'प्रतीक्षा में',
+    statusACCEPTED: 'स्वीकृत',
+    statusREJECTED: 'अस्वीकृत',
+  },
+
+  authForm: {
+    somethingWentWrong: 'कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।',
+    unreachable: 'सर्वर तक नहीं पहुँच सके। अपना कनेक्शन जाँचें और फिर कोशिश करें।',
+  },
+
   settings: {
     nav: 'सेटिंग्स',
     profile: 'प्रोफ़ाइल',

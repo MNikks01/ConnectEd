@@ -7,16 +7,22 @@ import { redirect } from 'next/navigation';
 
 import { ProfileForm } from '@/components/profile-form';
 import { ApiError } from '@/lib/api-client';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { CurrentAccountResponse, ProfileResponse } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Your profile · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('profileSettings.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProfileSettingsPage() {
+  const { t } = await getTranslations();
+
   let profile: ProfileResponse;
   let account: CurrentAccountResponse;
 
@@ -37,10 +43,10 @@ export default async function ProfileSettingsPage() {
   return (
     <main>
       <p style={{ marginTop: 0 }}>
-        <Link href={`/accounts/${account.id}`}>← How others see you</Link>
+        <Link href={`/accounts/${account.id}`}>{t('profileSettings.back')}</Link>
       </p>
 
-      <PageHeader title="Your profile" />
+      <PageHeader title={t('profileSettings.title')} />
 
       <Card as="section">
         <ProfileForm profile={profile} />

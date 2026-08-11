@@ -10,22 +10,25 @@ import { Field } from '@connected/ui';
 
 import { applyForChildLeaveAction, applyForOwnLeaveAction } from '@/app/(app)/(member)/actions';
 import { ActionForm, useFieldError } from './action-form';
+import { useTranslations } from './locale-provider';
 
 import type { MyMembershipResponse } from '@connected/types';
 
 function DateFields() {
+  const { t } = useTranslations();
+
   return (
     <>
       <Field
         name="startDate"
-        label="First day"
+        label={t('leaveForms.firstDay')}
         type="date"
         required
         error={useFieldError('startDate')}
       />
       <Field
         name="endDate"
-        label="Last day"
+        label={t('leaveForms.lastDay')}
         type="date"
         required
         error={useFieldError('endDate')}
@@ -35,38 +38,45 @@ function DateFields() {
 }
 
 function ReasonField() {
+  const { t } = useTranslations();
+
   return (
     <Field
       name="reason"
-      label="Reason"
+      label={t('leaveForms.reason')}
       as="textarea"
       rows={3}
       required
       maxLength={2000}
       error={useFieldError('reason')}
-      hint="Seen by whoever decides the application."
+      hint={t('leaveForms.reasonHint')}
     />
   );
 }
 
 export function ApplyForChildForm({ children }: { children: MyMembershipResponse[] }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={applyForChildLeaveAction}
-      submitLabel="Apply for leave"
-      pendingLabel="Sending…"
-      successMessage="Sent to the class teacher."
+      submitLabel={t('leaveForms.submit')}
+      pendingLabel={t('leaveForms.sending')}
+      successMessage={t('leaveForms.sentToClassTeacher')}
       resetOnSuccess
     >
       <Field
         name="childId"
-        label="Child"
+        label={t('leaveForms.child')}
         as="select"
         required
         error={useFieldError('childId')}
         options={children.map((membership) => ({
           value: membership.childId ?? '',
-          label: `${membership.childName ?? 'Child'} — ${membership.className ?? 'Class'}`,
+          label: t('leaveForms.childOption', {
+            child: membership.childName ?? t('leaveForms.childFallback'),
+            className: membership.className ?? t('leaveForms.classFallback'),
+          }),
         }))}
       />
       <DateFields />
@@ -76,18 +86,20 @@ export function ApplyForChildForm({ children }: { children: MyMembershipResponse
 }
 
 export function ApplyForSelfForm({ schools }: { schools: { id: string; name: string }[] }) {
+  const { t } = useTranslations();
+
   return (
     <ActionForm
       action={applyForOwnLeaveAction}
-      submitLabel="Apply for leave"
-      pendingLabel="Sending…"
-      successMessage="Sent to the principal."
+      submitLabel={t('leaveForms.submit')}
+      pendingLabel={t('leaveForms.sending')}
+      successMessage={t('leaveForms.sentToPrincipal')}
       resetOnSuccess
     >
       {schools.length > 1 ? (
         <Field
           name="schoolId"
-          label="School"
+          label={t('leaveForms.school')}
           as="select"
           required
           error={useFieldError('schoolId')}

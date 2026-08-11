@@ -77,6 +77,22 @@ export function formatTime(value: string | Date, locale: Locale): string {
 }
 
 /**
+ * A calendar day the school chose — "Fri 5 Dec" — rendered in UTC.
+ *
+ * The time zone is not a detail here. A leave date is a *day*, not an instant: formatting it in
+ * the reader's zone moves it by one on either side of midnight, so a parent in a different zone
+ * from the school would read the wrong dates back.
+ */
+export function formatCalendarDay(isoDate: string, locale: Locale): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(FORMAT_TAG[locale], {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+/**
  * Digits, in the locale's numbering system.
  *
  * Worth having rather than interpolating a raw number: Hindi is written with Western digits in most

@@ -8,17 +8,22 @@ import { notFound, redirect } from 'next/navigation';
 import { MessageThread } from '@/components/message-thread';
 import { ApiError } from '@/lib/api-client';
 import { LiveMessages } from '@/components/live-messages';
+import { getTranslations } from '@/lib/i18n/server';
 import { readAsUser, SessionExpiredError } from '@/lib/server-api';
 
 import type { InboxResponse, MessageResponse, Paginated } from '@connected/types';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Conversation · GetConnected' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslations();
+  return { title: t('thread.metaTitle') };
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { t } = await getTranslations();
 
   let messages: Paginated<MessageResponse>;
   let inbox: InboxResponse;
@@ -41,10 +46,10 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     <main>
       <LiveMessages />
       <p style={{ marginTop: 0 }}>
-        <Link href="/messages">← All messages</Link>
+        <Link href="/messages">{t('thread.back')}</Link>
       </p>
 
-      <PageHeader title={thread?.other.displayName ?? 'Conversation'} />
+      <PageHeader title={thread?.other.displayName ?? t('thread.fallbackTitle')} />
 
       <MessageThread threadId={id} messages={messages.data} />
     </main>
