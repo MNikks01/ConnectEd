@@ -1,6 +1,6 @@
 # Sprint 9 — Somewhere to run
 
-`Status: In Review` · `Last updated: 2026-08-11` · Duration: 2 weeks
+`Status: Done` · `Last updated: 2026-08-11` · Duration: 2 weeks
 
 Goal: make it possible to give this to a school. This is a **proposal for planning** — adjust the
 split before committing.
