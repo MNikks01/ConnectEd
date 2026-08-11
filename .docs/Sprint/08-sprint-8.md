@@ -166,4 +166,52 @@ has to come from outside the PRD. See [`09-sprint-9.md`](09-sprint-9.md).
 
 ## Retro
 
-_Written at the retro, in the room — see action A4._
+**Drafted from the record on 2026-08-12, not held in the room.** Same caveat as Sprint 7's, same
+reason, and Sprint 9's retro stops treating it as a caveat and treats it as a finding.
+
+### Went well
+
+**Two decisions arrived, and one shipped the same day.** S8-0c and S8-0d were answered on
+2026-08-08; S8-0d was in the product as #126 before the day was out. After three sprints of carries
+it is worth recording what it looks like when a decision lands: the work was ready and waiting, and
+the gap between answer and shipped feature was hours.
+
+**The gradebook, attendance and report cards all shipped**, which is the largest functional block in
+any sprint so far, and the report card brought a genuinely new idea with it — a document is issued
+rather than rendered, so correcting a mark in March cannot silently rewrite a card issued in
+December.
+
+**Four frontend items found four server defects, and the pattern is the finding.** Each item was
+meant to be a thin layer over a finished, tested server; each found the server wrong in the same
+shape — **it said yes to an action and no to something the action needs.** No route to create an
+assessment. No route to correct a mark. A school that could open a draft by id and never see one
+listed. A class teacher who could issue against a term and could not list one to choose from.
+
+The Definition of Done gained a clause for it — _and a route a person can reach it by_ — and earned
+it four times in one sprint.
+
+### Didn't go well
+
+**A release shipped without the version bump it should have carried**, needing
+`release/2026-08-08.3` to correct `release/2026-08-08.2`. An empty release commit merges cleanly and
+the changelog is wrong afterwards, which is the worst combination: nothing fails at the time.
+
+**S8-0a and S8-0b were not answered**, fifth and third carry respectively. They were then deferred
+explicitly on 2026-08-08 "until everything else is complete" — which is a legitimate answer and
+better than a sixth silent carry, and which has now expired on its own terms, because everything
+else is complete.
+
+**The ungated half was found for the third sprint running**, and the review notes said plainly that
+this was the last time. That prediction was half right: Sprint 9 had no ungated _functional_ work,
+and then found two unbuilt commitments in the product's own documents. The lesson is not "there is
+always more" — it is that the completeness record only tells you what it has been asked to track.
+
+**Still nothing reviewed by a second person.** Eighth sprint.
+
+### Actions — owners proposed, not agreed
+
+| #   | Action                                                                                                                    | Proposed owner | By                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------ |
+| A1  | ✅ **Done 2026-08-09** — the completeness record gained its non-functional half, which is what found Sprint 9's content.  | tech-writer    | —                  |
+| A2  | ✅ **Done 2026-08-11** — the release-with-no-bump case is now written down where a reader meets it, not just in a memory. | devops         | —                  |
+| A3  | Honour or re-take the S8-0a/S8-0b deferral once "everything else" is complete, rather than letting it drift.              | product        | Sprint 10 planning |

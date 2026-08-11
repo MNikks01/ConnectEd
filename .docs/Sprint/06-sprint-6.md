@@ -256,13 +256,13 @@ is being written after the fact rather than at a ceremony.
 
 ### Actions — owners proposed, not agreed
 
-| #   | Action                                                                                                                                    | Proposed owner   | By                |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
-| A1  | **Decide S6-0a** (Stripe or Razorpay) or explicitly drop billing from Sprint 7's goal. A third carry should be a decision, not a default. | product          | Sprint 7 planning |
-| A2  | ✅ **Done 2026-08-06** — checks required on both branches; the review half deliberately not, see below.                                   | devops           | —                 |
-| A3  | Audit the remaining release-path tooling for cases it has never run against — the ones found this sprint were all found by accident.      | devops           | Sprint 7          |
-| A4  | Write the retro at the ceremony rather than reconstructing it, starting with Sprint 7.                                                    | whole team       | Sprint 7 retro    |
-| A5  | Close out the `docs/close-sprint-2` branch — it still holds an unmerged Sprint 2 close-out commit from 2026-08-01.                        | technical-writer | Sprint 7          |
+| #   | Action                                                                                                                                                                                    | Proposed owner   | By                |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
+| A1  | **Decide S6-0a** (Stripe or Razorpay) or explicitly drop billing from Sprint 7's goal. A third carry should be a decision, not a default.                                                 | product          | Sprint 7 planning |
+| A2  | ✅ **Done 2026-08-06** — checks required on both branches; the review half deliberately not, see below.                                                                                   | devops           | —                 |
+| A3  | Audit the remaining release-path tooling for cases it has never run against — the ones found this sprint were all found by accident.                                                      | devops           | Sprint 7          |
+| A4  | ❌ **Closed as failed 2026-08-12** — carried through Sprints 7, 8 and 9 and never achievable: a retro in the room needs a room, and there is one collaborator. Replaced by Sprint 9's A1. | whole team       | —                 |
+| A5  | Close out the `docs/close-sprint-2` branch — it still holds an unmerged Sprint 2 close-out commit from 2026-08-01.                                                                        | technical-writer | Sprint 7          |
 
 **A2, and the half of it that was not done.** Both branches now require a pull request, five passing
 checks (`verify`, `e2e`, `observability-config`, `changeset-check`, `analyze`), and refuse force
