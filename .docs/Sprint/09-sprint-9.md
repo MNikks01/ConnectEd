@@ -518,4 +518,70 @@ surfaces where a second reader is worth most — and neither was read by anybody
 
 ## Retro
 
-_Written at the retro, in the room — see action A4._
+**Drafted from the record on 2026-08-12, not held in the room** — and this one has to say why, three
+times being enough evidence to stop calling it a caveat.
+
+### A4 failed, and it was never achievable
+
+Sprint 6 wrote action **A4: "Write the retro at the ceremony rather than reconstructing it, starting
+with Sprint 7."** Owner: _whole team_. It was carried through Sprints 7, 8 and 9 and completed in
+none of them, and the reason is not neglect.
+
+**A retro held in the room needs a room.** This repository has one collaborator — that is B-8, the
+oldest open item in the project, and it is why branch protection requires zero approving reviews. An
+action assigned to a "whole team" cannot be completed by the one person it actually landed on, and
+carrying it three times turned a missing ceremony into a missing document as well: the practice did
+not happen _and_ the record stayed empty, which is strictly worse than Sprint 6's honest
+reconstruction.
+
+**A4 is closed as failed, not done.** Its replacement is A1 below, which is achievable by the person
+who will actually do it. If a second collaborator arrives the ceremony version is worth reinstating —
+and it should be written then, not aspirationally now.
+
+### Went well
+
+**The sprint's own premise was wrong, and finding that out was the value.** The plan opened by saying
+the ungated work had run out and that the missing thing — a deployment — had never been a
+requirement. Writing the non-functional half of the completeness record then found two commitments
+the product had made _in its own documents_ with no code behind them: export and erasure, and Hindi.
+Both were built. The honest version of the opening claim is narrower than it was written: the ungated
+work that somebody had asked for _out loud_ had run out.
+
+**Six defects were found by doing rather than by reasoning**, and every one came from running the
+thing somewhere new: a web app that could not have been deployed twice, a stale `tsbuildinfo`, a
+container tag that would have failed after the release was already created, WebKit dropping every
+session cookie so **Safari users could not have signed in at all**, a page 69px too wide, and a
+language switcher that existed only on the pages you see before signing in.
+
+**The completeness record earned its keep.** It is the least glamorous artefact in the repository and
+it produced the sprint's two largest items, because it is the only place that asks "what did we
+claim" rather than "what did we build".
+
+**Both halves of the deployment story were separated honestly.** S9-5, S9-6, S9-7 and S9-10 are all
+recorded as half-done, and all four halves are the same half. Seeing them in a column is what made
+"this is one decision, not four problems" obvious.
+
+### Didn't go well
+
+**A red `development` went unnoticed for two days.** Two pull requests merged seventeen seconds
+apart; the second cancelled the first's post-merge run; a cancelled check reports as _absent_ rather
+than failed; `release/2026-08-11` shipped with a 320px defect nobody had been told about. Sprint 7
+saw the first version of this and fixed the symptom. This was the cause.
+
+**The sprint ran long and wide.** Nine committed items, four of them half-done, plus two unplanned
+builds that came out of S9-13 — and the plan's own risk section had warned that a deployment sprint
+would find "everything the product needs that only a developer's machine has ever provided". It did.
+That is a good outcome and it is not a well-estimated sprint.
+
+**Nothing was reviewed by a second person.** Ninth sprint, and this one added an irreversible
+destructive operation, a security walk, a new personal-data table and a change to every screen.
+
+### Actions — owners proposed, not agreed
+
+| #   | Action                                                                                                                                                             | Proposed owner | By                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ------------------ |
+| A1  | **Replaces A4.** Write each retro from the record at sprint close, in the same PR that closes the sprint — labelled as a reconstruction. Achievable by one person. | tech-writer    | Sprint 10 close    |
+| A2  | ✅ **Done 2026-08-11** — `cancel-in-progress` only for pull requests, `strict: true`, four more required checks. See #151.                                         | devops         | —                  |
+| A3  | **Answer B-1, or decide not to.** Fifth sprint of asking, and Sprint 10 has no content without it. A sixth carry should be an explicit stop, not a default.        | product        | Sprint 10 planning |
+| A4  | ❌ **Closed as failed** — see above. Unachievable as written; replaced by A1.                                                                                      | —              | —                  |
+| A5  | Estimate deployment work as discovery. Every infrastructure item this sprint found something the plan had not named.                                               | whole team     | Sprint 10 planning |

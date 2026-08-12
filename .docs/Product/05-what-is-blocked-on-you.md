@@ -1,6 +1,6 @@
 # Product — What is blocked on you
 
-`Status: Accepted` · `Last updated: 2026-08-11`
+`Status: Accepted` · `Last updated: 2026-08-12`
 
 Everything engineering cannot do without an answer, an account, or a person. Each item says what to
 decide, **how to actually do it**, and what happens the moment it lands.
@@ -25,16 +25,25 @@ end-to-end tests behind it.
 
 **What the product cannot do**, and why:
 
-| Cannot                    | Because                                   | Item                                    |
-| ------------------------- | ----------------------------------------- | --------------------------------------- |
-| Run anywhere but a laptop | No environment has ever existed           | [B-1](#b-1--where-production-runs)      |
-| Take money                | No payment provider chosen                | [B-2](#b-2--a-payment-provider)         |
-| Send an email             | No mail transport chosen                  | [B-3](#b-3--a-mail-transport)           |
-| Speak Hindi               | No internationalisation, and nobody asked | [B-10](#things-that-are-mine-not-yours) |
+| Cannot                              | Because                                       | Item                                     |
+| ----------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| Run anywhere but a laptop           | No environment has ever existed               | [B-1](#b-1--where-production-runs)       |
+| Take money                          | No payment provider chosen                    | [B-2](#b-2--a-payment-provider)          |
+| Send an email                       | No mail transport chosen                      | [B-3](#b-3--a-mail-transport)            |
+| Be read in Hindi by a Hindi speaker | Nobody who speaks it has read the translation | [B-15](#b-15--somebody-who-speaks-hindi) |
 
-Three of those four are waiting on a decision below. **Erasure was the fifth row here until
-2026-08-11**, and it is now built — which leaves internationalisation as the only thing on this list
-that is nobody's decision and simply has not been done.
+Three of those four are waiting on a decision below; the fourth waits on a person.
+
+**Two rows left this table in two days.** Erasure was here until 2026-08-11 and is now built.
+"Speak Hindi" was here until 2026-08-12 and is now built too — every page and component, 909 keys
+per locale, missing translations caught by the type checker. What replaced it is narrower and is
+not engineering: **909 strings of Hindi have been written and nobody who speaks Hindi has read
+them.** That is B-15, and it is the first item on this list that needs a person rather than a
+decision or a bill.
+
+**There is now no engineering commitment left that the product made in its own documents.** Both
+that were hiding there have been found and built. The remaining rows are all deployment, deferred
+integrations, or people.
 
 ---
 
@@ -233,6 +242,33 @@ and change get it in one place and cannot drift apart.
 
 ---
 
+### B-15 — Somebody who speaks Hindi
+
+**Blocks:** NFR-016 moving ◐ → ✅, and nothing else. It is small, and it is the kind of small that
+is embarrassing in front of a school rather than broken in a log.
+
+**The state.** The machinery is done and enforced: the catalogue is a TypeScript object typed
+against English, so a missing Hindi key is a **compile error** rather than a string that quietly
+renders in the wrong language. Dates, numbers and plurals go through `Intl` with a real formatting
+tag, not the UI locale — a distinction that had already produced one wrong date format before a
+test caught it.
+
+**What is not done is the only part a type checker cannot do.** All 909 Hindi strings were written
+by me. They are structurally correct and they have never been read by a Hindi speaker. School
+vocabulary is exactly where machine-adjacent translation goes wrong — _register_, _term_,
+_guardian_, _excused_, _report card_ and _verification_ all have a conventional Indian-school word
+that is not the dictionary one, and getting them nearly right reads worse than English would.
+
+**How to do it.** One person, one sitting, no technical knowledge needed:
+[`apps/web/lib/i18n/messages/hi.ts`](../../apps/web/lib/i18n/messages/hi.ts) is a flat file of
+`key: 'string'` lines. They edit the right-hand side and change nothing else. Or switch the app to
+Hindi and read the screens — the language switcher is on every page, signed in or out.
+
+**Worth doing before the pilot, not after.** If the pilot is Indian this is the first thing its
+users see, and the first impression of a translation is the one that sticks.
+
+---
+
 ## Accounts and access only you can create
 
 None of these are decisions; they are things with your name on the bill.
@@ -264,19 +300,25 @@ is not caught by a type checker.
 
 Worth doing before B-1, not after: infrastructure is where a second reader is worth most.
 
+**It has now cost something measurable.** Sprint 6 wrote an action to hold retros in the room rather
+than reconstructing them, and assigned it to _whole team_. It was carried through Sprints 7, 8 and 9
+and closed as **failed** on 2026-08-12, because a retro held in the room needs a room. Three sprints
+of process were spent on an action that one person could not have completed, and the record stayed
+empty the whole time — which is worse than the honest reconstruction it was meant to replace.
+
 ---
 
 ## Things that are mine, not yours
 
 Listed so the boundary is clear. None of these need you.
 
-| #    | What                                              | State                                                                                                                          |
-| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| B-9  | **Export and erasure** (NFR-006)                  | ✅ **Built 2026-08-11.** Both flows live — see [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) and ADR-0020  |
-| B-10 | **Internationalisation** (NFR-016)                | Not started. `Class.medium` already offers Hindi; the product models the language and cannot speak it                          |
-| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                    |
-| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | ✅ **Walked 2026-08-11** — five findings, four fixed, one is B-14 above. [`Security/07-asvs-l2.md`](../Security/07-asvs-l2.md) |
-| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                             |
+| #    | What                                              | State                                                                                                                                                             |
+| ---- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B-9  | **Export and erasure** (NFR-006)                  | ✅ **Built 2026-08-11.** Both flows live — see [`PRD/14-export-and-erasure.md`](../PRD/14-export-and-erasure.md) and ADR-0020                                     |
+| B-10 | **Internationalisation** (NFR-016)                | ✅ **Built 2026-08-12.** Every page and component; 909 keys per locale; a missing translation fails `tsc`. Reading it is [B-15](#b-15--somebody-who-speaks-hindi) |
+| B-11 | **The mobile client**                             | A phase, not a task. FR-NOTIF-004 (push tokens) waits on it                                                                                                       |
+| B-12 | **OWASP ASVS L2 walked as a checklist** (NFR-005) | ✅ **Walked 2026-08-11** — five findings, four fixed, one is B-14 above. [`Security/07-asvs-l2.md`](../Security/07-asvs-l2.md)                                    |
+| B-13 | **A human accessibility audit** (NFR-012)         | Automated scanning is clean across every screen; that is the mechanical third only                                                                                |
 
 ---
 
@@ -292,9 +334,18 @@ Listed so the boundary is clear. None of these need you.
 | B-5  | Plan limits and prices  | Whenever — provisional numbers are enforced today       |
 | B-6  | Four product questions  | Whenever                                                |
 | B-14 | Breached-password check | **New.** Whenever — the gap is recorded, not unknown    |
+| B-15 | A Hindi reader          | **New.** Small, cheap, and visible to every pilot user  |
 | B-7  | Accounts and DNS        | As each of B-1 … B-3 is answered                        |
 
-The engineering position is straightforward: **there is no unblocked feature work left that anybody
-asked for.** What remains is a deployment, two integrations behind your deferrals, and — since
-export and erasure shipped on 2026-08-11 — **one** remaining commitment the product made in its own
-documents: Hindi (NFR-016).
+The engineering position is straightforward, and it is now stronger than it was: **there is no
+unblocked engineering work left at all** — not "little", none. Both commitments that were hiding in
+the product's own documents have been found and built (export and erasure on 2026-08-11, Hindi on
+2026-08-12), and the ASVS walk and the product-event table took the last of it.
+
+What remains is a deployment, two integrations behind your deferrals, and three people: a reviewer
+(B-8), a Hindi reader (B-15) and an accessibility auditor (B-13).
+
+**Sprint 9 made this same claim and was wrong**, which is why it is worth saying how it was checked
+this time: by writing the non-functional half of the completeness record, walking ASVS L2 chapter by
+chapter, and building the metric tree until something refused to be computed. Each of those found
+work. None of them finds any now.
