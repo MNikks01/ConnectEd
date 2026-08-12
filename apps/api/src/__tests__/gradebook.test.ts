@@ -291,7 +291,33 @@ describe('a draft is not a result', () => {
     const payload = row.payload as unknown as Record<string, unknown>;
 
     expect(payload.title).toBe('Fractions test');
-    expect(JSON.stringify(payload)).not.toContain('17.5');
+
+    // The key set, not a substring of the serialised payload.
+    //
+    // `expect(JSON.stringify(payload)).not.toContain('17.5')` was the obvious way to write this and
+    // it was wrong in both directions. It failed on 2026-08-12 against an unchanged payload,
+    // because `occurredAt` read `…T07:13:17.571Z` — seconds `17`, milliseconds `571` — which spells
+    // `17.5`. Any second-and-millisecond pair can do that, so the test broke roughly once every six
+    // hundred runs on a clock nobody controls, and it would have done it on a release.
+    //
+    // The quieter half is worse. Searching the text for `17.5` only catches a leak that happens to
+    // spell those characters; it says nothing about a *derived* result, which is the same
+    // disclosure. A payload carrying `grade: 'B+'` — this pupil's mark, in the form a parent
+    // actually reads — passes the old assertion untouched. Both were checked by sabotage: adding
+    // `topScore` and adding `grade` each fail the assertion below, and only the first would have
+    // failed the one it replaces.
+    //
+    // Pinning the keys states what the payload may hold rather than what one value must not look
+    // like, so a result added under any name, in any shape, fails here.
+    expect(Object.keys(payload).sort()).toEqual([
+      'assessmentId',
+      'classId',
+      'eventId',
+      'occurredAt',
+      'subjectId',
+      'title',
+      'type',
+    ]);
   });
 });
 
